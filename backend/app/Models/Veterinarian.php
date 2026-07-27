@@ -12,6 +12,10 @@ class Veterinarian extends Model
 {
     use HasFactory, SoftDeletes;
 
+    public const MODERATION_STATUS_PENDING_REVIEW = 'pending_review';
+
+    public const MODERATION_STATUS_ACTIVE = 'active';
+
     protected $fillable = [
         'user_id',
         'name',
@@ -60,5 +64,11 @@ class Veterinarian extends Model
     public function favorites(): MorphMany
     {
         return $this->morphMany(Favorite::class, 'favoritable');
+    }
+
+    public function isPubliclyVisible(): bool
+    {
+        return (bool) $this->is_active
+            && $this->moderation_status === self::MODERATION_STATUS_ACTIVE;
     }
 }

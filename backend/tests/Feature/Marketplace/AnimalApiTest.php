@@ -24,7 +24,7 @@ class AnimalApiTest extends TestCase
 
     public function test_authenticated_user_can_list_animals_with_filters(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->approvedProfessional('breeder')->create();
 
         Animal::factory()->create([
             'name' => 'Luna',
@@ -60,7 +60,7 @@ class AnimalApiTest extends TestCase
 
     public function test_authenticated_user_can_create_update_and_delete_an_animal_listing(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->approvedProfessional('breeder')->create();
         Sanctum::actingAs($user, ['*']);
 
         $createResponse = $this->postJson('/api/animals', [
@@ -139,7 +139,7 @@ class AnimalApiTest extends TestCase
 
     public function test_user_cannot_update_or_delete_another_users_listing(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->approvedProfessional('breeder')->create();
         $other = User::factory()->create();
         $animal = Animal::factory()->create([
             'user_id' => $other->id,
@@ -173,7 +173,7 @@ class AnimalApiTest extends TestCase
     public function test_authenticated_user_can_upload_real_images_for_an_animal_listing(): void
     {
         Storage::fake('public');
-        $user = User::factory()->create();
+        $user = User::factory()->approvedProfessional('breeder')->create();
         Sanctum::actingAs($user, ['*']);
 
         $response = $this
@@ -220,7 +220,7 @@ class AnimalApiTest extends TestCase
     public function test_authenticated_user_can_update_an_animal_listing_with_real_uploaded_images(): void
     {
         Storage::fake('public');
-        $user = User::factory()->create();
+        $user = User::factory()->approvedProfessional('breeder')->create();
         $animal = Animal::factory()->create([
             'user_id' => $user->id,
             'photo_url' => null,

@@ -18,7 +18,7 @@ class UpdateContentModerationStatusRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'action' => ['required', 'string', Rule::in(['hide', 'suspend', 'restore'])],
+            'action' => ['required', 'string', Rule::in(['approve', 'reject', 'hide', 'suspend', 'restore'])],
             'moderation_note' => ['nullable', 'string', 'max:2000'],
         ];
     }

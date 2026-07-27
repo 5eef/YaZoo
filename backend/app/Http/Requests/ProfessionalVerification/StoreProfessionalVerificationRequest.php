@@ -23,16 +23,36 @@ class StoreProfessionalVerificationRequest extends FormRequest
             'legal_name' => ['nullable', 'string', 'max:190'],
             'ice' => ['nullable', 'string', 'max:50'],
             'onssa_authorization_number' => ['nullable', 'string', 'max:100'],
-            'professional_license_number' => ['nullable', 'string', 'max:100'],
+            'professional_license_number' => [
+                'required_if:business_type,veterinarian',
+                'nullable',
+                'string',
+                'max:100',
+            ],
             'document' => [
+                'required_if:business_type,veterinarian',
                 'nullable',
                 'file',
                 'mimetypes:application/pdf,image/jpeg,image/png,image/webp',
                 'extensions:pdf,jpg,jpeg,png,webp',
                 'max:5120',
             ],
-            'document_type' => ['nullable', 'string', Rule::in(ProfessionalVerification::DOCUMENT_TYPES)],
-            'document_expires_at' => ['nullable', 'date', 'after:today'],
+            'document_type' => [
+                'required_if:business_type,veterinarian',
+                'nullable',
+                'string',
+                Rule::in(
+                    $this->input('business_type') === 'veterinarian'
+                        ? ['veterinarian_license']
+                        : ProfessionalVerification::DOCUMENT_TYPES,
+                ),
+            ],
+            'document_expires_at' => [
+                'required_if:business_type,veterinarian',
+                'nullable',
+                'date',
+                'after:today',
+            ],
         ];
     }
 

@@ -12,6 +12,10 @@ class ServiceListing extends Model
 {
     use HasFactory, SoftDeletes;
 
+    public const MODERATION_STATUS_PENDING_REVIEW = 'pending_review';
+
+    public const MODERATION_STATUS_ACTIVE = 'active';
+
     public const TYPES = [
         'pet_sitting',
         'training',
@@ -89,5 +93,11 @@ class ServiceListing extends Model
     public function favorites(): MorphMany
     {
         return $this->morphMany(Favorite::class, 'favoritable');
+    }
+
+    public function isPubliclyVisible(): bool
+    {
+        return $this->status === 'active'
+            && $this->moderation_status === self::MODERATION_STATUS_ACTIVE;
     }
 }

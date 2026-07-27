@@ -9,6 +9,7 @@ use App\Http\Middleware\ForceHttps;
 use App\Http\Middleware\ForceJsonResponse;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\UseSanctumTokenFromCookie;
+use App\Support\OperationsSchedule;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
@@ -77,19 +78,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withSchedule(function (Schedule $schedule): void {
-        $schedule
-            ->command('sanctum:prune-expired --hours=0')
-            ->daily()
-            ->withoutOverlapping();
-
-        if (! (bool) env('MEDIA_BACKUP_ENABLED', false)) {
-            return;
-        }
-
-        $schedule
-            ->command('yazoo:backup-media --keep='.(int) env('MEDIA_BACKUP_KEEP_DAYS', 7))
-            ->dailyAt((string) env('MEDIA_BACKUP_SCHEDULE', '03:30'))
-            ->withoutOverlapping();
+        OperationsSchedule::register($schedule);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         $exceptions->context(fn (): array => [

@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\ProfessionalVerification;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
@@ -55,5 +56,31 @@ class UserFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'is_admin' => true,
         ]);
+    }
+
+    public function approvedProfessional(string $businessType): static
+    {
+        return $this->afterCreating(function (User $user) use ($businessType): void {
+            $admin = User::factory()->admin()->create();
+
+            ProfessionalVerification::query()->create([
+                'user_id' => $user->id,
+                'business_type' => $businessType,
+                'legal_name' => $user->name,
+                'document_type' => $businessType === 'veterinarian'
+                    ? 'veterinarian_license'
+                    : 'professional_card',
+                'professional_license_number' => $businessType === 'veterinarian'
+                    ? 'VET-'.str_pad((string) $user->id, 6, '0', STR_PAD_LEFT)
+                    : null,
+                'document_path' => 'professional-verifications/test-document.pdf',
+                'document_expires_at' => now()->addYear(),
+                'status' => 'approved',
+                'verified_by' => $admin->id,
+                'verified_at' => now(),
+                'reviewed_by' => $admin->id,
+                'reviewed_at' => now(),
+            ]);
+        });
     }
 }

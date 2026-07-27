@@ -25,7 +25,7 @@ class ServiceListingController extends Controller
         $query = ServiceListing::query()
             ->with([
                 'user:id,name,email,phone,phone_verified_at,avatar,city,country',
-                'user.latestProfessionalVerification',
+                'user.latestProfessionalVerification.reviewer:id,is_admin',
             ])
             ->withCount([
                 'reviews as reviews_count' => fn ($reviewQuery) => $reviewQuery->publiclyVisible(),
@@ -38,6 +38,17 @@ class ServiceListingController extends Controller
                 ]);
             })
             ->where('status', 'active')
+            ->where(function ($query) use ($request): void {
+                $query->where('moderation_status', ServiceListing::MODERATION_STATUS_ACTIVE);
+
+                if ($user = $request->user()) {
+                    $query->orWhere(function ($ownerQuery) use ($user): void {
+                        $ownerQuery
+                            ->where('user_id', $user->id)
+                            ->where('moderation_status', ServiceListing::MODERATION_STATUS_PENDING_REVIEW);
+                    });
+                }
+            })
             ->latest();
 
         if ($request->filled('type')) {
@@ -59,7 +70,7 @@ class ServiceListingController extends Controller
             ServiceListing::query()
                 ->with([
                     'user:id,name,email,phone,phone_verified_at,avatar,city,country',
-                    'user.latestProfessionalVerification',
+                    'user.latestProfessionalVerification.reviewer:id,is_admin',
                 ])
                 ->withCount([
                     'reviews as reviews_count' => fn ($reviewQuery) => $reviewQuery->publiclyVisible(),
@@ -90,7 +101,7 @@ class ServiceListingController extends Controller
             ServiceListing::query()
                 ->with([
                     'user:id,name,email,phone,phone_verified_at,avatar,city,country',
-                    'user.latestProfessionalVerification',
+                    'user.latestProfessionalVerification.reviewer:id,is_admin',
                 ])
                 ->withCount([
                     'reviews as reviews_count' => fn ($reviewQuery) => $reviewQuery->publiclyVisible(),
@@ -103,6 +114,7 @@ class ServiceListingController extends Controller
                     ]);
                 })
                 ->where('status', 'active')
+                ->where('moderation_status', ServiceListing::MODERATION_STATUS_ACTIVE)
                 ->when($request->user(), fn ($query, $user) => $query->where('user_id', '!=', $user->id))
                 ->orderByDesc('reservations_count')
                 ->latest()
@@ -112,12 +124,16 @@ class ServiceListingController extends Controller
 
     public function store(StoreServiceListingRequest $request): JsonResponse
     {
-        $this->authorize('create', ServiceListing::class);
+        $this->authorize('create', [ServiceListing::class, $request->validated('type')]);
 
         $service = ServiceListing::query()->create([
             ...$request->validated(),
             'user_id' => $request->user()->id,
             'status' => 'active',
+            'moderation_status' => ServiceListing::MODERATION_STATUS_PENDING_REVIEW,
+            'moderation_note' => null,
+            'moderated_by' => null,
+            'moderated_at' => null,
         ]);
 
         $this->activityLogger->log(
@@ -137,7 +153,12 @@ class ServiceListingController extends Controller
 
     public function show(ServiceListing $service): ServiceListingResource
     {
-        abort_if($service->status !== 'active' && ! request()->user()?->is($service->user), 404);
+        abort_unless(
+            $service->isPubliclyVisible()
+                || request()->user()?->is($service->user)
+                || (bool) request()->user()?->is_admin,
+            404,
+        );
 
         $service->increment('views_count');
 
@@ -148,7 +169,20 @@ class ServiceListingController extends Controller
     {
         $this->authorize('update', $service);
 
-        $service->update($request->validated());
+        $validated = $request->validated();
+
+        if (isset($validated['type'])) {
+            $this->authorize('create', [ServiceListing::class, $validated['type']]);
+        }
+
+        if (! $request->user()->is_admin) {
+            $validated['moderation_status'] = ServiceListing::MODERATION_STATUS_PENDING_REVIEW;
+            $validated['moderation_note'] = null;
+            $validated['moderated_by'] = null;
+            $validated['moderated_at'] = null;
+        }
+
+        $service->update($validated);
 
         $this->activityLogger->log(
             'service.updated',
@@ -167,7 +201,7 @@ class ServiceListingController extends Controller
     {
         $service->load([
             'user:id,name,email,phone,phone_verified_at,avatar,city,country',
-            'user.latestProfessionalVerification',
+            'user.latestProfessionalVerification.reviewer:id,is_admin',
         ])
             ->loadCount([
                 'reviews as reviews_count' => fn ($reviewQuery) => $reviewQuery->publiclyVisible(),

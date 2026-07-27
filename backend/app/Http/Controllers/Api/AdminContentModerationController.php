@@ -12,6 +12,7 @@ use App\Models\Veterinarian;
 use App\Services\Admin\ModerationLogger;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Cache;
 
 class AdminContentModerationController extends Controller
 {
@@ -62,6 +63,7 @@ class AdminContentModerationController extends Controller
             $note,
             ['frontend_type' => $type, 'requested_action' => $action],
         );
+        Cache::forget('admin:moderation-dashboard:v1');
 
         return response()->json([
             'message' => __('messages.admin.content_moderation_updated'),
@@ -78,7 +80,8 @@ class AdminContentModerationController extends Controller
         return match ($action) {
             'hide' => 'hidden',
             'suspend' => 'suspended',
-            'restore' => 'restored',
+            'approve', 'restore' => 'active',
+            'reject' => 'rejected',
         };
     }
 
@@ -86,7 +89,8 @@ class AdminContentModerationController extends Controller
     {
         return match ($action) {
             'hide', 'suspend' => 'suspended',
-            'restore' => 'approved',
+            'approve', 'restore' => 'approved',
+            'reject' => 'rejected',
         };
     }
 
@@ -95,7 +99,8 @@ class AdminContentModerationController extends Controller
         if ($type === 'animal') {
             return match ($action) {
                 'suspend', 'hide' => 'suspend_animal',
-                'restore' => 'restore_animal',
+                'approve', 'restore' => 'restore_animal',
+                'reject' => 'reject_animal',
             };
         }
 

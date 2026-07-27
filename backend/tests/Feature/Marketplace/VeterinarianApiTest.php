@@ -66,7 +66,7 @@ class VeterinarianApiTest extends TestCase
 
     public function test_authenticated_user_can_list_veterinarians_with_filters(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->approvedProfessional('veterinarian')->create();
 
         Veterinarian::factory()->create([
             'name' => 'Dr Sara Vet',
@@ -94,7 +94,7 @@ class VeterinarianApiTest extends TestCase
 
     public function test_authenticated_user_can_create_update_and_delete_veterinarian(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->approvedProfessional('veterinarian')->create();
         Sanctum::actingAs($user, ['*']);
 
         $createResponse = $this->postJson('/api/veterinarians', [
@@ -141,7 +141,7 @@ class VeterinarianApiTest extends TestCase
 
     public function test_validation_fails_without_name(): void
     {
-        Sanctum::actingAs(User::factory()->create(), ['*']);
+        Sanctum::actingAs(User::factory()->approvedProfessional('veterinarian')->create(), ['*']);
 
         $this->postJson('/api/veterinarians', [
             'city' => 'Casablanca',

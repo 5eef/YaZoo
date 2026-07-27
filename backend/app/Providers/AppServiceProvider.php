@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Events\UserNotificationCreated;
 use App\Notifications\NewMessageNotification;
+use App\Support\PhoneNumber;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
@@ -38,12 +39,33 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(120)->by($request->user()?->id ?: $request->ip());
         });
 
+        RateLimiter::for('otp-request', function (Request $request) {
+            $phone = PhoneNumber::normalize($request->input('phone'));
+            $phoneKey = hash_hmac(
+                'sha256',
+                ($phone ?? 'invalid').':'.(string) $request->input('intent'),
+                (string) config('app.key'),
+            );
+
+            return [
+                Limit::perMinute(5)->by('otp-ip:'.$request->ip()),
+                Limit::perMinute(3)->by('otp-phone:'.$phoneKey),
+            ];
+        });
+
         RateLimiter::for('feed-write', function (Request $request) {
             return Limit::perMinute(30)->by($request->user()?->id ?: $request->ip());
         });
 
         RateLimiter::for('marketplace-write', function (Request $request) {
             return Limit::perMinute(30)->by($request->user()?->id ?: $request->ip());
+        });
+
+        RateLimiter::for('professional-verification-submit', function (Request $request) {
+            return [
+                Limit::perHour(5)->by('professional-verification-user:'.($request->user()?->id ?: 'guest')),
+                Limit::perHour(15)->by('professional-verification-ip:'.$request->ip()),
+            ];
         });
 
         RateLimiter::for('messages-write', function (Request $request) {

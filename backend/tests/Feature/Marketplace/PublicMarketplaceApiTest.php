@@ -164,6 +164,81 @@ class PublicMarketplaceApiTest extends TestCase
             ->assertJsonPath('data.animals.0.author.name', 'Association YaZoo');
     }
 
+    public function test_veterinarian_badge_requires_complete_admin_reviewed_veterinarian_license(): void
+    {
+        $unverified = User::factory()->create();
+        $verified = User::factory()->approvedProfessional('veterinarian')->create();
+
+        Veterinarian::factory()->create([
+            'user_id' => $unverified->id,
+            'name' => 'Veterinaire sans preuve',
+            'is_active' => true,
+            'moderation_status' => 'active',
+        ]);
+        Veterinarian::factory()->create([
+            'user_id' => $verified->id,
+            'name' => 'Veterinaire verifie',
+            'is_active' => true,
+            'moderation_status' => 'active',
+        ]);
+
+        $items = collect(
+            $this->getJson('/api/marketplace/public-preview')
+                ->assertOk()
+                ->json('data.veterinarians'),
+        )->keyBy('title');
+
+        $this->assertNull($items['Veterinaire sans preuve']['professionalBadge']);
+        $this->assertSame('verified_veterinarian', $items['Veterinaire verifie']['professionalBadge']);
+    }
+
+    public function test_public_preview_exposes_business_specific_badges_for_each_marketplace_destination(): void
+    {
+        $petShop = User::factory()->approvedProfessional('pet_shop')->create();
+        $breeder = User::factory()->approvedProfessional('breeder')->create();
+        $trainer = User::factory()->approvedProfessional('trainer')->create();
+        $provider = User::factory()->approvedProfessional('service_provider')->create();
+
+        Product::factory()->create([
+            'user_id' => $petShop->id,
+            'name' => 'Produit animalerie',
+            'moderation_status' => 'active',
+            'listing_status' => 'available',
+            'stock' => 2,
+        ]);
+        Animal::factory()->create([
+            'user_id' => $breeder->id,
+            'name' => 'Animal eleveur',
+            'legal_status' => 'approved',
+            'listing_status' => 'available',
+        ]);
+        ServiceListing::factory()->create([
+            'user_id' => $trainer->id,
+            'title' => 'Dressage verifie',
+            'type' => 'training',
+            'status' => 'active',
+            'moderation_status' => 'active',
+        ]);
+        ServiceListing::factory()->create([
+            'user_id' => $provider->id,
+            'title' => 'Service verifie',
+            'type' => 'pet_sitting',
+            'status' => 'active',
+            'moderation_status' => 'active',
+        ]);
+
+        $data = $this->getJson('/api/marketplace/public-preview')
+            ->assertOk()
+            ->json('data');
+
+        $this->assertSame('verified_pet_shop', collect($data['products'])->firstWhere('title', 'Produit animalerie')['professionalBadge']);
+        $this->assertSame('verified_breeder', collect($data['animals'])->firstWhere('title', 'Animal eleveur')['professionalBadge']);
+
+        $services = collect($data['services'])->keyBy('title');
+        $this->assertSame('verified_trainer', $services['Dressage verifie']['professionalBadge']);
+        $this->assertSame('verified_service_provider', $services['Service verifie']['professionalBadge']);
+    }
+
     private function assertNoSensitiveKeys(array $payload): void
     {
         $sensitiveKeys = [

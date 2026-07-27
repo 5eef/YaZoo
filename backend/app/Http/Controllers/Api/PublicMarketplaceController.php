@@ -7,6 +7,7 @@ use App\Models\Animal;
 use App\Models\Product;
 use App\Models\ServiceListing;
 use App\Models\Veterinarian;
+use App\Services\MarketplacePublishingResolver;
 use App\Support\MarketplaceMedia;
 use App\Support\MediaStorage;
 use Illuminate\Database\Eloquent\Model;
@@ -15,6 +16,10 @@ use Illuminate\Http\Request;
 
 class PublicMarketplaceController extends Controller
 {
+    public function __construct(
+        private readonly MarketplacePublishingResolver $publishing,
+    ) {}
+
     public function __invoke(Request $request): JsonResponse
     {
         $perSection = min(max($request->integer('per_section', 6), 1), 12);
@@ -35,7 +40,7 @@ class PublicMarketplaceController extends Controller
                         'listing_status',
                         'created_at',
                     ])
-                    ->with('user:id,name,avatar,city')
+                    ->with($this->professionalVerificationRelations())
                     ->where('legal_status', 'approved')
                     ->whereIn('listing_status', ['available', 'reserved'])
                     ->latest()
@@ -55,7 +60,7 @@ class PublicMarketplaceController extends Controller
                         'condition_status',
                         'created_at',
                     ])
-                    ->with('user:id,name,avatar,city')
+                    ->with($this->professionalVerificationRelations())
                     ->where('moderation_status', 'active')
                     ->whereIn('listing_status', ['available', 'reserved'])
                     ->where('stock', '>', 0)
@@ -77,7 +82,7 @@ class PublicMarketplaceController extends Controller
                         'media',
                         'created_at',
                     ])
-                    ->with('user:id,name,avatar,city')
+                    ->with($this->professionalVerificationRelations())
                     ->where('status', 'active')
                     ->where('moderation_status', 'active')
                     ->latest()
@@ -96,7 +101,7 @@ class PublicMarketplaceController extends Controller
                         'image_path',
                         'created_at',
                     ])
-                    ->with('user:id,name,avatar,city')
+                    ->with($this->professionalVerificationRelations())
                     ->where('is_active', true)
                     ->where('moderation_status', 'active')
                     ->latest()
@@ -120,6 +125,7 @@ class PublicMarketplaceController extends Controller
             $animal->is_for_adoption ? null : $animal->price,
             MarketplaceMedia::resolveUrl($animal->photo_url),
             $animal->is_for_adoption ? 'adoption' : $animal->listing_status,
+            'animals',
         );
     }
 
@@ -135,6 +141,7 @@ class PublicMarketplaceController extends Controller
             $product->price,
             MarketplaceMedia::resolveUrl($product->image_url),
             $product->condition_status,
+            'products',
         );
     }
 
@@ -152,6 +159,8 @@ class PublicMarketplaceController extends Controller
             $service->price,
             is_string($firstMedia) ? MediaStorage::resolveUrl($firstMedia) : null,
             $service->price_type,
+            'services',
+            $service->type,
         );
     }
 
@@ -166,7 +175,8 @@ class PublicMarketplaceController extends Controller
             $veterinarian->city,
             null,
             MarketplaceMedia::resolveUrl($veterinarian->image_path),
-            'verified_professional',
+            null,
+            'veterinarians',
         );
     }
 
@@ -180,7 +190,13 @@ class PublicMarketplaceController extends Controller
         mixed $price,
         ?string $imageUrl,
         ?string $badge,
+        string $destination,
+        ?string $serviceType = null,
     ): array {
+        $professionalBadge = $listing->user
+            ? $this->publishing->badgeFor($listing->user, $destination, $serviceType)
+            : null;
+
         return [
             'id' => $listing->getKey(),
             'type' => $type,
@@ -191,11 +207,23 @@ class PublicMarketplaceController extends Controller
             'price' => $price !== null ? (float) $price : null,
             'imageUrl' => $imageUrl,
             'badge' => $badge,
+            'professionalBadge' => $professionalBadge,
             'createdAt' => $listing->created_at?->toISOString(),
             'author' => [
                 'name' => $this->sanitizePublicText($listing->user?->name),
                 'avatar' => MediaStorage::resolveUrl($listing->user?->avatar),
             ],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function professionalVerificationRelations(): array
+    {
+        return [
+            'user:id,name,avatar,city',
+            'user.latestProfessionalVerification.reviewer:id,is_admin',
         ];
     }
 

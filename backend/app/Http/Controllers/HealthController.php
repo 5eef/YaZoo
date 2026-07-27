@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Facades\Cache;
 use Throwable;
 
 class HealthController extends Controller
@@ -14,6 +15,7 @@ class HealthController extends Controller
         return response()->json([
             'status' => 'ok',
             'service' => 'yazoo-api',
+            'version' => config('app.version'),
         ]);
     }
 
@@ -22,6 +24,14 @@ class HealthController extends Controller
         $checks = [
             'database' => $this->checkDatabase(),
             'redis' => $this->checkRedis(),
+            'queue' => $this->checkHeartbeat(
+                'operations:queue-heartbeat',
+                config('queue.default') !== 'sync',
+            ),
+            'scheduler' => $this->checkHeartbeat(
+                'operations:scheduler-heartbeat',
+                (bool) config('operations.run_scheduler'),
+            ),
         ];
 
         $ready = collect($checks)->every(fn (array $check): bool => $check['ok']);
@@ -29,6 +39,7 @@ class HealthController extends Controller
         return response()->json([
             'status' => $ready ? 'ok' : 'degraded',
             'service' => 'yazoo-api',
+            'version' => config('app.version'),
             'checks' => $checks,
         ], $ready ? 200 : 503);
     }
@@ -39,10 +50,10 @@ class HealthController extends Controller
             DB::select('select 1');
 
             return ['ok' => true];
-        } catch (Throwable $exception) {
+        } catch (Throwable) {
             return [
                 'ok' => false,
-                'error' => $exception->getMessage(),
+                'error' => 'database_unavailable',
             ];
         }
     }
@@ -57,10 +68,10 @@ class HealthController extends Controller
             Redis::connection()->ping();
 
             return ['ok' => true];
-        } catch (Throwable $exception) {
+        } catch (Throwable) {
             return [
                 'ok' => false,
-                'error' => $exception->getMessage(),
+                'error' => 'redis_unavailable',
             ];
         }
     }
@@ -72,5 +83,18 @@ class HealthController extends Controller
             config('queue.default'),
             config('session.driver'),
         ])->contains('redis');
+    }
+
+    private function checkHeartbeat(string $key, bool $required): array
+    {
+        if (! $required) {
+            return ['ok' => true, 'skipped' => true];
+        }
+
+        $heartbeat = Cache::get($key);
+
+        return $heartbeat
+            ? ['ok' => true, 'lastHeartbeatAt' => $heartbeat]
+            : ['ok' => false, 'error' => 'heartbeat_missing'];
     }
 }

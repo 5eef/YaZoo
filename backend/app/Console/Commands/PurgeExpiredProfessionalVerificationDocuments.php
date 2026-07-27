@@ -18,6 +18,7 @@ class PurgeExpiredProfessionalVerificationDocuments extends Command
         $cutoff = now()->subDays(max(1, (int) config('professional_verifications.retention_days', 365)))->toDateString();
         $dryRun = (bool) $this->option('dry-run');
         $deleted = 0;
+        $failed = 0;
         $scanned = 0;
 
         ProfessionalVerification::query()
@@ -25,7 +26,7 @@ class PurgeExpiredProfessionalVerificationDocuments extends Command
             ->whereNotNull('document_expires_at')
             ->whereDate('document_expires_at', '<=', $cutoff)
             ->orderBy('id')
-            ->chunkById(100, function ($verifications) use ($disk, $dryRun, &$deleted, &$scanned): void {
+            ->chunkById(100, function ($verifications) use ($disk, $dryRun, &$deleted, &$failed, &$scanned): void {
                 foreach ($verifications as $verification) {
                     $scanned++;
                     $path = (string) $verification->document_path;
@@ -37,7 +38,13 @@ class PurgeExpiredProfessionalVerificationDocuments extends Command
                     }
 
                     if (! $dryRun && Storage::disk($disk)->exists($path)) {
-                        Storage::disk($disk)->delete($path);
+                        if (! Storage::disk($disk)->delete($path)) {
+                            $failed++;
+                            $this->error("Storage deletion failed for verification {$verification->id}.");
+
+                            continue;
+                        }
+
                         $deleted++;
                     }
 
@@ -51,14 +58,15 @@ class PurgeExpiredProfessionalVerificationDocuments extends Command
             });
 
         $this->info(sprintf(
-            'Professional verification document purge %s: scanned=%d deleted=%d disk=%s',
+            'Professional verification document purge %s: scanned=%d deleted=%d failed=%d disk=%s',
             $dryRun ? 'dry-run' : 'complete',
             $scanned,
             $deleted,
+            $failed,
             $disk,
         ));
 
-        return self::SUCCESS;
+        return $failed === 0 ? self::SUCCESS : self::FAILURE;
     }
 
     private function isSafeDocumentPath(string $path): bool

@@ -30,7 +30,7 @@ class AnimalMarketplaceService
         return Animal::query()
             ->with([
                 'user:id,name,email,phone,phone_verified_at,avatar,city,country',
-                'user.latestProfessionalVerification',
+                'user.latestProfessionalVerification.reviewer:id,is_admin',
             ])
             ->withCount([
                 'reviews as reviews_count' => fn ($query) => $query->publiclyVisible(),
@@ -41,6 +41,17 @@ class AnimalMarketplaceService
                 $query->withExists([
                     'favorites as is_favorited' => fn ($favoriteQuery) => $favoriteQuery->where('user_id', $user->id),
                 ]);
+            })
+            ->where(function ($query) use ($request): void {
+                $query->where('legal_status', 'approved');
+
+                if ($user = $request->user()) {
+                    $query->orWhere(function ($ownerQuery) use ($user): void {
+                        $ownerQuery
+                            ->where('user_id', $user->id)
+                            ->where('legal_status', Animal::LEGAL_STATUS_PENDING_REVIEW);
+                    });
+                }
             })
             ->when($request->filled('q'), function ($query) use ($request): void {
                 $this->search($query, ['name', 'type', 'breed', 'description'], (string) $request->string('q')->trim());
@@ -103,6 +114,13 @@ class AnimalMarketplaceService
             'marketplace/animals',
         );
 
+        if (! request()->user()?->is_admin) {
+            $payload['legal_status'] = Animal::LEGAL_STATUS_PENDING_REVIEW;
+            $payload['moderation_note'] = null;
+            $payload['moderated_by'] = null;
+            $payload['moderated_at'] = null;
+        }
+
         $animal->update($payload);
 
         return $this->loadForResponse($animal);
@@ -123,7 +141,7 @@ class AnimalMarketplaceService
     {
         $animal->load([
             'user:id,name,email,phone,phone_verified_at,avatar,city,country',
-            'user.latestProfessionalVerification',
+            'user.latestProfessionalVerification.reviewer:id,is_admin',
         ])
             ->loadCount([
                 'reviews as reviews_count' => fn ($query) => $query->publiclyVisible(),

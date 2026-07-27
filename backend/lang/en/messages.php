@@ -11,6 +11,10 @@ return [
         'otp_sms' => 'Your YaZoo code is: :code. It expires in :minutes minutes.',
         'otp_sent_login' => 'A sign-in code was sent by SMS.',
         'otp_sent_register' => 'A registration code was sent by SMS.',
+        'otp_sent' => 'If this number is eligible, a code was sent by SMS.',
+        'otp_cooldown' => 'Please wait before requesting another code.',
+        'otp_locked' => 'Too many attempts. Please try again later.',
+        'sms_unavailable' => 'SMS sign-in is temporarily unavailable. Use your email and password or Google.',
         'otp_missing' => 'No valid OTP code is available. Request a new code.',
         'otp_invalid' => 'The OTP code is invalid or expired.',
         'otp_required_login' => 'The OTP code is required to sign in with phone.',
@@ -63,6 +67,7 @@ return [
     ],
     'contact' => [
         'sent' => 'Message sent successfully.',
+        'unavailable' => 'The contact service is temporarily unavailable.',
     ],
     'monitoring' => [
         'frontend_report_saved' => 'Frontend report saved.',
@@ -86,8 +91,10 @@ return [
         'content_moderation_updated' => 'Content moderation status updated.',
     ],
     'professional_verifications' => [
+        'pending_exists' => 'A request of this type is already pending.',
         'submitted' => 'Professional verification request sent. It will be reviewed manually.',
         'status_updated' => 'Professional verification status updated.',
+        'veterinarian_credentials_required' => 'A veterinarian license, its number, its document, and a future expiration date are required before approval.',
         'business_types' => [
             'seller' => 'Seller',
             'trainer' => 'Trainer',

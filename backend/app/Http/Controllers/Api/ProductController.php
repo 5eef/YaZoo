@@ -45,6 +45,13 @@ class ProductController extends Controller
      */
     public function show(Request $request, Product $product): ProductResource
     {
+        abort_unless(
+            $product->isPubliclyVisible()
+                || $request->user()?->is($product->user)
+                || (bool) $request->user()?->is_admin,
+            404,
+        );
+
         $this->products->loadForResponse($product);
 
         return ProductResource::make($product);

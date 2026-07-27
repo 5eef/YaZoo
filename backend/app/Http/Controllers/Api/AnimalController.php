@@ -45,6 +45,13 @@ class AnimalController extends Controller
      */
     public function show(Request $request, Animal $animal): AnimalResource
     {
+        abort_unless(
+            $animal->isPubliclyVisible()
+                || $request->user()?->is($animal->user)
+                || (bool) $request->user()?->is_admin,
+            404,
+        );
+
         $this->animals->loadForResponse($animal);
 
         return AnimalResource::make($animal);

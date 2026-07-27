@@ -10,14 +10,17 @@ use App\Models\CommunityMember;
 use App\Models\Like;
 use App\Models\Post;
 use App\Models\Product;
+use App\Models\ServiceListing;
 use App\Models\User;
+use App\Models\Veterinarian;
+use App\Services\Admin\ModerationLogger;
 use App\Support\MarketplaceMedia;
 use App\Support\MediaStorage;
-use App\Services\Admin\ModerationLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class AdminModerationController extends Controller
 {
@@ -37,6 +40,68 @@ class AdminModerationController extends Controller
             now()->addSeconds(30),
             fn (): array => $this->dashboardPayload(),
         ));
+    }
+
+    public function marketplaceSection(Request $request, string $type): JsonResponse
+    {
+        $this->ensureAdmin($request);
+        abort_unless(in_array($type, ['animals', 'products', 'services', 'veterinarians'], true), 404);
+
+        $statusValues = $type === 'animals'
+            ? Animal::LEGAL_STATUSES
+            : ['pending_review', 'active', 'rejected', 'suspended'];
+        $validated = $request->validate([
+            'page' => ['nullable', 'integer', 'min:1'],
+            'per_page' => ['nullable', 'integer', 'min:5', 'max:50'],
+            'status' => ['nullable', 'string', Rule::in($statusValues)],
+            'q' => ['nullable', 'string', 'max:100'],
+        ]);
+        $perPage = (int) ($validated['per_page'] ?? 12);
+        $statusColumn = $type === 'animals' ? 'legal_status' : 'moderation_status';
+        $model = match ($type) {
+            'animals' => Animal::class,
+            'products' => Product::class,
+            'services' => ServiceListing::class,
+            'veterinarians' => Veterinarian::class,
+        };
+        $searchColumns = match ($type) {
+            'animals' => ['name', 'description', 'location'],
+            'products' => ['name', 'description', 'location'],
+            'services' => ['title', 'description', 'city'],
+            'veterinarians' => ['name', 'clinic_name', 'city'],
+        };
+
+        $paginator = $model::query()
+            ->with('user:id,name,email,avatar')
+            ->when(
+                filled($validated['status'] ?? null),
+                fn ($query) => $query->where($statusColumn, $validated['status']),
+            )
+            ->when(filled($validated['q'] ?? null), function ($query) use ($validated, $searchColumns): void {
+                $needle = '%'.addcslashes((string) $validated['q'], '\\%_').'%';
+                $query->where(function ($search) use ($needle, $searchColumns): void {
+                    foreach ($searchColumns as $column) {
+                        $search->orWhere($column, 'like', $needle);
+                    }
+                });
+            })
+            ->orderByRaw("CASE WHEN {$statusColumn} = 'pending_review' THEN 0 ELSE 1 END")
+            ->latest()
+            ->paginate($perPage);
+
+        $items = $paginator->getCollection()
+            ->map(fn ($item): array => $this->formatMarketplaceItem($type, $item))
+            ->values();
+
+        return response()->json([
+            'data' => $items,
+            'meta' => [
+                'currentPage' => $paginator->currentPage(),
+                'lastPage' => $paginator->lastPage(),
+                'perPage' => $paginator->perPage(),
+                'total' => $paginator->total(),
+            ],
+        ]);
     }
 
     /**
@@ -80,6 +145,7 @@ class AdminModerationController extends Controller
 
         $animals = Animal::query()
             ->with('user:id,name,email,avatar')
+            ->orderByRaw("CASE WHEN legal_status = 'pending_review' THEN 0 ELSE 1 END")
             ->latest()
             ->take(12)
             ->get()
@@ -104,6 +170,7 @@ class AdminModerationController extends Controller
 
         $products = Product::query()
             ->with('user:id,name,email,avatar')
+            ->orderByRaw("CASE WHEN moderation_status = 'pending_review' THEN 0 ELSE 1 END")
             ->latest()
             ->take(12)
             ->get()
@@ -124,6 +191,56 @@ class AdminModerationController extends Controller
                     'author' => $this->formatAuthor($product->user),
                 ];
             })
+            ->values()
+            ->all();
+
+        $services = ServiceListing::query()
+            ->with('user:id,name,email,avatar')
+            ->orderByRaw("CASE WHEN moderation_status = 'pending_review' THEN 0 ELSE 1 END")
+            ->latest()
+            ->take(12)
+            ->get()
+            ->map(function (ServiceListing $service): array {
+                $firstMedia = collect($service->media ?? [])->first();
+                $mediaPath = is_array($firstMedia)
+                    ? ($firstMedia['url'] ?? $firstMedia['path'] ?? null)
+                    : $firstMedia;
+
+                return [
+                    'id' => $service->id,
+                    'title' => $service->title,
+                    'category' => $service->type,
+                    'listingStatus' => $service->status,
+                    'location' => $service->city,
+                    'price' => $service->price !== null ? (float) $service->price : null,
+                    'moderationStatus' => $service->moderation_status,
+                    'moderationNote' => $service->moderation_note,
+                    'imageUrl' => is_string($mediaPath) ? MediaStorage::resolveUrl($mediaPath) : null,
+                    'createdAt' => $service->created_at?->toISOString(),
+                    'author' => $this->formatAuthor($service->user),
+                ];
+            })
+            ->values()
+            ->all();
+
+        $veterinarians = Veterinarian::query()
+            ->with('user:id,name,email,avatar')
+            ->orderByRaw("CASE WHEN moderation_status = 'pending_review' THEN 0 ELSE 1 END")
+            ->latest()
+            ->take(12)
+            ->get()
+            ->map(fn (Veterinarian $veterinarian): array => [
+                'id' => $veterinarian->id,
+                'title' => $veterinarian->name,
+                'category' => $veterinarian->clinic_name,
+                'listingStatus' => $veterinarian->is_active ? 'active' : 'inactive',
+                'location' => $veterinarian->city,
+                'moderationStatus' => $veterinarian->moderation_status,
+                'moderationNote' => $veterinarian->moderation_note,
+                'imageUrl' => MarketplaceMedia::resolveUrl($veterinarian->image_path),
+                'createdAt' => $veterinarian->created_at?->toISOString(),
+                'author' => $this->formatAuthor($veterinarian->user),
+            ])
             ->values()
             ->all();
 
@@ -159,6 +276,8 @@ class AdminModerationController extends Controller
                 'posts' => Post::query()->count(),
                 'animals' => Animal::query()->count(),
                 'products' => Product::query()->count(),
+                'services' => ServiceListing::query()->count(),
+                'veterinarians' => Veterinarian::query()->count(),
                 'communities' => Community::query()->count(),
                 'pendingCommunityRequests' => CommunityMember::query()
                     ->where('status', 'pending')
@@ -167,6 +286,8 @@ class AdminModerationController extends Controller
             'posts' => $posts,
             'animals' => $animals,
             'products' => $products,
+            'services' => $services,
+            'veterinarians' => $veterinarians,
             'communities' => $communities,
         ];
     }
@@ -282,5 +403,77 @@ class AdminModerationController extends Controller
             'email' => $user?->email,
             'avatar' => MediaStorage::resolveUrl($user?->avatar),
         ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function formatMarketplaceItem(string $type, mixed $item): array
+    {
+        $base = [
+            'id' => $item->id,
+            'createdAt' => $item->created_at?->toISOString(),
+            'author' => $this->formatAuthor($item->user),
+        ];
+
+        return match ($type) {
+            'animals' => [
+                ...$base,
+                'title' => $item->name,
+                'category' => $item->category,
+                'listingStatus' => $item->listing_status,
+                'location' => $item->location,
+                'price' => $item->price !== null ? (float) $item->price : null,
+                'isForAdoption' => (bool) $item->is_for_adoption,
+                'moderationStatus' => $item->legal_status,
+                'moderationNote' => $item->moderation_note,
+                'imageUrl' => MarketplaceMedia::resolveUrl($item->photo_url),
+            ],
+            'products' => [
+                ...$base,
+                'title' => $item->name,
+                'category' => $item->category,
+                'listingStatus' => $item->listing_status,
+                'conditionStatus' => $item->condition_status,
+                'location' => $item->location,
+                'price' => (float) $item->price,
+                'stock' => $item->stock,
+                'moderationStatus' => $item->moderation_status,
+                'moderationNote' => $item->moderation_note,
+                'imageUrl' => MarketplaceMedia::resolveUrl($item->image_url),
+            ],
+            'services' => [
+                ...$base,
+                'title' => $item->title,
+                'category' => $item->type,
+                'listingStatus' => $item->status,
+                'location' => $item->city,
+                'price' => $item->price !== null ? (float) $item->price : null,
+                'moderationStatus' => $item->moderation_status,
+                'moderationNote' => $item->moderation_note,
+                'imageUrl' => $this->serviceImageUrl($item),
+            ],
+            'veterinarians' => [
+                ...$base,
+                'title' => $item->name,
+                'category' => $item->clinic_name,
+                'listingStatus' => $item->is_active ? 'active' : 'inactive',
+                'location' => $item->city,
+                'price' => null,
+                'moderationStatus' => $item->moderation_status,
+                'moderationNote' => $item->moderation_note,
+                'imageUrl' => MarketplaceMedia::resolveUrl($item->image_path),
+            ],
+        };
+    }
+
+    private function serviceImageUrl(ServiceListing $service): ?string
+    {
+        $firstMedia = collect($service->media ?? [])->first();
+        $path = is_array($firstMedia)
+            ? ($firstMedia['url'] ?? $firstMedia['path'] ?? null)
+            : $firstMedia;
+
+        return is_string($path) ? MediaStorage::resolveUrl($path) : null;
     }
 }

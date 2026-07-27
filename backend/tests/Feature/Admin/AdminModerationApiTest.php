@@ -154,4 +154,43 @@ class AdminModerationApiTest extends TestCase
         Storage::disk('public')->assertMissing('marketplace/animals/admin-delete.png');
         Storage::disk('public')->assertMissing('marketplace/products/admin-delete.png');
     }
+
+    public function test_marketplace_moderation_is_paginated_bounded_and_filterable(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $author = User::factory()->create();
+
+        Product::factory()->count(25)->create([
+            'user_id' => $author->id,
+            'moderation_status' => Product::MODERATION_STATUS_PENDING_REVIEW,
+        ]);
+        Product::factory()->create([
+            'user_id' => $author->id,
+            'name' => 'Produit approuve distinctif',
+            'moderation_status' => Product::MODERATION_STATUS_ACTIVE,
+        ]);
+
+        Sanctum::actingAs($admin, ['*']);
+
+        $this->getJson('/api/admin/moderation/products?per_page=10&page=2')
+            ->assertOk()
+            ->assertJsonCount(10, 'data')
+            ->assertJsonPath('meta.currentPage', 2)
+            ->assertJsonPath('meta.perPage', 10)
+            ->assertJsonPath('meta.total', 26)
+            ->assertJsonPath('meta.lastPage', 3);
+
+        $this->getJson('/api/admin/moderation/products?status=active&q=distinctif')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.title', 'Produit approuve distinctif');
+
+        $this->getJson('/api/admin/moderation/products?per_page=51')
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('per_page');
+
+        $this->getJson('/api/admin/moderation/products?status=unknown')
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('status');
+    }
 }

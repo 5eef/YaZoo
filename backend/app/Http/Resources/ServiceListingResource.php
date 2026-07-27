@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\ServiceListing;
+use App\Services\MarketplacePublishingResolver;
 use App\Support\MediaStorage;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -14,6 +15,10 @@ class ServiceListingResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $professionalBadge = $this->user
+            ? app(MarketplacePublishingResolver::class)->badgeFor($this->user, 'services', $this->type)
+            : null;
+
         return [
             'id' => $this->id,
             'type' => $this->type,
@@ -51,7 +56,8 @@ class ServiceListingResource extends JsonResource
                 'city' => $this->user?->city,
                 'country' => $this->user?->country,
                 'isPhoneVerified' => $this->user?->hasVerifiedPhone() ?? false,
-                'isProfessionalVerified' => $this->user?->hasApprovedProfessionalVerification() ?? false,
+                'isProfessionalVerified' => $professionalBadge !== null,
+                'professionalBadge' => $professionalBadge,
                 'professionalVerificationStatus' => $this->user?->professionalVerificationStatus(),
             ],
             'isOwner' => $request->user()?->is($this->user) ?? false,

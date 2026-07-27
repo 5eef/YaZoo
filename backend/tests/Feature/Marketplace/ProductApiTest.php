@@ -24,7 +24,7 @@ class ProductApiTest extends TestCase
 
     public function test_authenticated_user_can_list_products_with_filters(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->approvedProfessional('seller')->create();
 
         Product::factory()->create([
             'name' => 'Croquettes premium',
@@ -56,7 +56,7 @@ class ProductApiTest extends TestCase
 
     public function test_authenticated_user_can_create_update_and_delete_a_product_listing(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->approvedProfessional('seller')->create();
         Sanctum::actingAs($user, ['*']);
 
         $createResponse = $this->postJson('/api/products', [
@@ -114,7 +114,7 @@ class ProductApiTest extends TestCase
 
     public function test_user_cannot_update_or_delete_another_users_product(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->approvedProfessional('seller')->create();
         $other = User::factory()->create();
         $product = Product::factory()->create(['user_id' => $other->id]);
 
@@ -140,7 +140,7 @@ class ProductApiTest extends TestCase
     public function test_authenticated_user_can_upload_real_images_for_a_product_listing(): void
     {
         Storage::fake('public');
-        $user = User::factory()->create();
+        $user = User::factory()->approvedProfessional('seller')->create();
         Sanctum::actingAs($user, ['*']);
 
         $response = $this
@@ -181,7 +181,7 @@ class ProductApiTest extends TestCase
     public function test_authenticated_user_can_update_a_product_listing_with_real_uploaded_images(): void
     {
         Storage::fake('public');
-        $user = User::factory()->create();
+        $user = User::factory()->approvedProfessional('seller')->create();
         $product = Product::factory()->create([
             'user_id' => $user->id,
             'image_url' => null,

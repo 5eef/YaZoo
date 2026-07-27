@@ -55,6 +55,7 @@ class ProfessionalVerificationApiTest extends TestCase
             'onssa_authorization_number' => 'ONSSA-A-123',
             'professional_license_number' => 'LIC-456',
             'document_type' => 'veterinarian_license',
+            'document_expires_at' => now()->addYear()->toDateString(),
             'document' => UploadedFile::fake()->create('license.pdf', 120, 'application/pdf'),
         ])
             ->assertCreated()
@@ -83,7 +84,7 @@ class ProfessionalVerificationApiTest extends TestCase
         Sanctum::actingAs($user, ['*']);
 
         $this->postJson('/api/professional-verifications', [
-            'business_type' => 'veterinarian',
+            'business_type' => 'seller',
             'document_type' => 'license',
             'document_path' => 'professional-verifications/evil.pdf',
         ])
@@ -93,9 +94,128 @@ class ProfessionalVerificationApiTest extends TestCase
 
         $this->assertDatabaseHas('professional_verifications', [
             'user_id' => $user->id,
-            'business_type' => 'veterinarian',
+            'business_type' => 'seller',
             'document_path' => null,
         ]);
+    }
+
+    public function test_only_one_pending_request_per_user_and_business_type_is_allowed_and_new_upload_is_cleaned(): void
+    {
+        Storage::fake('private');
+        $user = User::factory()->create();
+        $existing = ProfessionalVerification::query()->create([
+            'user_id' => $user->id,
+            'business_type' => 'seller',
+            'status' => 'pending',
+            'pending_key' => $user->id.':seller',
+        ]);
+        Sanctum::actingAs($user, ['*']);
+
+        $this->postJson('/api/professional-verifications', [
+            'business_type' => 'seller',
+            'legal_name' => 'Nouvelle demande',
+            'document' => UploadedFile::fake()->create('preuve.pdf', 64, 'application/pdf'),
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('business_type');
+
+        $this->assertSame(1, ProfessionalVerification::query()
+            ->where('user_id', $user->id)
+            ->where('business_type', 'seller')
+            ->where('status', 'pending')
+            ->count());
+        $this->assertDatabaseHas('professional_verifications', ['id' => $existing->id]);
+        $this->assertSame([], Storage::disk('private')->allFiles());
+    }
+
+    public function test_successful_replacement_removes_the_previous_private_document(): void
+    {
+        Storage::fake('private');
+        $user = User::factory()->create();
+        Storage::disk('private')->put('professional-verifications/old.pdf', 'old');
+        $previous = ProfessionalVerification::query()->create([
+            'user_id' => $user->id,
+            'business_type' => 'seller',
+            'status' => 'rejected',
+            'document_path' => 'professional-verifications/old.pdf',
+        ]);
+        Sanctum::actingAs($user, ['*']);
+
+        $this->postJson('/api/professional-verifications', [
+            'business_type' => 'seller',
+            'legal_name' => 'Nouvelle demande',
+            'document' => UploadedFile::fake()->create('preuve.pdf', 64, 'application/pdf'),
+        ])->assertCreated();
+
+        Storage::disk('private')->assertMissing('professional-verifications/old.pdf');
+        $this->assertNull($previous->fresh()->document_path);
+        $this->assertCount(1, Storage::disk('private')->allFiles());
+    }
+
+    public function test_professional_verification_submission_has_a_dedicated_rate_limit(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user, ['*']);
+
+        $this->postJson('/api/professional-verifications', [
+            'business_type' => 'seller',
+        ])->assertCreated();
+
+        foreach (range(1, 4) as $_) {
+            $this->postJson('/api/professional-verifications', [
+                'business_type' => 'seller',
+            ])->assertUnprocessable();
+        }
+
+        $this->postJson('/api/professional-verifications', [
+            'business_type' => 'seller',
+        ])->assertTooManyRequests();
+    }
+
+    public function test_veterinarian_request_requires_complete_future_license_information(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user, ['*']);
+
+        $this->postJson('/api/professional-verifications', [
+            'business_type' => 'veterinarian',
+            'document_type' => 'veterinarian_license',
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'professional_license_number',
+                'document',
+                'document_expires_at',
+            ]);
+
+        $this->post('/api/professional-verifications', [
+            'business_type' => 'veterinarian',
+            'professional_license_number' => 'VET-100',
+            'document_type' => 'license',
+            'document_expires_at' => now()->addYear()->toDateString(),
+            'document' => UploadedFile::fake()->create('license.pdf', 120, 'application/pdf'),
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['document_type']);
+    }
+
+    public function test_admin_cannot_approve_incomplete_veterinarian_credentials(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $verification = ProfessionalVerification::query()->create([
+            'user_id' => User::factory()->create()->id,
+            'business_type' => 'veterinarian',
+            'document_type' => 'veterinarian_license',
+            'status' => 'pending',
+        ]);
+
+        Sanctum::actingAs($admin, ['*']);
+
+        $this->patchJson("/api/admin/professional-verifications/{$verification->id}/status", [
+            'status' => 'approved',
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['status']);
     }
 
     public function test_admin_can_review_professional_verification_requests(): void
@@ -259,7 +379,7 @@ class ProfessionalVerificationApiTest extends TestCase
         Storage::disk('private')->assertExists($verification->document_path);
 
         $this->artisan('yazoo:purge-professional-documents')
-            ->expectsOutputToContain('scanned=1 deleted=1 disk=private')
+            ->expectsOutputToContain('scanned=1 deleted=1 failed=0 disk=private')
             ->assertExitCode(0);
 
         Storage::disk('private')->assertMissing('professional-verifications/test/private.pdf');
@@ -267,6 +387,25 @@ class ProfessionalVerificationApiTest extends TestCase
             'id' => $verification->id,
             'document_path' => null,
             'document_size' => null,
+        ]);
+    }
+
+    public function test_expired_private_document_purge_dry_run_does_not_delete_or_clear_metadata(): void
+    {
+        Storage::fake('private');
+        config(['professional_verifications.retention_days' => 30]);
+
+        $verification = $this->verificationWithPrivateDocument(User::factory()->create());
+        $verification->forceFill(['document_expires_at' => now()->subDays(31)])->save();
+
+        $this->artisan('yazoo:purge-professional-documents', ['--dry-run' => true])
+            ->expectsOutputToContain('dry-run: scanned=1 deleted=0 failed=0 disk=private')
+            ->assertExitCode(0);
+
+        Storage::disk('private')->assertExists($verification->document_path);
+        $this->assertDatabaseHas('professional_verifications', [
+            'id' => $verification->id,
+            'document_path' => $verification->document_path,
         ]);
     }
 

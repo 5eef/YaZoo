@@ -17,7 +17,6 @@ class CreateAdmin extends Command
     protected $signature = 'yazoo:create-admin
         {--name= : Name for a new admin}
         {--email= : Admin email address}
-        {--password= : Password for a new admin}
         {--promote : Promote an existing user instead of creating one}';
 
     /**
@@ -92,34 +91,19 @@ class CreateAdmin extends Command
     protected function createAdmin(string $email): int
     {
         $name = trim((string) ($this->option('name') ?: $this->ask('Nom admin')));
-        $password = (string) ($this->option('password') ?: $this->secret('Mot de passe admin'));
+        $password = (string) $this->secret('Mot de passe admin');
+        $confirmation = (string) $this->secret('Confirmer le mot de passe admin');
 
         $validator = Validator::make([
             'name' => $name,
             'email' => $email,
             'password' => $password,
+            'password_confirmation' => $confirmation,
         ], [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email:rfc', 'unique:users,email'],
             'password' => ['required', 'confirmed', Password::min(8)->mixedCase()->numbers()],
         ]);
-
-        if ($this->option('password')) {
-            $validator->setData([
-                'name' => $name,
-                'email' => $email,
-                'password' => $password,
-                'password_confirmation' => $password,
-            ]);
-        } else {
-            $confirmation = (string) $this->secret('Confirmer le mot de passe admin');
-            $validator->setData([
-                'name' => $name,
-                'email' => $email,
-                'password' => $password,
-                'password_confirmation' => $confirmation,
-            ]);
-        }
 
         if ($validator->fails()) {
             $this->error($validator->errors()->first() ?? 'Donnees admin invalides.');

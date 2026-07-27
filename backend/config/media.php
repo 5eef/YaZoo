@@ -3,6 +3,11 @@
 return [
     'driver' => env('MEDIA_STORAGE_DRIVER', 'filesystem'),
     'filesystem_disk' => env('MEDIA_FILESYSTEM_DISK', 'public'),
+    'backup' => [
+        'enabled' => env('MEDIA_BACKUP_ENABLED', false),
+        'schedule' => env('MEDIA_BACKUP_SCHEDULE', '03:30'),
+        'keep_days' => env('MEDIA_BACKUP_KEEP_DAYS', 7),
+    ],
     'azure_blob' => [
         'enabled' => env('MEDIA_AZURE_BLOB_ENABLED', false),
         'account' => env('MEDIA_AZURE_BLOB_ACCOUNT'),

@@ -67,6 +67,8 @@ class AuthApiTest extends TestCase
             'business_type' => 'seller',
             'status' => 'approved',
             'document_path' => 'professional-verifications/private.pdf',
+            'reviewed_by' => $user->id,
+            'reviewed_at' => now(),
         ]);
 
         $loginResponse = $this->postJson('/api/auth/login', [
@@ -254,6 +256,7 @@ class AuthApiTest extends TestCase
 
     public function test_request_otp_never_exposes_debug_code(): void
     {
+        config(['services.sms.driver' => 'log']);
         User::factory()->create([
             'phone' => '+212600000010',
         ]);
@@ -268,6 +271,19 @@ class AuthApiTest extends TestCase
             ->assertJsonStructure(['message', 'expires_at']);
 
         $this->assertArrayNotHasKey('otp_debug_code', $response->json());
+    }
+
+    public function test_request_otp_fails_when_sms_is_disabled(): void
+    {
+        config(['services.sms.driver' => 'disabled']);
+        User::factory()->create(['phone' => '+212600000011']);
+
+        $this->postJson('/api/auth/otp/request', [
+            'phone' => '+212600000011',
+            'intent' => 'login',
+        ])
+            ->assertServiceUnavailable()
+            ->assertJsonMissing(['expires_at']);
     }
 
     public function test_login_rejects_invalid_credentials(): void
@@ -559,8 +575,9 @@ class AuthApiTest extends TestCase
         $this->artisan('yazoo:create-admin', [
             '--name' => 'Commission Admin',
             '--email' => 'commission-admin@example.com',
-            '--password' => 'Password123',
         ])
+            ->expectsQuestion('Mot de passe admin', 'Password123')
+            ->expectsQuestion('Confirmer le mot de passe admin', 'Password123')
             ->expectsConfirmation('Creer un administrateur pour commission-admin@example.com ?', 'yes')
             ->assertExitCode(0);
 
@@ -588,6 +605,35 @@ class AuthApiTest extends TestCase
             'email' => 'promote-me@example.com',
             'is_admin' => true,
         ]);
+    }
+
+    public function test_create_admin_command_rejects_a_weak_password(): void
+    {
+        $this->artisan('yazoo:create-admin', [
+            '--name' => 'Weak Admin',
+            '--email' => 'weak-admin@example.com',
+        ])
+            ->expectsQuestion('Mot de passe admin', 'password')
+            ->expectsQuestion('Confirmer le mot de passe admin', 'password')
+            ->assertExitCode(1);
+
+        $this->assertDatabaseMissing('users', [
+            'email' => 'weak-admin@example.com',
+        ]);
+    }
+
+    public function test_create_admin_command_is_idempotent_for_an_existing_admin(): void
+    {
+        User::factory()->admin()->create(['email' => 'existing-admin@example.com']);
+
+        $this->artisan('yazoo:create-admin', [
+            '--email' => 'existing-admin@example.com',
+            '--promote' => true,
+        ])
+            ->expectsOutput("L'utilisateur existing-admin@example.com est deja admin.")
+            ->assertExitCode(0);
+
+        $this->assertSame(1, User::query()->where('email', 'existing-admin@example.com')->count());
     }
 
     private function plainTokenFromCookie(TestResponse $response): string

@@ -4,15 +4,20 @@ namespace App\Policies;
 
 use App\Models\Animal;
 use App\Models\User;
+use App\Services\MarketplacePublishingResolver;
 
 class AnimalPolicy
 {
+    public function __construct(
+        private readonly MarketplacePublishingResolver $publishing,
+    ) {}
+
     /**
      * Determine whether the user can create a listing.
      */
     public function create(User $user): bool
     {
-        return $user->exists;
+        return $this->publishing->canPublishTo($user, 'animals');
     }
 
     /**
@@ -20,7 +25,11 @@ class AnimalPolicy
      */
     public function update(User $user, Animal $animal): bool
     {
-        return $user->is($animal->user);
+        return (bool) $user->is_admin
+            || (
+                $user->is($animal->user)
+                && $this->publishing->canPublishTo($user, 'animals')
+            );
     }
 
     /**
@@ -28,7 +37,7 @@ class AnimalPolicy
      */
     public function delete(User $user, Animal $animal): bool
     {
-        return $user->is($animal->user);
+        return $user->is($animal->user) || (bool) $user->is_admin;
     }
 
     /**

@@ -30,7 +30,7 @@ class ProductMarketplaceService
         return Product::query()
             ->with([
                 'user:id,name,email,phone,phone_verified_at,avatar,city,country',
-                'user.latestProfessionalVerification',
+                'user.latestProfessionalVerification.reviewer:id,is_admin',
             ])
             ->withCount([
                 'reviews as reviews_count' => fn ($query) => $query->publiclyVisible(),
@@ -41,6 +41,17 @@ class ProductMarketplaceService
                 $query->withExists([
                     'favorites as is_favorited' => fn ($favoriteQuery) => $favoriteQuery->where('user_id', $user->id),
                 ]);
+            })
+            ->where(function ($query) use ($request): void {
+                $query->where('moderation_status', Product::MODERATION_STATUS_ACTIVE);
+
+                if ($user = $request->user()) {
+                    $query->orWhere(function ($ownerQuery) use ($user): void {
+                        $ownerQuery
+                            ->where('user_id', $user->id)
+                            ->where('moderation_status', Product::MODERATION_STATUS_PENDING_REVIEW);
+                    });
+                }
             })
             ->when($request->filled('q'), function ($query) use ($request): void {
                 $this->search($query, ['name', 'description'], (string) $request->string('q')->trim());
@@ -74,6 +85,10 @@ class ProductMarketplaceService
             'image',
             'marketplace/products',
         );
+        $payload['moderation_status'] = Product::MODERATION_STATUS_PENDING_REVIEW;
+        $payload['moderation_note'] = null;
+        $payload['moderated_by'] = null;
+        $payload['moderated_at'] = null;
 
         $product = $user->products()->create($payload);
 
@@ -92,6 +107,13 @@ class ProductMarketplaceService
             'image',
             'marketplace/products',
         );
+
+        if (! request()->user()?->is_admin) {
+            $payload['moderation_status'] = Product::MODERATION_STATUS_PENDING_REVIEW;
+            $payload['moderation_note'] = null;
+            $payload['moderated_by'] = null;
+            $payload['moderated_at'] = null;
+        }
 
         $product->update($payload);
 
@@ -113,7 +135,7 @@ class ProductMarketplaceService
     {
         $product->load([
             'user:id,name,email,phone,phone_verified_at,avatar,city,country',
-            'user.latestProfessionalVerification',
+            'user.latestProfessionalVerification.reviewer:id,is_admin',
         ])
             ->loadCount([
                 'reviews as reviews_count' => fn ($query) => $query->publiclyVisible(),

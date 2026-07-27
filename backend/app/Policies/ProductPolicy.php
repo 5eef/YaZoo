@@ -4,15 +4,20 @@ namespace App\Policies;
 
 use App\Models\Product;
 use App\Models\User;
+use App\Services\MarketplacePublishingResolver;
 
 class ProductPolicy
 {
+    public function __construct(
+        private readonly MarketplacePublishingResolver $publishing,
+    ) {}
+
     /**
      * Determine whether the user can create a product listing.
      */
     public function create(User $user): bool
     {
-        return $user->exists;
+        return $this->publishing->canPublishTo($user, 'products');
     }
 
     /**
@@ -20,7 +25,11 @@ class ProductPolicy
      */
     public function update(User $user, Product $product): bool
     {
-        return $user->is($product->user);
+        return (bool) $user->is_admin
+            || (
+                $user->is($product->user)
+                && $this->publishing->canPublishTo($user, 'products')
+            );
     }
 
     /**
@@ -28,7 +37,7 @@ class ProductPolicy
      */
     public function delete(User $user, Product $product): bool
     {
-        return $user->is($product->user);
+        return $user->is($product->user) || (bool) $user->is_admin;
     }
 
     /**

@@ -40,6 +40,7 @@ class ProductFactory extends Factory
             'stock' => fake()->numberBetween(0, 25),
             'listing_status' => fake()->randomElement(Product::LISTING_STATUSES),
             'condition_status' => fake()->randomElement(['new', 'used']),
+            'moderation_status' => Product::MODERATION_STATUS_ACTIVE,
         ];
     }
 }

@@ -11,6 +11,10 @@ return [
         'otp_sms' => 'Votre code YaZoo est : :code. Il expire dans :minutes minutes.',
         'otp_sent_login' => 'Un code de connexion a ete envoye par SMS.',
         'otp_sent_register' => 'Un code d inscription a ete envoye par SMS.',
+        'otp_sent' => 'Si ce numero est admissible, un code a ete envoye par SMS.',
+        'otp_cooldown' => 'Veuillez patienter avant de demander un nouveau code.',
+        'otp_locked' => 'Trop de tentatives. Reessayez plus tard.',
+        'sms_unavailable' => 'La connexion par SMS est temporairement indisponible. Utilisez votre e-mail et mot de passe ou Google.',
         'otp_missing' => 'Aucun code OTP valide n est disponible. Demandez un nouveau code.',
         'otp_invalid' => 'Le code OTP est invalide ou expire.',
         'otp_required_login' => 'Le code OTP est obligatoire pour se connecter avec le telephone.',
@@ -63,6 +67,7 @@ return [
     ],
     'contact' => [
         'sent' => 'Message envoye avec succes.',
+        'unavailable' => 'Le service de contact est temporairement indisponible.',
     ],
     'monitoring' => [
         'frontend_report_saved' => 'Rapport frontend enregistre.',
@@ -86,8 +91,10 @@ return [
         'content_moderation_updated' => 'Statut de moderation du contenu mis a jour.',
     ],
     'professional_verifications' => [
+        'pending_exists' => 'Une demande de ce type est deja en attente.',
         'submitted' => 'Demande de verification professionnelle envoyee. Elle sera traitee manuellement.',
         'status_updated' => 'Statut de verification professionnelle mis a jour.',
+        'veterinarian_credentials_required' => 'Une licence veterinaire, son numero, son fichier et une date d expiration future sont obligatoires avant approbation.',
         'business_types' => [
             'seller' => 'Vendeur',
             'trainer' => 'Dresseur',

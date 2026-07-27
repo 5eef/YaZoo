@@ -4,15 +4,36 @@ namespace App\Support\Sms;
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
 
 class SmsSender
 {
+    public function isAvailable(): bool
+    {
+        return match ((string) config('services.sms.driver', 'disabled')) {
+            'twilio' => filled(config('services.sms.twilio.sid'))
+                && filled(config('services.sms.twilio.token'))
+                && filled(config('services.sms.twilio.from')),
+            'orange' => filled(config('services.sms.orange.base_url'))
+                && filled(config('services.sms.orange.token')),
+            'log' => ! app()->isProduction(),
+            default => false,
+        };
+    }
+
     /**
      * Send an SMS using the configured provider.
      */
     public function send(string $phone, string $message): void
     {
-        $driver = (string) config('services.sms.driver', 'log');
+        $driver = (string) config('services.sms.driver', 'disabled');
+
+        if (! $this->isAvailable()) {
+            throw new ServiceUnavailableHttpException(
+                300,
+                __('messages.auth.sms_unavailable'),
+            );
+        }
 
         if ($driver === 'twilio') {
             $this->sendViaTwilio($phone, $message);
@@ -26,14 +47,22 @@ class SmsSender
             return;
         }
 
-        $this->sendViaLog($phone, $message);
+        if ($driver === 'log' && ! app()->isProduction()) {
+            $this->sendViaLog($phone);
+
+            return;
+        }
+
+        throw new ServiceUnavailableHttpException(
+            300,
+            __('messages.auth.sms_unavailable'),
+        );
     }
 
-    protected function sendViaLog(string $phone, string $message): void
+    protected function sendViaLog(string $phone): void
     {
-        Log::info('YaZoo OTP SMS (log driver)', [
-            'phone' => $phone,
-            'message' => $message,
+        Log::info('YaZoo OTP SMS skipped outside production', [
+            'phone' => $this->maskPhone($phone),
         ]);
     }
 
@@ -44,9 +73,7 @@ class SmsSender
         $from = (string) config('services.sms.twilio.from', '');
 
         if ($sid === '' || $token === '' || $from === '') {
-            $this->sendViaLog($phone, $message);
-
-            return;
+            throw new ServiceUnavailableHttpException(300, __('messages.auth.sms_unavailable'));
         }
 
         Http::asForm()
@@ -66,9 +93,7 @@ class SmsSender
         $sender = (string) config('services.sms.orange.sender', 'YaZoo');
 
         if ($baseUrl === '' || $token === '') {
-            $this->sendViaLog($phone, $message);
-
-            return;
+            throw new ServiceUnavailableHttpException(300, __('messages.auth.sms_unavailable'));
         }
 
         Http::withToken($token)
@@ -78,5 +103,18 @@ class SmsSender
                 'message' => $message,
             ])
             ->throw();
+    }
+
+    protected function maskPhone(string $phone): string
+    {
+        $length = strlen($phone);
+
+        if ($length <= 6) {
+            return str_repeat('*', $length);
+        }
+
+        return substr($phone, 0, 4)
+            .str_repeat('*', max(0, $length - 6))
+            .substr($phone, -2);
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Resources\Marketplace;
 
 use App\Models\Animal;
+use App\Services\MarketplacePublishingResolver;
 use App\Support\MarketplaceMedia;
 use App\Support\MediaStorage;
 use Illuminate\Http\Request;
@@ -20,6 +21,10 @@ class AnimalResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $professionalBadge = $this->user
+            ? app(MarketplacePublishingResolver::class)->badgeFor($this->user, 'animals')
+            : null;
+
         return [
             'id' => $this->id,
             'name' => $this->name,
@@ -66,7 +71,8 @@ class AnimalResource extends JsonResource
                 'avatar' => MediaStorage::resolveUrl($this->user?->avatar),
                 'city' => $this->user?->city,
                 'country' => $this->user?->country,
-                'isProfessionalVerified' => $this->user?->hasApprovedProfessionalVerification() ?? false,
+                'isProfessionalVerified' => $professionalBadge !== null,
+                'professionalBadge' => $professionalBadge,
                 'professionalVerificationStatus' => $this->user?->professionalVerificationStatus(),
             ],
             'isOwner' => $request->user()?->is($this->user) ?? false,

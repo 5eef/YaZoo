@@ -32,6 +32,7 @@ class VeterinarianFactory extends Factory
             'longitude' => -7.5898434,
             'location_url' => 'https://maps.google.com/?q=33.5731104,-7.5898434',
             'is_active' => true,
+            'moderation_status' => Veterinarian::MODERATION_STATUS_ACTIVE,
         ];
     }
 }

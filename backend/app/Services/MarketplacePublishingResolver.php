@@ -19,6 +19,15 @@ class MarketplacePublishingResolver
         'service_provider' => ['destination' => 'services', 'serviceType' => null],
     ];
 
+    private const PROFESSIONAL_BADGES = [
+        'seller' => 'verified_seller',
+        'pet_shop' => 'verified_pet_shop',
+        'breeder' => 'verified_breeder',
+        'veterinarian' => 'verified_veterinarian',
+        'trainer' => 'verified_trainer',
+        'service_provider' => 'verified_service_provider',
+    ];
+
     /**
      * @return array{
      *     canPublish: bool,
@@ -30,6 +39,10 @@ class MarketplacePublishingResolver
      */
     public function resolve(User $user): array
     {
+        if ($user->isSuspended() || $user->isBanned()) {
+            return $this->emptyCapability();
+        }
+
         $user->loadMissing('latestProfessionalVerification');
         $verification = $user->latestProfessionalVerification;
 
@@ -44,7 +57,15 @@ class MarketplacePublishingResolver
         ) ? $verification->business_type : null;
         $verificationStatus = $verification->effectiveStatus();
 
-        if ($businessType === null || $verificationStatus !== 'approved') {
+        if (
+            $businessType === null
+            || $verificationStatus !== 'approved'
+            || ! $verification->wasReviewedByAdmin()
+            || (
+                $businessType === 'veterinarian'
+                && ! $verification->hasValidVeterinarianCredentials()
+            )
+        ) {
             return $this->emptyCapability();
         }
 
@@ -57,6 +78,60 @@ class MarketplacePublishingResolver
             'destination' => $target['destination'] ?? null,
             'serviceType' => $target['serviceType'] ?? null,
         ];
+    }
+
+    public function canPublishTo(User $user, string $destination, ?string $serviceType = null): bool
+    {
+        if ($user->isSuspended() || $user->isBanned()) {
+            return false;
+        }
+
+        if ((bool) $user->is_admin) {
+            return true;
+        }
+
+        $capability = $this->resolve($user);
+
+        if (
+            $capability['canPublish'] !== true
+            || $capability['destination'] !== $destination
+        ) {
+            return false;
+        }
+
+        return $capability['serviceType'] === null
+            || $capability['serviceType'] === $serviceType;
+    }
+
+    public function badgeFor(User $user, string $destination, ?string $serviceType = null): ?string
+    {
+        $capability = $this->resolve($user);
+
+        if (
+            $capability['canPublish'] !== true
+            || $capability['destination'] !== $destination
+            || (
+                $capability['serviceType'] !== null
+                && $capability['serviceType'] !== $serviceType
+            )
+        ) {
+            return null;
+        }
+
+        $verification = $user->latestProfessionalVerification;
+
+        if (
+            ! $verification
+            || ! $verification->wasReviewedByAdmin()
+            || (
+                $capability['businessType'] === 'veterinarian'
+                && ! $verification->hasValidVeterinarianCredentials()
+            )
+        ) {
+            return null;
+        }
+
+        return self::PROFESSIONAL_BADGES[$capability['businessType']] ?? null;
     }
 
     /**

@@ -133,6 +133,7 @@ class SearchController extends Controller
     protected function animalResults(string $query, int $limit): array
     {
         return Animal::query()
+            ->where('legal_status', 'approved')
             ->where(fn (Builder $builder) => $this->whereLike($builder, ['name', 'category', 'type', 'breed', 'location', 'description'], $query))
             ->latest()
             ->limit($limit)
@@ -157,6 +158,7 @@ class SearchController extends Controller
     protected function productResults(string $query, int $limit): array
     {
         return Product::query()
+            ->where('moderation_status', Product::MODERATION_STATUS_ACTIVE)
             ->where(fn (Builder $builder) => $this->whereLike($builder, ['name', 'category', 'description', 'location'], $query))
             ->latest()
             ->limit($limit)
@@ -221,6 +223,7 @@ class SearchController extends Controller
     {
         return ServiceListing::query()
             ->where('status', 'active')
+            ->where('moderation_status', ServiceListing::MODERATION_STATUS_ACTIVE)
             ->where(fn (Builder $builder) => $this->whereLike($builder, ['title', 'description', 'city', 'address', 'type'], $query))
             ->latest()
             ->limit($limit)
@@ -245,6 +248,7 @@ class SearchController extends Controller
     {
         return Veterinarian::query()
             ->where('is_active', true)
+            ->where('moderation_status', Veterinarian::MODERATION_STATUS_ACTIVE)
             ->where(fn (Builder $builder) => $this->whereLike($builder, ['name', 'clinic_name', 'description', 'city', 'address'], $query))
             ->latest()
             ->limit($limit)

@@ -172,10 +172,14 @@ class PaymentService
     public function markPaid(Payment $payment, array $context = []): Payment
     {
         return DB::transaction(function () use ($payment, $context): Payment {
+            $lockedReservation = Reservation::query()
+                ->lockForUpdate()
+                ->findOrFail($payment->reservation_id);
             $lockedPayment = Payment::query()
                 ->lockForUpdate()
-                ->with('reservation')
                 ->findOrFail($payment->id);
+
+            $this->assertReservationCanBecomePaid($lockedReservation);
 
             if ($lockedPayment->status !== Payment::STATUS_PAID) {
                 $lockedPayment->forceFill([
@@ -187,8 +191,8 @@ class PaymentService
                 ])->save();
             }
 
-            if ($lockedPayment->reservation && $lockedPayment->reservation->payment_status !== 'paid') {
-                $lockedPayment->reservation->forceFill([
+            if ($lockedReservation->payment_status !== 'paid') {
+                $lockedReservation->forceFill([
                     'payment_status' => 'paid',
                 ])->save();
             }
@@ -216,11 +220,14 @@ class PaymentService
     public function confirmManualPayment(Payment $payment, User $actor, array $context = []): Payment
     {
         return DB::transaction(function () use ($payment, $actor, $context): Payment {
+            $lockedReservation = Reservation::query()
+                ->lockForUpdate()
+                ->findOrFail($payment->reservation_id);
             $lockedPayment = Payment::query()
                 ->lockForUpdate()
-                ->with('reservation')
                 ->findOrFail($payment->id);
 
+            $this->assertReservationCanBecomePaid($lockedReservation);
             abort_unless($this->isManualProvider($lockedPayment->provider), 422, 'Ce paiement ne supporte pas la confirmation manuelle.');
             $this->authorizeManualConfirmation($lockedPayment, $actor, $context);
 
@@ -247,8 +254,8 @@ class PaymentService
                 ]),
             ])->save();
 
-            if ($lockedPayment->reservation && $lockedPayment->reservation->payment_status !== 'paid') {
-                $lockedPayment->reservation->forceFill([
+            if ($lockedReservation->payment_status !== 'paid') {
+                $lockedReservation->forceFill([
                     'payment_status' => 'paid',
                 ])->save();
             }
@@ -270,6 +277,15 @@ class PaymentService
 
             return $lockedPayment->fresh(['reservation', 'buyer', 'seller', 'transactions']);
         });
+    }
+
+    private function assertReservationCanBecomePaid(Reservation $reservation): void
+    {
+        if (in_array($reservation->reservation_status, ['cancelled', 'rejected'], true)) {
+            throw ValidationException::withMessages([
+                'reservation' => ['Une reservation annulee ou refusee ne peut pas devenir payee.'],
+            ]);
+        }
     }
 
     /**

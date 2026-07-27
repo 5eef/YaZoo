@@ -6,16 +6,18 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Privacy\StoreDataDeletionRequestRequest;
 use App\Http\Resources\DataDeletionRequestResource;
 use App\Models\DataDeletionRequest;
+use App\Services\Admin\ModerationLogger;
+use App\Services\Privacy\AccountDeletionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Validation\Rule;
-use App\Services\Admin\ModerationLogger;
 
 class DataDeletionRequestController extends Controller
 {
     public function __construct(
         private readonly ModerationLogger $logger,
+        private readonly AccountDeletionService $accountDeletion,
     ) {}
 
     public function store(StoreDataDeletionRequestRequest $request): JsonResponse
@@ -74,16 +76,23 @@ class DataDeletionRequestController extends Controller
         abort_unless((bool) $request->user()?->is_admin, 403);
 
         $validated = $request->validate([
-            'status' => ['required', 'string', Rule::in(DataDeletionRequest::STATUSES)],
+            'status' => ['required', 'string', Rule::in(['pending', 'reviewed', 'rejected', 'completed'])],
             'admin_note' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        $dataDeletionRequest->update([
-            'status' => $validated['status'],
-            'admin_note' => $validated['admin_note'] ?? $dataDeletionRequest->admin_note,
-            'reviewed_by' => $request->user()->id,
-            'reviewed_at' => now(),
-        ]);
+        if ($validated['status'] === 'completed') {
+            $dataDeletionRequest = $this->accountDeletion->process(
+                $dataDeletionRequest,
+                $request->user(),
+            );
+        } else {
+            $dataDeletionRequest->update([
+                'status' => $validated['status'],
+                'admin_note' => $validated['admin_note'] ?? $dataDeletionRequest->admin_note,
+                'reviewed_by' => $request->user()->id,
+                'reviewed_at' => now(),
+            ]);
+        }
 
         $this->logger->log($request, 'update_delete_request', $dataDeletionRequest, $validated['admin_note'] ?? null, [
             'status' => $validated['status'],

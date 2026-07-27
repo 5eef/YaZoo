@@ -31,6 +31,7 @@ class ServiceListingFactory extends Factory
             'whatsapp_enabled' => true,
             'status' => 'active',
             'media' => [],
+            'moderation_status' => ServiceListing::MODERATION_STATUS_ACTIVE,
         ];
     }
 }

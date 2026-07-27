@@ -62,6 +62,8 @@ class FavoriteController extends Controller
         ]);
 
         $favoritable = $this->findFavoritable($validated['type'], (int) $validated['id']);
+        abort_unless($this->canView($favoritable, $request), 404);
+
         $favorite = Favorite::query()->firstOrCreate([
             'user_id' => $request->user()->id,
             'favoritable_type' => $favoritable::class,
@@ -116,7 +118,9 @@ class FavoriteController extends Controller
             'type' => $this->typeForModel($favorite->favoritable_type),
             'favoritableId' => $favorite->favoritable_id,
             'savedAt' => $favorite->created_at?->toISOString(),
-            'item' => $favoritable ? $this->resourceFor($favoritable)?->resolve($request) : null,
+            'item' => $favoritable && $this->canView($favoritable, $request)
+                ? $this->resourceFor($favoritable)?->resolve($request)
+                : null,
         ];
     }
 
@@ -134,5 +138,20 @@ class FavoriteController extends Controller
             $model instanceof Veterinarian => VeterinarianResource::make($model),
             default => null,
         };
+    }
+
+    private function canView(Model $model, Request $request): bool
+    {
+        $isPublic = match (true) {
+            $model instanceof Animal,
+            $model instanceof Product,
+            $model instanceof ServiceListing,
+            $model instanceof Veterinarian => $model->isPubliclyVisible(),
+            default => false,
+        };
+
+        return $isPublic
+            || $request->user()?->is($model->user)
+            || (bool) $request->user()?->is_admin;
     }
 }

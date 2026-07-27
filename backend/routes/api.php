@@ -58,6 +58,12 @@ Route::middleware([ForceJsonResponse::class, SetApiLocale::class, 'throttle:api'
         'dataControllerName' => config('legal.data_controller_name'),
         'dataRetentionDays' => config('legal.data_retention_days'),
         'dataRequestResponseDays' => config('legal.data_request_response_days'),
+        'contactEmail' => config('services.contact.recipient'),
+        'contactPhone' => config('services.contact.public_phone'),
+        'contactWhatsapp' => config('services.contact.public_whatsapp'),
+        'contactAvailable' => filled(config('services.contact.recipient'))
+            && (! app()->isProduction() || ! in_array(config('mail.default'), ['log', 'array'], true)),
+        'smsAvailable' => app(\App\Support\Sms\SmsSender::class)->isAvailable(),
         'notice' => 'Informations administratives a valider juridiquement avant publication officielle.',
     ]))->middleware('throttle:30,1');
 
@@ -83,7 +89,7 @@ Route::middleware([ForceJsonResponse::class, SetApiLocale::class, 'throttle:api'
         ->middleware('throttle:30,1');
 
     Route::prefix('auth')->group(function (): void {
-        Route::post('/otp/request', [AuthController::class, 'requestOtp'])->middleware('throttle:5,1');
+        Route::post('/otp/request', [AuthController::class, 'requestOtp'])->middleware('throttle:otp-request');
         Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:10,1');
         Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
         Route::get('/google', [AuthController::class, 'redirectToGoogle'])
@@ -223,7 +229,8 @@ Route::middleware([ForceJsonResponse::class, SetApiLocale::class, 'throttle:api'
         Route::get('/privacy/consents', [PrivacyConsentController::class, 'index']);
         Route::post('/privacy/delete-request', [DataDeletionRequestController::class, 'store']);
         Route::get('/privacy/delete-request', [DataDeletionRequestController::class, 'show']);
-        Route::post('/professional-verifications', [ProfessionalVerificationController::class, 'store']);
+        Route::post('/professional-verifications', [ProfessionalVerificationController::class, 'store'])
+            ->middleware('throttle:professional-verification-submit');
         Route::get('/professional-verifications/me', [ProfessionalVerificationController::class, 'me']);
         Route::get('/professional-verifications/{professionalVerification}/document', [ProfessionalVerificationController::class, 'downloadDocument'])
             ->middleware('throttle:20,1');
@@ -254,6 +261,7 @@ Route::middleware([ForceJsonResponse::class, SetApiLocale::class, 'throttle:api'
             Route::patch('/animals/{animal}/legal-status', [AdminAnimalReviewController::class, 'updateStatus']);
             Route::get('/orders', [AdminOrdersController::class, 'index']);
             Route::get('/moderation', [AdminModerationController::class, 'index']);
+            Route::get('/moderation/{type}', [AdminModerationController::class, 'marketplaceSection']);
             Route::delete('/posts/{post}', [AdminModerationController::class, 'destroyPost']);
             Route::delete('/animals/{animal}', [AdminModerationController::class, 'destroyAnimal']);
             Route::delete('/products/{product}', [AdminModerationController::class, 'destroyProduct']);

@@ -99,6 +99,40 @@ class MediaStorage
     }
 
     /**
+     * Delete media while surfacing storage failures to transactional workflows.
+     *
+     * @param  array<int, string|null>  $paths
+     */
+    public static function deleteStoredFilesOrFail(array $paths): void
+    {
+        $mongoIds = collect($paths)
+            ->filter(fn ($path) => is_string($path) && self::isMongoReference($path))
+            ->map(fn (string $path) => self::extractMongoFileId($path))
+            ->unique()
+            ->values()
+            ->all();
+
+        foreach ($mongoIds as $mongoId) {
+            self::mongoBucket()->delete(new ObjectId($mongoId));
+        }
+
+        $internalPaths = collect($paths)
+            ->filter(fn ($path) => is_string($path) && $path !== '')
+            ->reject(fn ($path) => Str::startsWith($path, ['http://', 'https://', '/']) || self::isMongoReference($path))
+            ->unique()
+            ->values()
+            ->all();
+
+        $disk = Storage::disk((string) config('media.filesystem_disk', 'public'));
+
+        foreach ($internalPaths as $path) {
+            if ($disk->exists($path) && ! $disk->delete($path)) {
+                throw new RuntimeException('Media storage cleanup failed.');
+            }
+        }
+    }
+
+    /**
      * Detect the media kind from a file upload.
      */
     public static function detectMediaKind(UploadedFile $file): string

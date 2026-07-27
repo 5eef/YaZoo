@@ -226,6 +226,7 @@ class SocialTrustApiTest extends TestCase
     public function test_professional_verification_status_is_propagated_without_document_path(): void
     {
         $seller = User::factory()->create();
+        $admin = User::factory()->admin()->create();
         $product = Product::factory()->create(['user_id' => $seller->id]);
 
         ProfessionalVerification::query()->create([
@@ -233,6 +234,8 @@ class SocialTrustApiTest extends TestCase
             'business_type' => 'pet_shop',
             'document_path' => 'professional-verifications/private.pdf',
             'status' => 'approved',
+            'reviewed_by' => $admin->id,
+            'reviewed_at' => now(),
         ]);
 
         Sanctum::actingAs(User::factory()->create(), ['*']);
@@ -240,6 +243,7 @@ class SocialTrustApiTest extends TestCase
         $response = $this->getJson("/api/products/{$product->id}")
             ->assertOk()
             ->assertJsonPath('data.author.isProfessionalVerified', true)
+            ->assertJsonPath('data.author.professionalBadge', 'verified_pet_shop')
             ->assertJsonPath('data.author.professionalVerificationStatus', 'approved');
 
         $payload = $response->getContent();

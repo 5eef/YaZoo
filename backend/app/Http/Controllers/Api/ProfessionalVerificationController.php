@@ -8,11 +8,17 @@ use App\Http\Requests\ProfessionalVerification\UpdateProfessionalVerificationSta
 use App\Http\Resources\ProfessionalVerificationResource;
 use App\Models\ProfessionalVerification;
 use App\Services\Admin\ModerationLogger;
+use Illuminate\Contracts\Cache\LockTimeoutException;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
+use Throwable;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ProfessionalVerificationController extends Controller
@@ -26,6 +32,9 @@ class ProfessionalVerificationController extends Controller
         $validated = $request->validated();
         $document = $request->file('document');
         unset($validated['document']);
+        $businessType = (string) $validated['business_type'];
+        $pendingKey = $request->user()->id.':'.$businessType;
+        $path = null;
 
         if ($document) {
             $extension = strtolower($document->extension() ?: $document->getClientOriginalExtension());
@@ -44,11 +53,86 @@ class ProfessionalVerificationController extends Controller
             ];
         }
 
-        $verification = ProfessionalVerification::query()->create([
-            ...$validated,
-            'user_id' => $request->user()->id,
-            'status' => 'pending',
-        ])->load(['user:id,name,email,phone,city,country', 'verifier:id,name', 'reviewer:id,name']);
+        try {
+            $verification = Cache::lock('professional-verification:'.$pendingKey, 15)->block(
+                5,
+                function () use ($request, $validated, $pendingKey, $businessType): ProfessionalVerification {
+                    return DB::transaction(function () use (
+                        $request,
+                        $validated,
+                        $pendingKey,
+                        $businessType,
+                    ): ProfessionalVerification {
+                        $existingPending = ProfessionalVerification::query()
+                            ->where('user_id', $request->user()->id)
+                            ->where('business_type', $businessType)
+                            ->where('status', 'pending')
+                            ->lockForUpdate()
+                            ->first();
+
+                        if ($existingPending) {
+                            throw ValidationException::withMessages([
+                                'business_type' => [__('messages.professional_verifications.pending_exists')],
+                            ]);
+                        }
+
+                        return ProfessionalVerification::query()->create([
+                            ...$validated,
+                            'user_id' => $request->user()->id,
+                            'status' => 'pending',
+                            'pending_key' => $pendingKey,
+                        ]);
+                    });
+                },
+            );
+        } catch (Throwable $exception) {
+            if ($path && Storage::disk($this->documentDisk())->exists($path)) {
+                Storage::disk($this->documentDisk())->delete($path);
+            }
+
+            if (
+                $exception instanceof LockTimeoutException
+                || ($exception instanceof QueryException
+                    && str_contains(strtolower($exception->getMessage()), 'pending_key'))
+            ) {
+                throw ValidationException::withMessages([
+                    'business_type' => [__('messages.professional_verifications.pending_exists')],
+                ]);
+            }
+
+            throw $exception;
+        }
+
+        $previous = ProfessionalVerification::query()
+            ->where('user_id', $request->user()->id)
+            ->where('business_type', $businessType)
+            ->whereKeyNot($verification->id)
+            ->whereNotNull('document_path')
+            ->latest()
+            ->first();
+
+        if ($previous && $this->isSafeDocumentPath((string) $previous->document_path)) {
+            $disk = Storage::disk($this->documentDisk());
+            if ($disk->exists($previous->document_path)) {
+                if (! $disk->delete($previous->document_path)) {
+                    $verification->delete();
+                    if ($path && $disk->exists($path)) {
+                        $disk->delete($path);
+                    }
+
+                    throw new \RuntimeException('Previous professional document cleanup failed.');
+                }
+
+                $previous->forceFill([
+                    'document_path' => null,
+                    'document_original_name' => null,
+                    'document_mime' => null,
+                    'document_size' => null,
+                ])->save();
+            }
+        }
+
+        $verification->load(['user:id,name,email,phone,city,country', 'verifier:id,name', 'reviewer:id,name']);
 
         return response()->json([
             'message' => __('messages.professional_verifications.submitted'),
@@ -87,8 +171,21 @@ class ProfessionalVerificationController extends Controller
     ): JsonResponse {
         $status = $request->validated('status');
 
+        if (
+            $status === 'approved'
+            && $professionalVerification->business_type === 'veterinarian'
+            && ! $professionalVerification->hasValidVeterinarianCredentials()
+        ) {
+            throw ValidationException::withMessages([
+                'status' => [__('messages.professional_verifications.veterinarian_credentials_required')],
+            ]);
+        }
+
         $professionalVerification->update([
             'status' => $status,
+            'pending_key' => $status === 'pending'
+                ? $professionalVerification->user_id.':'.$professionalVerification->business_type
+                : null,
             'review_reason' => $request->validated('review_reason') ?? $professionalVerification->review_reason,
             'admin_note' => $request->validated('admin_note') ?? $professionalVerification->admin_note,
             'reviewed_by' => $status === 'pending' ? null : $request->user()->id,

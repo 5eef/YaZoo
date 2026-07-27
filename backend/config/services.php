@@ -36,6 +36,12 @@ return [
         'login_redirect' => env('GOOGLE_LOGIN_REDIRECT', env('FRONTEND_URL', 'http://localhost:5173').'/login'),
     ],
 
+    'contact' => [
+        'recipient' => env('CONTACT_RECIPIENT'),
+        'public_phone' => env('CONTACT_PUBLIC_PHONE'),
+        'public_whatsapp' => env('CONTACT_PUBLIC_WHATSAPP'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
@@ -44,8 +50,11 @@ return [
     ],
 
     'sms' => [
-        'driver' => env('SMS_DRIVER', 'log'),
+        'driver' => env('SMS_DRIVER', 'disabled'),
         'otp_ttl' => (int) env('SMS_OTP_TTL', 5),
+        'otp_max_attempts' => (int) env('SMS_OTP_MAX_ATTEMPTS', 5),
+        'otp_resend_cooldown_seconds' => (int) env('SMS_OTP_RESEND_COOLDOWN_SECONDS', 60),
+        'otp_lock_minutes' => (int) env('SMS_OTP_LOCK_MINUTES', 15),
         'twilio' => [
             'sid' => env('TWILIO_SID'),
             'token' => env('TWILIO_AUTH_TOKEN'),

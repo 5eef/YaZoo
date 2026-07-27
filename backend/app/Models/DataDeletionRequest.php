@@ -13,6 +13,8 @@ class DataDeletionRequest extends Model
     public const STATUSES = [
         'pending',
         'reviewed',
+        'processing',
+        'failed',
         'completed',
         'rejected',
     ];
@@ -21,6 +23,10 @@ class DataDeletionRequest extends Model
         'user_id',
         'reason',
         'status',
+        'processing_attempts',
+        'failure_code',
+        'processing_started_at',
+        'completed_at',
         'reviewed_by',
         'reviewed_at',
         'admin_note',
@@ -30,6 +36,8 @@ class DataDeletionRequest extends Model
     {
         return [
             'reviewed_at' => 'datetime',
+            'processing_started_at' => 'datetime',
+            'completed_at' => 'datetime',
         ];
     }
 

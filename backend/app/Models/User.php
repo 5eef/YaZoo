@@ -291,7 +291,37 @@ class User extends Authenticatable
 
     public function hasApprovedProfessionalVerification(): bool
     {
-        return $this->professionalVerificationStatus() === 'approved';
+        if ($this->isSuspended() || $this->isBanned()) {
+            return false;
+        }
+
+        $verification = $this->relationLoaded('latestProfessionalVerification')
+            ? $this->latestProfessionalVerification
+            : $this->latestProfessionalVerification()->first();
+
+        return $verification?->effectiveStatus() === 'approved'
+            && $verification->wasReviewedByAdmin();
+    }
+
+    public function hasApprovedVeterinarianVerification(): bool
+    {
+        if ($this->isSuspended() || $this->isBanned()) {
+            return false;
+        }
+
+        $verification = $this->relationLoaded('latestProfessionalVerification')
+            ? $this->latestProfessionalVerification
+            : $this->latestProfessionalVerification()->first();
+
+        if (
+            ! $verification
+            || $verification->effectiveStatus() !== 'approved'
+            || ! $verification->wasReviewedByAdmin()
+        ) {
+            return false;
+        }
+
+        return $verification->hasValidVeterinarianCredentials();
     }
 
     public function professionalVerificationStatus(): ?string

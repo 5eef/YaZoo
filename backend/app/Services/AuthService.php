@@ -17,6 +17,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Laravel\Socialite\Contracts\User as SocialiteUser;
 use Symfony\Component\HttpFoundation\Cookie;
+use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
 
 class AuthService
 {
@@ -33,24 +34,28 @@ class AuthService
         $phone = PhoneNumber::normalize($validated['phone'] ?? null) ?? (string) $validated['phone'];
         $intent = (string) $validated['intent'];
 
-        if ($intent === 'login' && ! User::query()->where('phone', $phone)->exists()) {
-            throw ValidationException::withMessages([
-                'phone' => [__('messages.auth.phone_not_found')],
-            ]);
+        if (! $this->phoneOtpBroker->isAvailable()) {
+            throw new ServiceUnavailableHttpException(
+                300,
+                __('messages.auth.sms_unavailable'),
+            );
         }
 
-        if ($intent === 'register' && User::query()->where('phone', $phone)->exists()) {
-            throw ValidationException::withMessages([
-                'phone' => [__('messages.auth.phone_already_exists')],
-            ]);
+        $phoneExists = User::query()->where('phone', $phone)->exists();
+        $eligible = ($intent === 'login' && $phoneExists)
+            || ($intent === 'register' && ! $phoneExists);
+
+        if (! $eligible) {
+            return new OtpDispatchResult(
+                __('messages.auth.otp_sent'),
+                now()->addMinutes((int) config('services.sms.otp_ttl', 5))->toIso8601String(),
+            );
         }
 
         $otpPayload = $this->phoneOtpBroker->send($phone, $intent);
 
         return new OtpDispatchResult(
-            $intent === 'login'
-                ? __('messages.auth.otp_sent_login')
-                : __('messages.auth.otp_sent_register'),
+            __('messages.auth.otp_sent'),
             (string) $otpPayload['expires_at'],
         );
     }

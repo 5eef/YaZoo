@@ -119,4 +119,9 @@ class Animal extends Model
     {
         return $this->morphMany(Favorite::class, 'favoritable');
     }
+
+    public function isPubliclyVisible(): bool
+    {
+        return $this->legal_status === 'approved';
+    }
 }

@@ -54,6 +54,7 @@ class ProfessionalVerification extends Model
         'document_size',
         'document_expires_at',
         'status',
+        'pending_key',
         'verified_by',
         'verified_at',
         'admin_note',
@@ -93,5 +94,32 @@ class ProfessionalVerification extends Model
         }
 
         return $this->status;
+    }
+
+    public function wasReviewedByAdmin(): bool
+    {
+        if (! $this->reviewed_by || ! $this->reviewed_at) {
+            return false;
+        }
+
+        if (
+            $this->relationLoaded('reviewer')
+            && $this->reviewer
+            && array_key_exists('is_admin', $this->reviewer->getAttributes())
+        ) {
+            return (bool) $this->reviewer->is_admin;
+        }
+
+        return $this->reviewer()->where('is_admin', true)->exists();
+    }
+
+    public function hasValidVeterinarianCredentials(): bool
+    {
+        return $this->business_type === 'veterinarian'
+            && $this->document_type === 'veterinarian_license'
+            && filled($this->professional_license_number)
+            && filled($this->document_path)
+            && $this->document_expires_at !== null
+            && $this->document_expires_at->isFuture();
     }
 }

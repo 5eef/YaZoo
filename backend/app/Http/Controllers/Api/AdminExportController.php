@@ -16,6 +16,7 @@ use App\Models\Reservation;
 use App\Models\ServiceListing;
 use App\Models\User;
 use App\Models\Veterinarian;
+use App\Support\CsvCellSanitizer;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -124,7 +125,7 @@ class AdminExportController extends Controller
             fwrite($handle, "\xEF\xBB\xBF");
 
             foreach ($rows as $row) {
-                fputcsv($handle, $row);
+                fputcsv($handle, CsvCellSanitizer::sanitizeRow($row));
             }
 
             fclose($handle);

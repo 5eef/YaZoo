@@ -11,6 +11,12 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        if (app()->isProduction()) {
+            throw new \RuntimeException(
+                'Demo seeders are disabled in production. Use yazoo:create-admin interactively.',
+            );
+        }
+
         $this->call([
             DemoContentSeeder::class,
         ]);

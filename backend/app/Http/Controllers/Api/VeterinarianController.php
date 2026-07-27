@@ -22,7 +22,7 @@ class VeterinarianController extends Controller
         $query = Veterinarian::query()
             ->with([
                 'user:id,name,email,phone,phone_verified_at,avatar,city,country',
-                'user.latestProfessionalVerification',
+                'user.latestProfessionalVerification.reviewer:id,is_admin',
             ])
             ->withCount(['favorites as favorites_count'])
             ->when($request->user(), function ($query, $user): void {
@@ -30,9 +30,24 @@ class VeterinarianController extends Controller
                     'favorites as is_favorited' => fn ($favoriteQuery) => $favoriteQuery->where('user_id', $user->id),
                 ]);
             })
+            ->where(function ($query) use ($request): void {
+                $query->where(function ($publicQuery): void {
+                    $publicQuery
+                        ->where('is_active', true)
+                        ->where('moderation_status', Veterinarian::MODERATION_STATUS_ACTIVE);
+                });
+
+                if ($user = $request->user()) {
+                    $query->orWhere(function ($ownerQuery) use ($user): void {
+                        $ownerQuery
+                            ->where('user_id', $user->id)
+                            ->where('moderation_status', Veterinarian::MODERATION_STATUS_PENDING_REVIEW);
+                    });
+                }
+            })
             ->latest();
 
-        if (! $request->boolean('include_inactive')) {
+        if (! $request->boolean('include_inactive') || ! $request->user()?->is_admin) {
             $query->where('is_active', true);
         }
 
@@ -68,6 +83,11 @@ class VeterinarianController extends Controller
         $veterinarian = Veterinarian::query()->create([
             ...$validated,
             'user_id' => $request->user()->id,
+            'is_active' => true,
+            'moderation_status' => Veterinarian::MODERATION_STATUS_PENDING_REVIEW,
+            'moderation_note' => null,
+            'moderated_by' => null,
+            'moderated_at' => null,
         ]);
 
         return VeterinarianResource::make($this->loadSocialSignals($veterinarian))
@@ -77,7 +97,12 @@ class VeterinarianController extends Controller
 
     public function show(Veterinarian $veterinarian): VeterinarianResource
     {
-        abort_if(! $veterinarian->is_active && ! request()->user()?->is($veterinarian->user), 404);
+        abort_unless(
+            $veterinarian->isPubliclyVisible()
+                || request()->user()?->is($veterinarian->user)
+                || (bool) request()->user()?->is_admin,
+            404,
+        );
 
         return VeterinarianResource::make($this->loadSocialSignals($veterinarian));
     }
@@ -87,6 +112,13 @@ class VeterinarianController extends Controller
         $this->authorize('update', $veterinarian);
 
         $validated = $this->prepareMedia($request, $request->validated(), $veterinarian);
+
+        if (! $request->user()->is_admin) {
+            $validated['moderation_status'] = Veterinarian::MODERATION_STATUS_PENDING_REVIEW;
+            $validated['moderation_note'] = null;
+            $validated['moderated_by'] = null;
+            $validated['moderated_at'] = null;
+        }
 
         $veterinarian->update($validated);
 
@@ -127,7 +159,7 @@ class VeterinarianController extends Controller
     {
         $veterinarian->load([
             'user:id,name,email,phone,phone_verified_at,avatar,city,country',
-            'user.latestProfessionalVerification',
+            'user.latestProfessionalVerification.reviewer:id,is_admin',
         ])
             ->loadCount(['favorites as favorites_count']);
 

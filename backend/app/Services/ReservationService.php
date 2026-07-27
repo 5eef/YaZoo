@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Models\Animal;
+use App\Models\Payment;
+use App\Models\PaymentTransaction;
 use App\Models\Product;
 use App\Models\Reservation;
 use App\Models\ServiceListing;
@@ -69,6 +71,7 @@ class ReservationService
                 ->lockForUpdate()
                 ->findOrFail($animal->id);
 
+            abort_unless($lockedAnimal->isPubliclyVisible(), 422, "Cette annonce animal n'est pas approuvee.");
             abort_if($lockedAnimal->listing_status !== 'available', 422, "Cette annonce animal n'est plus reservable.");
             abort_if((int) $lockedAnimal->user_id === (int) $buyer->id, 403, 'Vous ne pouvez pas reserver votre propre annonce animal.');
             abort_if(
@@ -127,6 +130,7 @@ class ReservationService
                 ->lockForUpdate()
                 ->findOrFail($product->id);
 
+            abort_unless($lockedProduct->isPubliclyVisible(), 422, "Ce produit n'est pas approuve.");
             abort_if($lockedProduct->listing_status === 'sold' || $lockedProduct->stock <= 0, 422, "Ce produit n'est plus reservable.");
             abort_if((int) $lockedProduct->user_id === (int) $buyer->id, 403, 'Vous ne pouvez pas reserver votre propre produit.');
 
@@ -201,7 +205,7 @@ class ReservationService
                 ->findOrFail($serviceId);
 
             abort_if($service->type !== $serviceType, 422, 'Le type du service ne correspond pas a la categorie demandee.');
-            abort_if($service->status !== 'active', 422, "Ce service n'est pas reservable.");
+            abort_unless($service->isPubliclyVisible(), 422, "Ce service n'est pas approuve ou actif.");
             abort_if((int) $service->user_id === (int) $buyer->id, 403, 'Vous ne pouvez pas reserver votre propre service.');
 
             $reservation = Reservation::create([
@@ -299,6 +303,8 @@ class ReservationService
 
             abort_if($lockedReservation->reservation_status !== 'pending', 422, 'Seules les reservations en attente peuvent etre refusees.');
 
+            $this->cancelActivePayments($lockedReservation, 'reservation_rejected');
+
             $lockedReservation->update([
                 'reservation_status' => 'rejected',
                 'payment_status' => 'cancelled',
@@ -334,6 +340,8 @@ class ReservationService
                 'Cette reservation ne peut plus etre annulee car la livraison est deja trop avancee.',
             );
 
+            $this->cancelActivePayments($lockedReservation, 'reservation_cancelled');
+
             $lockedReservation->update([
                 'reservation_status' => 'cancelled',
                 'payment_status' => 'cancelled',
@@ -351,6 +359,38 @@ class ReservationService
         $this->logReservationAction('reservation.cancelled', $reservation, $reservation->buyer);
 
         return $reservation;
+    }
+
+    private function cancelActivePayments(Reservation $reservation, string $reason): void
+    {
+        $payments = Payment::query()
+            ->where('reservation_id', $reservation->id)
+            ->lockForUpdate()
+            ->get();
+
+        abort_if(
+            $payments->contains(fn (Payment $payment): bool => $payment->status === Payment::STATUS_PAID),
+            422,
+            'Cette reservation a deja ete payee et ne peut plus etre annulee.',
+        );
+
+        foreach ($payments->whereIn('status', Payment::ACTIVE_STATUSES) as $payment) {
+            $payment->forceFill([
+                'status' => Payment::STATUS_CANCELLED,
+                'checkout_url' => null,
+                'cancelled_at' => now(),
+            ])->save();
+
+            PaymentTransaction::query()->create([
+                'payment_id' => $payment->id,
+                'provider' => $payment->provider,
+                'type' => PaymentTransaction::TYPE_MANUAL_UPDATE,
+                'status' => PaymentTransaction::STATUS_SUCCEEDED,
+                'request_payload' => ['reason' => $reason],
+                'response_payload' => ['status' => Payment::STATUS_CANCELLED],
+                'processed_at' => now(),
+            ]);
+        }
     }
 
     public function complete(Reservation $reservation): Reservation

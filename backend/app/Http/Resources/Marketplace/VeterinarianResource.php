@@ -3,6 +3,7 @@
 namespace App\Http\Resources\Marketplace;
 
 use App\Models\Veterinarian;
+use App\Services\MarketplacePublishingResolver;
 use App\Support\MarketplaceMedia;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -14,6 +15,10 @@ class VeterinarianResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $professionalBadge = $this->user
+            ? app(MarketplacePublishingResolver::class)->badgeFor($this->user, 'veterinarians')
+            : null;
+
         return [
             'id' => $this->id,
             'name' => $this->name,
@@ -41,7 +46,8 @@ class VeterinarianResource extends JsonResource
                 'id' => $this->user?->id,
                 'name' => $this->user?->name,
                 'isPhoneVerified' => $this->user?->hasVerifiedPhone() ?? false,
-                'isProfessionalVerified' => $this->user?->hasApprovedProfessionalVerification() ?? false,
+                'isProfessionalVerified' => $professionalBadge !== null,
+                'professionalBadge' => $professionalBadge,
                 'professionalVerificationStatus' => $this->user?->professionalVerificationStatus(),
             ],
             'isOwner' => $request->user()?->is($this->user) ?? false,

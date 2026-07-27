@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\Reservation;
 use App\Models\User;
 use App\Services\Payments\CmiGateway;
+use App\Services\Payments\PaymentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Laravel\Sanctum\Sanctum;
@@ -535,6 +536,49 @@ class PaymentApiTest extends TestCase
         $this->assertSame('[redacted]', $transaction->request_payload['nested']['signature']);
     }
 
+    public function test_cancelling_reservation_atomically_cancels_active_payments(): void
+    {
+        Notification::fake();
+        $reservation = $this->reservation();
+        Sanctum::actingAs($reservation->buyer, ['*']);
+
+        $this->postJson("/api/reservations/{$reservation->id}/payments", [
+            'provider' => Payment::PROVIDER_MANUAL_BANK_TRANSFER,
+        ])->assertCreated();
+
+        $payment = Payment::query()->firstOrFail();
+
+        $this->patchJson("/api/reservations/{$reservation->id}/cancel")
+            ->assertOk();
+
+        $this->assertSame('cancelled', $reservation->refresh()->reservation_status);
+        $this->assertSame(Payment::STATUS_CANCELLED, $payment->refresh()->status);
+        $this->assertNull($payment->checkout_url);
+        $this->assertDatabaseHas('payment_transactions', [
+            'payment_id' => $payment->id,
+            'type' => PaymentTransaction::TYPE_MANUAL_UPDATE,
+            'status' => PaymentTransaction::STATUS_SUCCEEDED,
+        ]);
+    }
+
+    public function test_cancelled_reservation_cannot_be_marked_paid_by_late_callback(): void
+    {
+        $reservation = $this->reservation([
+            'reservation_status' => 'cancelled',
+            'payment_status' => 'cancelled',
+            'cancelled_at' => now(),
+        ]);
+        $payment = $this->paymentForReservation($reservation);
+
+        try {
+            app(PaymentService::class)->markPaid($payment);
+            $this->fail('A cancelled reservation must never become paid.');
+        } catch (\Illuminate\Validation\ValidationException) {
+            $this->assertSame(Payment::STATUS_PENDING, $payment->refresh()->status);
+            $this->assertSame('cancelled', $reservation->refresh()->payment_status);
+        }
+    }
+
     /**
      * @param  array<string, mixed>  $overrides
      */
@@ -571,6 +615,11 @@ class PaymentApiTest extends TestCase
     {
         $reservation = $this->reservation();
 
+        return $this->paymentForReservation($reservation);
+    }
+
+    private function paymentForReservation(Reservation $reservation): Payment
+    {
         return Payment::create([
             'reservation_id' => $reservation->id,
             'buyer_id' => $reservation->buyer_id,

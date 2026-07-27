@@ -11,6 +11,10 @@ class Product extends Model
 {
     use HasFactory;
 
+    public const MODERATION_STATUS_PENDING_REVIEW = 'pending_review';
+
+    public const MODERATION_STATUS_ACTIVE = 'active';
+
     public const CATEGORIES = [
         'food',
         'toy',
@@ -88,5 +92,10 @@ class Product extends Model
     public function favorites(): MorphMany
     {
         return $this->morphMany(Favorite::class, 'favoritable');
+    }
+
+    public function isPubliclyVisible(): bool
+    {
+        return $this->moderation_status === self::MODERATION_STATUS_ACTIVE;
     }
 }
