@@ -23,34 +23,61 @@ SMTP/SMS/CMI/legales.
 Commandes locales sans mutation:
 
 ```powershell
+# Fournir tous les noms reels a inspecter; aucune valeur par defaut ne les devine.
 .\deploy\azure-setup.ps1 `
+  -ResourceGroup <groupe-a-inspecter> `
+  -Location <region-a-inspecter> `
+  -AppServicePlanName <plan-a-inspecter> `
+  -BackendWebAppName <backend-a-inspecter> `
+  -FrontendWebAppName <frontend-a-inspecter> `
+  -MysqlServerName <mysql-a-inspecter> `
+  -MysqlDatabase <base-a-inspecter> `
+  -MysqlAdminUser <administrateur-a-inspecter> `
+  -KeyVaultName <coffre-a-inspecter> `
+  -VnetName <vnet-a-inspecter> `
+  -AppSubnetName <sous-reseau-app-a-inspecter> `
+  -MysqlSubnetName <sous-reseau-mysql-a-inspecter> `
+  -MysqlPrivateDnsZone <dns-prive-a-inspecter> `
   -ProvisioningPrincipalObjectId 00000000-0000-0000-0000-000000000000 `
   -BackendImage 5eef/yazoo-api:0000000000000000000000000000000000000000 `
   -FrontendImage 5eef/yazoo-frontend:0000000000000000000000000000000000000000 `
   -WhatIf
-
-.\deploy\azure-dockerhub-deploy.ps1 -WhatIf `
-  -BackendImage 5eef/yazoo-api:0000000000000000000000000000000000000000 `
-  -FrontendImage 5eef/yazoo-frontend:0000000000000000000000000000000000000000 `
-  -AppKey "<test>" `
-  -FrontendUrl "https://frontend.example.test" `
-  -DbHost "mysql.example.test" `
-  -DbUsername "<test>" `
-  -DbPassword "<test>" `
-  -RedisHost "redis.example.test" `
-  -RedisPassword "<test>" `
-  -ContactRecipient "contact@example.test" `
-  -LegalStatus "<test>" `
-  -LegalAddress "<test>" `
-  -LegalIce "<test>" `
-  -PrivacyContactEmail "privacy@example.test" `
-  -MailHost "smtp.example.test" `
-  -MailPort "587" `
-  -MailUsername "<test>" `
-  -MailPassword "<test>" `
-  -MailFromAddress "noreply@example.test"
 ```
 
-Le mode `-WhatIf` expurge les arguments sensibles. Un deploiement reel exige les
-comptes, secrets, informations legales, budget et autorisation de production; il
-n'est jamais simule comme reussi.
+Sans `-AllowCreateResources`, `azure-setup.ps1` ne fait que des lectures Azure;
+`-WhatIf` simule les commandes sans mutation. La creation exige tous les noms
+explicites et `-AllowCreateResources`.
+
+`azure-dockerhub-deploy.ps1` est reserve a la configuration initiale. Il exige
+`-AllowInitialConfiguration` hors `-WhatIf`, utilise des parametres `SecureString`
+pour les valeurs sensibles et ne doit pas servir aux releases courantes. Les
+secrets sont saisis avec `Read-Host -AsSecureString` ou fournis par un magasin
+securise; ils ne doivent pas apparaitre dans une ligne de commande ou un fichier.
+Le chemin canonique des releases est `.github/workflows/deploy.yml`, avec SHA
+immuable, preflight, health checks et rollback.
+
+## Garde-fous du workflow de production
+
+L'environnement GitHub `production` doit contenir:
+
+- `AZURE_RESOURCE_GROUP`;
+- `AZURE_BACKEND_WEBAPP_NAME` et `AZURE_FRONTEND_WEBAPP_NAME`;
+- `AZURE_BACKEND_URL` et `AZURE_FRONTEND_URL`;
+- `AZURE_MYSQL_SERVER_NAME`, dont la valeur existante doit etre verifiee par
+  l'operateur.
+
+Cet environnement doit avoir une approbation manuelle requise et une restriction
+de branche. Ce reglage est externe au depot. Sans protection d'environnement, un
+merge vers `main` peut enchainer automatiquement CI et deploiement.
+
+Avant toute migration ou modification d'image App Service, le workflow lit le
+serveur MySQL existant via Azure Control Plane et exige l'etat `Ready`, au moins
+7 jours de retention automatique et une date de debut de restauration point-in-time.
+Il ne cree ni ne modifie le serveur. Un test de restauration dans une ressource
+isolee reste une validation humaine externe obligatoire avant une migration
+majeure; aucune restauration reelle n'est revendiquee ici.
+
+Les images SHA sont poussees pour diagnostic avant le rollout. Les alias `latest`
+ne sont pousses qu'apres validation du backend, du frontend, de la readiness et
+des versions. Un echec declenche le rollback des deux App Services et laisse
+`latest` sur la derniere version validee.

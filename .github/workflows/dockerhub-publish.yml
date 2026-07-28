@@ -9,13 +9,30 @@ permissions:
 jobs:
   required-ci:
     uses: ./.github/workflows/ci.yml
-    secrets: inherit
+    secrets:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
   publish:
     needs: required-ci
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Validate publication ref and SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::Docker images require the exact 40-character Git SHA."
+            exit 1
+          fi
+          case "$GITHUB_REF" in
+            refs/heads/*) ;;
+            *)
+              echo "::error::Manual image publication is allowed only from a branch ref."
+              exit 1
+              ;;
+          esac
 
       - uses: docker/login-action@v3
         with:
@@ -28,9 +45,7 @@ jobs:
           file: backend/Dockerfile
           push: true
           build-args: APP_VERSION=${{ github.sha }}
-          tags: |
-            5eef/yazoo-api:${{ github.sha }}
-            5eef/yazoo-api:latest
+          tags: 5eef/yazoo-api:${{ github.sha }}
 
       - uses: docker/build-push-action@v6
         with:
@@ -38,6 +53,16 @@ jobs:
           file: frontend/Dockerfile
           push: true
           build-args: APP_VERSION=${{ github.sha }}
-          tags: |
-            5eef/yazoo-frontend:${{ github.sha }}
-            5eef/yazoo-frontend:latest
+          tags: 5eef/yazoo-frontend:${{ github.sha }}
+
+      - name: Publish latest aliases from main only
+        if: github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker pull "5eef/yazoo-api:${GITHUB_SHA}"
+          docker pull "5eef/yazoo-frontend:${GITHUB_SHA}"
+          docker tag "5eef/yazoo-api:${GITHUB_SHA}" "5eef/yazoo-api:latest"
+          docker tag "5eef/yazoo-frontend:${GITHUB_SHA}" "5eef/yazoo-frontend:latest"
+          docker push "5eef/yazoo-api:latest"
+          docker push "5eef/yazoo-frontend:latest"

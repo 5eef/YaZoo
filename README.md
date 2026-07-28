@@ -138,7 +138,8 @@ docker build --build-arg APP_VERSION=<git-sha> -f frontend\Dockerfile -t yazoo-f
 ```
 
 La publication Docker Hub et le deploiement sont assures par les workflows seulement
-apres la CI complete. `latest` n'est qu'un alias; Azure est fixe sur `<github.sha>`.
+apres la CI complete. Azure est fixe sur `<github.sha>`; `latest` n'est publie
+qu'apres un rollout dont les health checks et versions ont reussi.
 
 ## Azure Student
 
@@ -147,16 +148,46 @@ Creer les ressources:
 ```powershell
 cd "C:\Users\seef7\OneDrive\Desktop\YaZoo"
 .\deploy\azure-setup.ps1 `
+  -ResourceGroup <groupe-existant-ou-approuve> `
+  -Location <region-approuvee> `
+  -AppServicePlanName <plan-approuve> `
+  -BackendWebAppName <app-backend-approuvee> `
+  -FrontendWebAppName <app-frontend-approuvee> `
+  -MysqlServerName <serveur-mysql-approuve> `
+  -MysqlDatabase <base-approuvee> `
+  -MysqlAdminUser <administrateur-approuve> `
+  -KeyVaultName <coffre-approuve> `
+  -VnetName <vnet-approuve> `
+  -AppSubnetName <sous-reseau-app-approuve> `
+  -MysqlSubnetName <sous-reseau-mysql-approuve> `
+  -MysqlPrivateDnsZone <zone-dns-privee-approuvee> `
   -ProvisioningPrincipalObjectId <object-id-entra> `
   -BackendImage 5eef/yazoo-api:<sha-git-40-caracteres> `
-  -FrontendImage 5eef/yazoo-frontend:<sha-git-40-caracteres>
+  -FrontendImage 5eef/yazoo-frontend:<sha-git-40-caracteres> `
+  -AllowCreateResources
 ```
 
 Le script est idempotent, cible deux Azure App Services conteneurises et n'utilise ni
-Static Web Apps ni ACR. Verifier d'abord sans mutation:
+Static Web Apps ni ACR. Tous les noms sont obligatoires. Sans
+`-AllowCreateResources`, il inspecte seulement les ressources existantes. Verifier
+d'abord sans mutation avec les memes parametres et `-WhatIf`; l'exemple abrege
+ci-dessous doit etre complete avec tous les noms explicites:
 
 ```powershell
 .\deploy\azure-setup.ps1 `
+  -ResourceGroup <groupe-a-inspecter> `
+  -Location <region-a-inspecter> `
+  -AppServicePlanName <plan-a-inspecter> `
+  -BackendWebAppName <app-backend-a-inspecter> `
+  -FrontendWebAppName <app-frontend-a-inspecter> `
+  -MysqlServerName <serveur-mysql-a-inspecter> `
+  -MysqlDatabase <base-a-inspecter> `
+  -MysqlAdminUser <administrateur-a-inspecter> `
+  -KeyVaultName <coffre-a-inspecter> `
+  -VnetName <vnet-a-inspecter> `
+  -AppSubnetName <sous-reseau-app-a-inspecter> `
+  -MysqlSubnetName <sous-reseau-mysql-a-inspecter> `
+  -MysqlPrivateDnsZone <zone-dns-a-inspecter> `
   -ProvisioningPrincipalObjectId 00000000-0000-0000-0000-000000000000 `
   -BackendImage 5eef/yazoo-api:0000000000000000000000000000000000000000 `
   -FrontendImage 5eef/yazoo-frontend:0000000000000000000000000000000000000000 `
@@ -190,6 +221,14 @@ Variables de l'environnement GitHub `production`:
 - `AZURE_FRONTEND_WEBAPP_NAME`
 - `AZURE_BACKEND_URL`
 - `AZURE_FRONTEND_URL`
+- `AZURE_MYSQL_SERVER_NAME`
+
+L'environnement GitHub `production` doit exiger une approbation humaine avant le
+job `build-and-deploy` et limiter les branches autorisees. GitHub ne versionne pas
+ce reglage: s'il n'est pas configure dans les parametres du depot, un merge vers
+`main` peut deployer automatiquement apres la CI. Le flux attendu est merge,
+CI complete, attente d'approbation, approbation, push des images SHA, validation
+MySQL, rollout Azure, puis publication de `latest`.
 
 Le plan complet, le rollback, la migration unique et l'activation des services externes
 sont documentes dans `.azure/deployment-plan.md`.

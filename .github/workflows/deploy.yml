@@ -15,7 +15,8 @@ concurrency:
 jobs:
   required-ci:
     uses: ./.github/workflows/ci.yml
-    secrets: inherit
+    secrets:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
   build-and-deploy:
     needs: required-ci
@@ -27,11 +28,25 @@ jobs:
       FRONTEND_WEBAPP: ${{ vars.AZURE_FRONTEND_WEBAPP_NAME }}
       BACKEND_URL: ${{ vars.AZURE_BACKEND_URL }}
       FRONTEND_URL: ${{ vars.AZURE_FRONTEND_URL }}
+      MYSQL_SERVER: ${{ vars.AZURE_MYSQL_SERVER_NAME }}
       BACKEND_IMAGE: 5eef/yazoo-api:${{ github.sha }}
       FRONTEND_IMAGE: 5eef/yazoo-frontend:${{ github.sha }}
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Validate production ref and SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::Production deployment is allowed only from refs/heads/main."
+            exit 1
+          fi
+          if ! [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::Production deployment requires the exact 40-character Git SHA."
+            exit 1
+          fi
 
       - uses: docker/login-action@v3
         with:
@@ -41,18 +56,14 @@ jobs:
       - name: Build immutable images
         run: |
           docker build --build-arg APP_VERSION="${GITHUB_SHA}" -f backend/Dockerfile \
-            -t "${BACKEND_IMAGE}" \
-            -t "5eef/yazoo-api:latest" .
+            -t "${BACKEND_IMAGE}" .
           docker build --build-arg APP_VERSION="${GITHUB_SHA}" -f frontend/Dockerfile \
-            -t "${FRONTEND_IMAGE}" \
-            -t "5eef/yazoo-frontend:latest" .
+            -t "${FRONTEND_IMAGE}" .
 
-      - name: Push immutable images and convenience aliases
+      - name: Push immutable SHA images
         run: |
           docker push "${BACKEND_IMAGE}"
           docker push "${FRONTEND_IMAGE}"
-          docker push "5eef/yazoo-api:latest"
-          docker push "5eef/yazoo-frontend:latest"
 
       - uses: azure/login@v2
         with:
@@ -61,12 +72,40 @@ jobs:
       - name: Validate Azure deployment configuration
         run: |
           set -euo pipefail
-          for value in RESOURCE_GROUP BACKEND_WEBAPP FRONTEND_WEBAPP BACKEND_URL FRONTEND_URL; do
+          for value in RESOURCE_GROUP BACKEND_WEBAPP FRONTEND_WEBAPP BACKEND_URL FRONTEND_URL MYSQL_SERVER; do
             if [ -z "${!value}" ]; then
               echo "::error::$value is not configured for the production environment."
               exit 1
             fi
           done
+
+      - name: Validate MySQL backup and restore readiness
+        run: |
+          set -euo pipefail
+          mysql_details="$(az mysql flexible-server show \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$MYSQL_SERVER" \
+            --only-show-errors \
+            --output json)"
+
+          mysql_state="$(printf '%s' "$mysql_details" | jq -r '.state // empty')"
+          backup_retention_days="$(printf '%s' "$mysql_details" | jq -r '.backup.backupRetentionDays // .backupRetentionDays // empty')"
+          earliest_restore_date="$(printf '%s' "$mysql_details" | jq -r '.backup.earliestRestoreDate // .earliestRestoreDate // empty')"
+
+          if [ "$mysql_state" != "Ready" ]; then
+            echo "::error::Azure MySQL server is not Ready."
+            exit 1
+          fi
+          if ! [[ "$backup_retention_days" =~ ^[0-9]+$ ]] || [ "$backup_retention_days" -lt 7 ]; then
+            echo "::error::Azure MySQL automated backup retention must be at least 7 days."
+            exit 1
+          fi
+          if [ -z "$earliest_restore_date" ] || [ "$earliest_restore_date" = "null" ]; then
+            echo "::error::Azure MySQL earliest point-in-time restore date is unavailable."
+            exit 1
+          fi
+
+          echo "Azure MySQL is Ready; automated retention and point-in-time restore metadata are available."
 
       - name: Record previously deployed images
         id: previous
@@ -106,7 +145,7 @@ jobs:
 
           az webapp stop --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP"
           az webapp config appsettings set --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP" \
-            --settings "APP_VERSION=${GITHUB_SHA}" "YAZOO_RUN_MIGRATIONS=true" --output none
+            --settings "APP_VERSION=${GITHUB_SHA}" "YAZOO_RUN_PRODUCTION_PREFLIGHT=true" "YAZOO_RUN_MIGRATIONS=true" --output none
           az webapp config container set --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP" \
             --docker-custom-image-name "$BACKEND_IMAGE" --docker-registry-server-url https://index.docker.io --output none
           az webapp start --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP"
@@ -117,7 +156,7 @@ jobs:
           fi
 
           az webapp config appsettings set --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP" \
-            --settings "APP_VERSION=${GITHUB_SHA}" "YAZOO_RUN_MIGRATIONS=false" --output none
+            --settings "APP_VERSION=${GITHUB_SHA}" "YAZOO_RUN_PRODUCTION_PREFLIGHT=true" "YAZOO_RUN_MIGRATIONS=false" --output none
           az webapp restart --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP"
 
           if ! wait_backend; then
@@ -141,6 +180,15 @@ jobs:
           echo "::error::The exact SHA failed health or version verification."
           exit 1
 
+      - name: Publish last-known-good aliases
+        if: steps.rollout.outcome == 'success'
+        run: |
+          set -euo pipefail
+          docker tag "${BACKEND_IMAGE}" "5eef/yazoo-api:latest"
+          docker tag "${FRONTEND_IMAGE}" "5eef/yazoo-frontend:latest"
+          docker push "5eef/yazoo-api:latest"
+          docker push "5eef/yazoo-frontend:latest"
+
       - name: Roll back both applications after a failed rollout
         if: steps.rollout.outcome == 'failure'
         id: rollback
@@ -149,7 +197,7 @@ jobs:
           az webapp config container set --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP" \
             --docker-custom-image-name "${{ steps.previous.outputs.backend }}" --docker-registry-server-url https://index.docker.io --output none
           az webapp config appsettings set --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP" \
-            --settings "APP_VERSION=${{ steps.previous.outputs.backend_version }}" "YAZOO_RUN_MIGRATIONS=false" --output none
+            --settings "APP_VERSION=${{ steps.previous.outputs.backend_version }}" "YAZOO_RUN_PRODUCTION_PREFLIGHT=true" "YAZOO_RUN_MIGRATIONS=false" --output none
           az webapp config container set --resource-group "$RESOURCE_GROUP" --name "$FRONTEND_WEBAPP" \
             --docker-custom-image-name "${{ steps.previous.outputs.frontend }}" --docker-registry-server-url https://index.docker.io --output none
           az webapp restart --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP"

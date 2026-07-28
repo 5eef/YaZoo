@@ -2,24 +2,25 @@
 [CmdletBinding(SupportsShouldProcess)]
 param(
     [string] $SubscriptionId = "",
-    [string] $ResourceGroup = "yazoo-rg",
-    [string] $Location = "germanywestcentral",
-    [string] $BackendWebAppName = "yazoo-api",
-    [string] $FrontendWebAppName = "yazoo",
-    [string] $MysqlServerName = "yazoo-mysql",
-    [string] $MysqlDatabase = "yazoo",
-    [string] $MysqlAdminUser = "yazoo_admin",
+    [Parameter(Mandatory)][string] $ResourceGroup,
+    [Parameter(Mandatory)][string] $Location,
+    [Parameter(Mandatory)][string] $BackendWebAppName,
+    [Parameter(Mandatory)][string] $FrontendWebAppName,
+    [Parameter(Mandatory)][string] $MysqlServerName,
+    [Parameter(Mandatory)][string] $MysqlDatabase,
+    [Parameter(Mandatory)][string] $MysqlAdminUser,
     [SecureString] $MysqlAdminPassword,
-    [string] $KeyVaultName = "yazoo-kv",
+    [Parameter(Mandatory)][string] $KeyVaultName,
     [Parameter(Mandatory)][string] $ProvisioningPrincipalObjectId,
     [ValidateSet("User", "ServicePrincipal")][string] $ProvisioningPrincipalType = "ServicePrincipal",
-    [string] $AppServicePlanName = "yazoo-linux-plan",
-    [string] $VnetName = "yazoo-vnet",
-    [string] $AppSubnetName = "appservice-integration",
-    [string] $MysqlSubnetName = "mysql-private",
-    [string] $MysqlPrivateDnsZone = "yazoo.private.mysql.database.azure.com",
+    [Parameter(Mandatory)][string] $AppServicePlanName,
+    [Parameter(Mandatory)][string] $VnetName,
+    [Parameter(Mandatory)][string] $AppSubnetName,
+    [Parameter(Mandatory)][string] $MysqlSubnetName,
+    [Parameter(Mandatory)][string] $MysqlPrivateDnsZone,
     [Parameter(Mandatory)][string] $BackendImage,
-    [Parameter(Mandatory)][string] $FrontendImage
+    [Parameter(Mandatory)][string] $FrontendImage,
+    [switch] $AllowCreateResources
 )
 
 $ErrorActionPreference = 'Stop'
@@ -102,6 +103,33 @@ function Get-AzureValue {
     }
 
     return ($value | Select-Object -First 1)
+}
+
+if (-not $AllowCreateResources -and -not $WhatIfPreference) {
+    Write-Host "Inspection-only mode: no Azure resource will be created or modified."
+    $inspectionCommands = @(
+        @("group", "show", "--name", $ResourceGroup, "--only-show-errors", "--output", "none"),
+        @("appservice", "plan", "show", "--resource-group", $ResourceGroup, "--name", $AppServicePlanName, "--only-show-errors", "--output", "none"),
+        @("network", "vnet", "show", "--resource-group", $ResourceGroup, "--name", $VnetName, "--only-show-errors", "--output", "none"),
+        @("keyvault", "show", "--resource-group", $ResourceGroup, "--name", $KeyVaultName, "--only-show-errors", "--output", "none"),
+        @("mysql", "flexible-server", "show", "--resource-group", $ResourceGroup, "--name", $MysqlServerName, "--only-show-errors", "--output", "none"),
+        @("webapp", "show", "--resource-group", $ResourceGroup, "--name", $BackendWebAppName, "--only-show-errors", "--output", "none"),
+        @("webapp", "show", "--resource-group", $ResourceGroup, "--name", $FrontendWebAppName, "--only-show-errors", "--output", "none")
+    )
+
+    foreach ($inspectionCommand in $inspectionCommands) {
+        if ($SubscriptionId) {
+            $inspectionCommand += @("--subscription", $SubscriptionId)
+        }
+        Invoke-NativeCommand az $inspectionCommand
+    }
+
+    Write-Host "Azure resource inspection completed. Re-run with -AllowCreateResources only for explicitly approved provisioning."
+    return
+}
+
+if (-not $AllowCreateResources) {
+    Write-Host "WhatIf mode: resource creation is being simulated; -AllowCreateResources was not granted."
 }
 
 if ($SubscriptionId) {

@@ -155,6 +155,33 @@ class OperationsReadinessTest extends TestCase
             ->assertExitCode(0);
     }
 
+    public function test_production_preflight_fails_without_an_active_administrator(): void
+    {
+        config([
+            'app.key' => 'base64:test-key',
+            'legal.legal_status' => 'Configuration de test',
+            'legal.address' => 'Adresse de test',
+            'legal.ice' => 'ICE-TEST',
+            'legal.privacy_contact_email' => 'privacy@yazoo.test',
+            'services.contact.recipient' => 'contact@yazoo.test',
+            'mail.default' => 'smtp',
+            'mail.mailers.smtp.host' => 'smtp.yazoo.test',
+            'mail.mailers.smtp.username' => 'smtp-user',
+            'mail.mailers.smtp.password' => 'smtp-password',
+            'mail.from.address' => 'noreply@yazoo.test',
+            'services.sms.driver' => 'disabled',
+            'queue.default' => 'redis',
+            'operations.run_queue_worker' => true,
+            'operations.run_scheduler' => true,
+            'payments.providers.cmi.enabled' => false,
+            'auth.admin_bootstrap.enabled' => false,
+        ]);
+
+        $this->artisan('yazoo:preflight-production')
+            ->expectsOutput('At least one active administrator is required.')
+            ->assertExitCode(1);
+    }
+
     public function test_demo_database_seeder_refuses_to_run_in_production(): void
     {
         $previousEnvironment = app()->environment();

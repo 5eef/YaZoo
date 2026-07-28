@@ -33,8 +33,8 @@ Status: Local Validation Complete - Azure account validation pending
   non utilises par les scripts et workflows canoniques.
 
 Le workflow `.github/workflows/deploy.yml` appelle la CI reutilisable pour le meme
-SHA avant toute publication. Il construit et deploie le tag immuable
-`<github.sha>`; `latest` reste seulement un alias pratique.
+SHA avant toute publication. Il construit, pousse et deploie le tag immuable
+`<github.sha>`; `latest` n'est mis a jour qu'apres un rollout completement valide.
 
 ## Ressources et noms attendus
 
@@ -43,7 +43,8 @@ SHA avant toute publication. Il construit et deploie le tag immuable
 - Plan App Service: `yazoo-linux-plan`.
 - Backend: variable `AZURE_BACKEND_WEBAPP_NAME` (attendu: `yazoo-api`).
 - Frontend: variable `AZURE_FRONTEND_WEBAPP_NAME` (attendu: `yazoo`).
-- MySQL: `yazoo-mysql`.
+- MySQL: variable GitHub `AZURE_MYSQL_SERVER_NAME`; sa valeur doit correspondre
+  au serveur existant et etre confirmee par l'operateur.
 - Key Vault: `yazoo-kv`.
 - VNet: `yazoo-vnet`, sous-reseaux `appservice-integration` et
   `mysql-private`.
@@ -68,22 +69,39 @@ etre changes en cours de deploiement.
 6. Configurer les variables de l'environnement GitHub `production`:
    `AZURE_RESOURCE_GROUP`, `AZURE_BACKEND_WEBAPP_NAME`,
    `AZURE_FRONTEND_WEBAPP_NAME`, `AZURE_BACKEND_URL` et
-   `AZURE_FRONTEND_URL`.
-7. Proteger l'environnement `production` par approbation humaine et limiter les
-   branches autorisees.
+   `AZURE_FRONTEND_URL`, ainsi que `AZURE_MYSQL_SERVER_NAME` apres verification
+   du nom existant.
+7. Proteger l'environnement `production` par approbation humaine requise et
+   limiter les branches autorisees. Ce reglage GitHub est externe au depot:
+   sans lui, un merge vers `main` peut deployer automatiquement apres la CI.
 
 Le provisionnement local peut etre inspecte sans mutation:
 
 ```powershell
 .\deploy\azure-setup.ps1 `
+  -ResourceGroup <groupe-a-inspecter> `
+  -Location <region-a-inspecter> `
+  -AppServicePlanName <plan-a-inspecter> `
+  -BackendWebAppName <backend-a-inspecter> `
+  -FrontendWebAppName <frontend-a-inspecter> `
+  -MysqlServerName <mysql-a-inspecter> `
+  -MysqlDatabase <base-a-inspecter> `
+  -MysqlAdminUser <administrateur-a-inspecter> `
+  -KeyVaultName <coffre-a-inspecter> `
+  -VnetName <vnet-a-inspecter> `
+  -AppSubnetName <sous-reseau-app-a-inspecter> `
+  -MysqlSubnetName <sous-reseau-mysql-a-inspecter> `
+  -MysqlPrivateDnsZone <dns-prive-a-inspecter> `
   -ProvisioningPrincipalObjectId 00000000-0000-0000-0000-000000000000 `
   -BackendImage 5eef/yazoo-api:0000000000000000000000000000000000000000 `
   -FrontendImage 5eef/yazoo-frontend:0000000000000000000000000000000000000000 `
   -WhatIf
 ```
 
-Le script reel demande le mot de passe MySQL de facon masquee, arrete au premier
-echec essentiel et n'affiche jamais sa valeur.
+Tous les noms sont explicites. Sans `-AllowCreateResources`, le script reel fait
+uniquement des lectures de controle; `-WhatIf` simule sans mutation. La creation
+ou modification de fondation exige `-AllowCreateResources`, une autorisation
+humaine et un mot de passe MySQL saisi de facon masquee.
 
 ## Configuration backend obligatoire
 
@@ -98,25 +116,37 @@ php artisan yazoo:preflight-production
 Elle exige notamment une cle d'application, SMTP reel, contact, informations
 legales, administrateur actif, queue et scheduler. `ADMIN_BOOTSTRAP_ENABLED=false`,
 `YAZOO_RUN_MIGRATIONS=false` et `CMI_ENABLED=false` restent les valeurs sures par
-defaut.
+defaut. Le workflow canonique fixe `YAZOO_RUN_PRODUCTION_PREFLIGHT=true`; le
+conteneur l'execute avant toute migration et avant PHP-FPM/Nginx. Un echec arrete
+le conteneur. Hors production, le garde est ignore. En production, une desactivation
+explicite permet le demarrage mais emet un avertissement et n'est pas admise par le
+workflow canonique.
 
 ## Ordre migration, build et deploiement
 
-1. Sauvegarder MySQL et verifier qu'une restauration recente est possible.
+1. Exiger l'approbation manuelle de l'environnement GitHub `production`.
 2. Executer la CI complete du SHA: Composer, npm, couvertures, lint, TypeScript,
    i18n, Playwright, Compose, builds Docker, scan de secrets et SonarCloud si
    configure.
-3. Construire et pousser les deux images `<github.sha>`.
-4. Memoriser les images actuellement deployees.
-5. Arreter le backend, fixer simultanement son image au SHA et
+3. Construire et pousser uniquement les deux images `<github.sha>`.
+4. Verifier par Azure Control Plane que le serveur designe par
+   `AZURE_MYSQL_SERVER_NAME` existe, est `Ready`, conserve au moins 7 jours de
+   sauvegardes automatiques et expose une date de restauration point-in-time.
+   Tout echec arrete le workflow avant migration et avant changement d'image.
+5. Memoriser les images actuellement deployees.
+6. Arreter le backend, fixer simultanement son image au SHA,
+   `YAZOO_RUN_PRODUCTION_PREFLIGHT=true` et
    `YAZOO_RUN_MIGRATIONS=true`, puis le demarrer. Le script `startup.sh` execute
-   `php artisan yazoo:migrate-production --force` avant nginx; la commande utilise
-   un verrou de cache distribue et refuse un second proprietaire.
-6. Attendre `/health/live` et `/health/ready`, verifier le SHA, remettre
+   le preflight puis `php artisan yazoo:migrate-production` avant nginx; la
+   commande de migration utilise `--force` en interne, un verrou de cache
+   distribue et refuse un second proprietaire.
+7. Attendre `/health/live` et `/health/ready`, verifier le SHA, remettre
    `YAZOO_RUN_MIGRATIONS=false`, redemarrer et verifier une seconde fois.
-7. Fixer le frontend sur le meme SHA et le redemarrer.
-8. Verifier `/health/live`, `/health/ready`, `/version.json`, la page frontend et
+8. Fixer le frontend sur le meme SHA et le redemarrer.
+9. Verifier `/health/live`, `/health/ready`, `/version.json`, la page frontend et
    la correspondance exacte du SHA.
+10. Seulement apres ce succes, publier les alias Docker Hub `latest`. Un SHA en
+    echec reste disponible pour diagnostic mais ne devient jamais `latest`.
 
 Azure CLI ne fournit pas de commande distante non interactive via
 `az webapp ssh --command` pour ce type de conteneur. Le workflow n'utilise donc
@@ -145,7 +175,11 @@ MariaDB sur 3307.
 ## Sauvegarde et rollback
 
 - Activer les sauvegardes automatiques MySQL et documenter la retention reelle.
-- Tester une restauration dans une ressource isolee avant une migration majeure.
+- Le workflow bloque si la retention est inferieure a 7 jours ou si les metadonnees
+  de restauration point-in-time sont absentes.
+- Tester reellement une restauration dans une ressource isolee avant une migration
+  majeure. Cette preuve reste externe et aucune restauration n'est revendiquee
+  par la validation locale.
 - Sauvegarder le volume de medias persistants avec une retention validee.
 - Le workflow restaure automatiquement les deux images precedentes si la sante ou
   la version echoue, puis controle de nouveau backend et frontend.
@@ -243,7 +277,8 @@ obligatoires sont absents; aucune valeur ne doit etre inventee.
   sous-reseaux delegues, MySQL prive, Key Vault, role borne et App Services
   apparaissent sans mutation.
 - [x] `azure-dockerhub-deploy.ps1 -WhatIf`: aucune sentinelle de secret dans la
-  sortie; les tags `latest` sont refuses.
+  sortie; les tags `latest` sont refuses. Ce script est reserve a la configuration
+  initiale et exige une autorisation explicite hors simulation.
 - [x] `docker compose config --quiet`.
 - [x] Build local des images backend et frontend avec `APP_VERSION` fixe.
 - [x] Workflows valides par Symfony YAML et actionlint 1.7.12.

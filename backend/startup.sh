@@ -21,6 +21,8 @@ if [ -d /home/site/yazoo-storage ]; then
 fi
 cp /var/www/html/nginx.conf /etc/nginx/http.d/default.conf
 
+sh /var/www/html/scripts/run-production-preflight.sh
+
 if [ "${YAZOO_RUN_MIGRATIONS:-false}" = "true" ]; then
     su-exec www-data php artisan yazoo:migrate-production
 fi

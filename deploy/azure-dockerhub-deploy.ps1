@@ -2,25 +2,25 @@
 [CmdletBinding(SupportsShouldProcess)]
 param(
     [string] $SubscriptionId = "",
-    [string] $ResourceGroup = "yazoo-rg",
-    [string] $Location = "germanywestcentral",
-    [string] $AppServicePlanName = "yazoo-linux-plan",
-    [string] $BackendWebAppName = "yazoo-api",
-    [string] $FrontendWebAppName = "yazoo",
+    [Parameter(Mandatory)][string] $ResourceGroup,
+    [Parameter(Mandatory)][string] $Location,
+    [Parameter(Mandatory)][string] $AppServicePlanName,
+    [Parameter(Mandatory)][string] $BackendWebAppName,
+    [Parameter(Mandatory)][string] $FrontendWebAppName,
     [Parameter(Mandatory)][string] $BackendImage,
     [Parameter(Mandatory)][string] $FrontendImage,
-    [Parameter(Mandatory)][string] $AppKey,
+    [SecureString] $AppKey,
     [Parameter(Mandatory)][string] $FrontendUrl,
     [Parameter(Mandatory)][string] $DbHost,
     [string] $DbDatabase = "yazoo",
     [Parameter(Mandatory)][string] $DbUsername,
-    [Parameter(Mandatory)][string] $DbPassword,
+    [SecureString] $DbPassword,
     [Parameter(Mandatory)][string] $RedisHost,
-    [Parameter(Mandatory)][string] $RedisPassword,
+    [SecureString] $RedisPassword,
     [string] $RedisPort = "6380",
     [string] $RedisScheme = "tls",
     [string] $GoogleClientId = "",
-    [string] $GoogleClientSecret = "",
+    [SecureString] $GoogleClientSecret,
     [string] $GoogleRedirectUri = "",
     [string] $GoogleFrontendRedirect = "",
     [Parameter(Mandatory)][string] $ContactRecipient,
@@ -31,10 +31,11 @@ param(
     [Parameter(Mandatory)][string] $MailHost,
     [Parameter(Mandatory)][string] $MailPort,
     [Parameter(Mandatory)][string] $MailUsername,
-    [Parameter(Mandatory)][string] $MailPassword,
+    [SecureString] $MailPassword,
     [string] $MailEncryption = "tls",
     [Parameter(Mandatory)][string] $MailFromAddress,
-    [string] $MailFromName = "YaZoo"
+    [string] $MailFromName = "YaZoo",
+    [switch] $AllowInitialConfiguration
 )
 
 $ErrorActionPreference = "Stop"
@@ -108,10 +109,55 @@ function Test-WebAppExists {
     return $LASTEXITCODE -eq 0
 }
 
+function ConvertFrom-SecureValue {
+    param([SecureString] $Value)
+
+    if (-not $Value) {
+        return ""
+    }
+
+    $pointer = [IntPtr]::Zero
+    try {
+        $pointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($Value)
+        return [Runtime.InteropServices.Marshal]::PtrToStringBSTR($pointer)
+    } finally {
+        if ($pointer -ne [IntPtr]::Zero) {
+            [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($pointer)
+        }
+    }
+}
+
+if (-not $AllowInitialConfiguration -and -not $WhatIfPreference) {
+    throw "This script is for initial configuration only. Use deploy.yml for routine releases, or pass -AllowInitialConfiguration after explicit approval."
+}
+
+if (-not $AllowInitialConfiguration) {
+    Write-Host "WhatIf mode: initial configuration is being simulated; -AllowInitialConfiguration was not granted."
+} else {
+    Write-Warning "Initial configuration only: routine production releases must use .github/workflows/deploy.yml."
+    foreach ($requiredSecret in @{
+        AppKey = $AppKey
+        DbPassword = $DbPassword
+        RedisPassword = $RedisPassword
+        MailPassword = $MailPassword
+    }.GetEnumerator()) {
+        if (-not $requiredSecret.Value) {
+            throw "$($requiredSecret.Key) must be supplied as a SecureString for initial configuration."
+        }
+    }
+}
+
 if ($SubscriptionId) {
     Invoke-NativeCommand az @("account", "set", "--subscription", $SubscriptionId)
 }
 
+$appKeyValue = ConvertFrom-SecureValue $AppKey
+$dbPasswordValue = ConvertFrom-SecureValue $DbPassword
+$redisPasswordValue = ConvertFrom-SecureValue $RedisPassword
+$googleClientSecretValue = ConvertFrom-SecureValue $GoogleClientSecret
+$mailPasswordValue = ConvertFrom-SecureValue $MailPassword
+
+try {
 $frontendUri = [Uri] $FrontendUrl
 if ($frontendUri.Scheme -ne "https" -or -not $frontendUri.Host) {
     throw "FrontendUrl must be an absolute HTTPS URL."
@@ -186,12 +232,13 @@ $backendSettings = @(
     "WEBSITES_CONTAINER_START_TIME_LIMIT=1800",
     "WEBSITE_HEALTHCHECK_MAXPINGFAILURES=3",
     "YAZOO_RUN_MIGRATIONS=false",
+    "YAZOO_RUN_PRODUCTION_PREFLIGHT=true",
     "YAZOO_RUN_QUEUE_WORKER=true",
     "YAZOO_RUN_SCHEDULER=true",
     "YAZOO_RUNTIME_OPTIMIZE=true",
     "APP_NAME=YaZoo",
     "APP_ENV=production",
-    "APP_KEY=$AppKey",
+    "APP_KEY=$appKeyValue",
     "APP_DEBUG=false",
     "APP_URL=https://$BackendWebAppName.azurewebsites.net",
     "APP_FORCE_HTTPS=true",
@@ -204,7 +251,7 @@ $backendSettings = @(
     "DB_PORT=3306",
     "DB_DATABASE=$DbDatabase",
     "DB_USERNAME=$DbUsername",
-    "DB_PASSWORD=$DbPassword",
+    "DB_PASSWORD=$dbPasswordValue",
     "MYSQL_ATTR_SSL_CA=/etc/ssl/certs/ca-certificates.crt",
     "CACHE_STORE=redis",
     "QUEUE_CONNECTION=redis",
@@ -218,14 +265,14 @@ $backendSettings = @(
     "REDIS_SCHEME=$RedisScheme",
     "REDIS_HOST=$RedisHost",
     "REDIS_PORT=$RedisPort",
-    "REDIS_PASSWORD=$RedisPassword",
+    "REDIS_PASSWORD=$redisPasswordValue",
     "REDIS_DB=0",
     "REDIS_CACHE_DB=1",
     "FRONTEND_URL=$FrontendUrl",
     "SANCTUM_STATEFUL_DOMAINS=$frontendHost",
     "CORS_ALLOWED_ORIGINS=$FrontendUrl",
     "GOOGLE_CLIENT_ID=$GoogleClientId",
-    "GOOGLE_CLIENT_SECRET=$GoogleClientSecret",
+    "GOOGLE_CLIENT_SECRET=$googleClientSecretValue",
     "GOOGLE_REDIRECT_URI=$GoogleRedirectUri",
     "GOOGLE_FRONTEND_REDIRECT=$GoogleFrontendRedirect",
     "FILESYSTEM_DISK=public",
@@ -235,7 +282,7 @@ $backendSettings = @(
     "MAIL_HOST=$MailHost",
     "MAIL_PORT=$MailPort",
     "MAIL_USERNAME=$MailUsername",
-    "MAIL_PASSWORD=$MailPassword",
+    "MAIL_PASSWORD=$mailPasswordValue",
     "MAIL_ENCRYPTION=$MailEncryption",
     "MAIL_FROM_ADDRESS=$MailFromAddress",
     "MAIL_FROM_NAME=$MailFromName",
@@ -269,3 +316,10 @@ Invoke-NativeCommand az @("webapp", "restart", "--resource-group", $ResourceGrou
 Write-Host "Azure App Service container configuration completed."
 Write-Host "Backend health: https://$BackendWebAppName.azurewebsites.net/health/ready"
 Write-Host "Frontend health: https://$FrontendWebAppName.azurewebsites.net/"
+} finally {
+    $appKeyValue = $null
+    $dbPasswordValue = $null
+    $redisPasswordValue = $null
+    $googleClientSecretValue = $null
+    $mailPasswordValue = $null
+}
