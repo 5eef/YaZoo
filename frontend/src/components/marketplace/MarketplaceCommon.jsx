@@ -1,8 +1,17 @@
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import PropTypes from 'prop-types'
 import { useState } from 'react'
 import { removeFavoriteRequest, saveFavoriteRequest } from '../../api/favorites'
 import { useI18n } from '../../hooks/useI18n'
+
+const PROFESSIONAL_BADGE_TRANSLATIONS = {
+  verified_seller: 'verifiedSeller',
+  verified_pet_shop: 'verifiedPetShop',
+  verified_breeder: 'verifiedBreeder',
+  verified_trainer: 'verifiedTrainer',
+  verified_service_provider: 'verifiedServiceProvider',
+  verified_veterinarian: 'verifiedVeterinarian',
+}
 
 export function MarketplaceTabs({ active }) {
   const { t } = useI18n()
@@ -112,9 +121,20 @@ export function TrustBadge({ children, tone = 'neutral' }) {
 export function SellerTrustBadges({ author, sellerType }) {
   const { t } = useI18n()
   const badges = []
+  const professionalBadgeKey = PROFESSIONAL_BADGE_TRANSLATIONS[author?.professionalBadge]
 
-  if (author?.isProfessionalVerified) {
-    badges.push({ key: 'professionalVerified', label: t('marketplaceBadges.professionalVerified'), tone: 'emerald' })
+  if (professionalBadgeKey) {
+    badges.push({
+      key: author.professionalBadge,
+      label: t(`marketplaceBadges.${professionalBadgeKey}`),
+      tone: 'emerald',
+    })
+  } else if (author?.isProfessionalVerified) {
+    badges.push({
+      key: 'professionalVerified',
+      label: t('marketplaceBadges.professionalVerified'),
+      tone: 'emerald',
+    })
   }
 
   if (sellerType === 'professional') {

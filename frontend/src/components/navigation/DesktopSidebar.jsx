@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types'
-import { Link, NavLink } from 'react-router-dom'
+import { Link, NavLink } from 'react-router'
 
 import AppIcon from '../ui/AppIcon'
 import Avatar from '../ui/Avatar'

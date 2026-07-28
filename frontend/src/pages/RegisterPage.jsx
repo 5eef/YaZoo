@@ -1,14 +1,14 @@
 import { useContext, useMemo, useState } from 'react'
-import { Link, Navigate, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useSearchParams } from 'react-router'
 
 import { getGoogleAuthUrl, isGoogleAuthEnabled } from '../api/auth'
-import { createPrivacyConsent } from '../api/privacy'
 import GoogleAuthErrorNotice from '../components/auth/GoogleAuthErrorNotice'
 import Button from '../components/ui/Button'
 import Footer from '../components/ui/Footer'
 import PasswordField from '../components/ui/PasswordField'
 import { I18nContext } from '../contexts/i18n-context'
 import { useAuth } from '../hooks/useAuth'
+import { useSmsAvailability } from '../hooks/useSmsAvailability'
 import { getGoogleAuthErrorMessage } from '../lib/googleAuthErrors'
 import { translate } from '../lib/i18n'
 import { getErrorMessage } from '../utils/getErrorMessage'
@@ -31,8 +31,8 @@ function RegisterPage() {
     city: '',
   })
   const [errorMessage, setErrorMessage] = useState('')
-  const [acceptsSmsOtp, setAcceptsSmsOtp] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const smsAvailable = useSmsAvailability()
   const googleAuthEnabled = isGoogleAuthEnabled()
   const authError = searchParams.get('auth_error')
   const googleAuthErrorMessage = getGoogleAuthErrorMessage(authError, 'register', t)
@@ -70,11 +70,6 @@ function RegisterPage() {
     event.preventDefault()
     setErrorMessage('')
 
-    if (!acceptsSmsOtp) {
-      setErrorMessage(t('privacy.settings.smsOtpRequired'))
-      return
-    }
-
     setIsSubmitting(true)
     const formData = new FormData(event.currentTarget)
     const payload = {
@@ -91,15 +86,6 @@ function RegisterPage() {
 
     try {
       await register(payload)
-      try {
-        await createPrivacyConsent({
-          type: 'sms_otp',
-          accepted: true,
-          locale: i18n?.locale ?? 'fr',
-        })
-      } catch {
-        // Registration should not fail if consent persistence is temporarily unavailable.
-      }
     } catch (error) {
       setErrorMessage(
         getErrorMessage(error, t('auth.register.failed')),
@@ -232,15 +218,11 @@ function RegisterPage() {
               />
             </div>
 
-            <label className="flex gap-3 rounded-[20px] border border-violet-100 bg-violet-50/60 p-4 text-sm leading-6 text-stone-700 dark:border-violet-300/16 dark:bg-white/8 dark:text-violet-100">
-              <input
-                type="checkbox"
-                checked={acceptsSmsOtp}
-                onChange={(event) => setAcceptsSmsOtp(event.target.checked)}
-                className="mt-1 h-4 w-4 rounded border-violet-300 text-violet-700 focus:ring-violet-500"
-              />
-              <span>{t('privacy.settings.smsOtpConsent')}</span>
-            </label>
+            {smsAvailable === false ? (
+              <p className="rounded-[20px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900 dark:border-amber-300/20 dark:bg-amber-500/10 dark:text-amber-100">
+                {t('auth.smsUnavailable')}
+              </p>
+            ) : null}
 
             <GoogleAuthErrorNotice message={googleAuthErrorMessage} />
 

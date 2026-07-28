@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 
 import { getPublicMarketplacePreviewRequest } from '../../api/publicMarketplace'
 import { useI18n } from '../../hooks/useI18n'
@@ -24,6 +24,12 @@ const TRANSLATED_BADGES = new Set([
   'session',
   'negotiable',
   'verified_professional',
+  'verified_seller',
+  'verified_pet_shop',
+  'verified_breeder',
+  'verified_trainer',
+  'verified_service_provider',
+  'verified_veterinarian',
 ])
 
 function PublicMarketplaceShowcase() {
@@ -206,6 +212,9 @@ function PreviewCard({ listing, locale, t }) {
   const badgeKey = TRANSLATED_BADGES.has(listing.badge)
     ? `landing.marketplaceBadges.${listing.badge}`
     : null
+  const professionalBadgeKey = TRANSLATED_BADGES.has(listing.professionalBadge)
+    ? `landing.marketplaceBadges.${listing.professionalBadge}`
+    : null
 
   return (
     <article className="w-[82vw] max-w-[310px] shrink-0 snap-start overflow-hidden rounded-[24px] border border-violet-100 bg-[linear-gradient(180deg,#ffffff,#f8f3ff)] shadow-[0_14px_34px_rgba(124,58,237,0.08)] dark:border-violet-300/14 dark:bg-[linear-gradient(180deg,_rgba(24,16,38,0.98),_rgba(36,20,61,0.94))] sm:w-[285px]">
@@ -235,11 +244,18 @@ function PreviewCard({ listing, locale, t }) {
               {listing.subtitle || listing.location}
             </p>
           </div>
-          {badgeKey ? (
-            <span className="shrink-0 rounded-full bg-violet-100 px-2.5 py-1 text-[11px] font-semibold text-violet-800 dark:bg-violet-400/18 dark:text-violet-100">
-              {t(badgeKey)}
-            </span>
-          ) : null}
+          <div className="flex shrink-0 flex-col items-end gap-1.5">
+            {professionalBadgeKey ? (
+              <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-800 dark:bg-emerald-400/18 dark:text-emerald-100">
+                {t(professionalBadgeKey)}
+              </span>
+            ) : null}
+            {badgeKey ? (
+              <span className="rounded-full bg-violet-100 px-2.5 py-1 text-[11px] font-semibold text-violet-800 dark:bg-violet-400/18 dark:text-violet-100">
+                {t(badgeKey)}
+              </span>
+            ) : null}
+          </div>
         </div>
 
         {listing.price !== null ? (

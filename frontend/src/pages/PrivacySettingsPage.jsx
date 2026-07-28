@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import PropTypes from 'prop-types'
 
 import {
@@ -226,7 +226,7 @@ function updateCookieConsentLocalState(analyticsAccepted) {
   try {
     current = rawValue ? JSON.parse(rawValue) : {}
   } catch {
-    current = {}
+    // Ignore malformed legacy consent data and replace it with a valid object below.
   }
 
   globalThis.localStorage?.setItem(

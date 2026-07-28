@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, Navigate } from 'react-router-dom'
+import { Link, Navigate } from 'react-router'
 
 import { getAdminOrdersDashboardRequest } from '../api/admin'
 import Avatar from '../components/ui/Avatar'

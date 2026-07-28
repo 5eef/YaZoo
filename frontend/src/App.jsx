@@ -1,5 +1,5 @@
 import { Suspense, lazy } from 'react'
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes } from 'react-router'
 
 import { useAuth } from './hooks/useAuth'
 import { useI18n } from './hooks/useI18n'

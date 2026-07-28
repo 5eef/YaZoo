@@ -1,5 +1,5 @@
 import { useContext } from 'react'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 
 import { I18nContext } from '../../contexts/i18n-context'
 import { getCurrentLocale, translate } from '../../lib/i18n'

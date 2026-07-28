@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, Navigate } from 'react-router-dom'
+import { Link, Navigate } from 'react-router'
 
 import {
   exportAdminReportsCsvRequest,
@@ -13,6 +13,7 @@ import {
   deleteAdminProductRequest,
   getAdminReportsRequest,
   getAdminModerationRequest,
+  getAdminModerationSectionRequest,
   updateAdminReportStatusRequest,
 } from '../api/admin'
 import Avatar from '../components/ui/Avatar'
@@ -26,9 +27,13 @@ const moderationTabs = [
   { key: 'posts', labelKey: 'admin.moderation.tabs.posts' },
   { key: 'animals', labelKey: 'admin.moderation.tabs.animals' },
   { key: 'products', labelKey: 'admin.moderation.tabs.products' },
+  { key: 'services', labelKey: 'admin.moderation.tabs.services' },
+  { key: 'veterinarians', labelKey: 'admin.moderation.tabs.veterinarians' },
   { key: 'communities', labelKey: 'admin.moderation.tabs.communities' },
   { key: 'reports', labelKey: 'admin.moderation.tabs.reports' },
 ]
+
+const paginatedMarketplaceTabs = ['animals', 'products', 'services', 'veterinarians']
 
 function AdminModerationPage() {
   const { t } = useI18n()
@@ -38,6 +43,8 @@ function AdminModerationPage() {
     posts: [],
     animals: [],
     products: [],
+    services: [],
+    veterinarians: [],
     communities: [],
     reports: [],
   })
@@ -47,6 +54,9 @@ function AdminModerationPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [deletingKey, setDeletingKey] = useState('')
   const [moderatingKey, setModeratingKey] = useState('')
+  const [marketplacePage, setMarketplacePage] = useState(1)
+  const [marketplaceMeta, setMarketplaceMeta] = useState(null)
+  const [isSectionLoading, setIsSectionLoading] = useState(false)
 
   useEffect(() => {
     if (!user?.isAdmin) {
@@ -87,6 +97,43 @@ function AdminModerationPage() {
     }
   }, [t, user?.isAdmin])
 
+  useEffect(() => {
+    if (!user?.isAdmin || !paginatedMarketplaceTabs.includes(activeTab)) {
+      setMarketplaceMeta(null)
+      return undefined
+    }
+
+    let cancelled = false
+    setIsSectionLoading(true)
+
+    getAdminModerationSectionRequest(activeTab, {
+      page: marketplacePage,
+      per_page: 12,
+    })
+      .then((response) => {
+        if (cancelled) return
+
+        setDashboard((current) => ({
+          ...current,
+          [activeTab]: response.data?.data ?? [],
+        }))
+        setMarketplaceMeta(response.data?.meta ?? null)
+        setErrorMessage('')
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setErrorMessage(getErrorMessage(error, t('admin.moderation.loadError')))
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsSectionLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [activeTab, marketplacePage, t, user?.isAdmin])
+
   if (!user?.isAdmin) {
     return <Navigate to="/feed" replace />
   }
@@ -99,6 +146,8 @@ function AdminModerationPage() {
     { label: t('admin.moderation.stats.posts'), value: stats.posts ?? 0 },
     { label: t('admin.moderation.stats.animals'), value: stats.animals ?? 0 },
     { label: t('admin.moderation.stats.products'), value: stats.products ?? 0 },
+    { label: t('admin.moderation.stats.services'), value: stats.services ?? 0 },
+    { label: t('admin.moderation.stats.veterinarians'), value: stats.veterinarians ?? 0 },
     { label: t('admin.moderation.stats.communities'), value: stats.communities ?? 0 },
     {
       label: t('admin.moderation.stats.pendingCommunityRequests'),
@@ -198,7 +247,16 @@ function AdminModerationPage() {
         moderation_note: note,
       })
       setSuccessMessage(t('admin.moderation.contentStatusUpdated'))
-      await loadDashboard()
+      if (paginatedMarketplaceTabs.includes(type)) {
+        const response = await getAdminModerationSectionRequest(type, {
+          page: marketplacePage,
+          per_page: 12,
+        })
+        setDashboard((current) => ({ ...current, [type]: response.data?.data ?? [] }))
+        setMarketplaceMeta(response.data?.meta ?? null)
+      } else {
+        await loadDashboard()
+      }
     } catch (error) {
       setErrorMessage(getErrorMessage(error, t('admin.moderation.contentStatusError')))
     } finally {
@@ -295,7 +353,10 @@ function AdminModerationPage() {
             <button
               key={tab.key}
               type="button"
-              onClick={() => setActiveTab(tab.key)}
+              onClick={() => {
+                setActiveTab(tab.key)
+                setMarketplacePage(1)
+              }}
               className={`w-full rounded-full px-4 py-2 text-sm font-medium transition sm:w-auto ${
                 activeTab === tab.key
                   ? 'bg-[linear-gradient(135deg,#7c3aed,#a855f7,#c4b5fd)] text-white shadow-[0_12px_24px_rgba(124,58,237,0.18)]'
@@ -307,11 +368,11 @@ function AdminModerationPage() {
           ))}
         </div>
 
-        {isLoading ? (
+        {isLoading || isSectionLoading ? (
           <StateBox>{t('admin.moderationLoading')}</StateBox>
         ) : null}
 
-        {!isLoading && items.length === 0 ? (
+        {!isLoading && !isSectionLoading && items.length === 0 ? (
           <StateBox>{t('admin.moderationEmpty')}</StateBox>
         ) : null}
 
@@ -320,20 +381,45 @@ function AdminModerationPage() {
         ) : null}
 
         {!isLoading && activeTab !== 'reports' && items.length > 0 ? (
-          <div className="mt-5 grid gap-4 lg:grid-cols-2">
-            {items.map((item) => (
-              <ModerationCard
-                key={`${activeTab}-${item.id}`}
-                item={item}
-                type={activeTab}
-                isDeleting={deletingKey === `${activeTab}-${item.id}`}
-                moderatingKey={moderatingKey}
-                onDelete={handleDelete}
-                onModerate={handleContentModeration}
-                t={t}
-              />
-            ))}
-          </div>
+          <>
+            <div className="mt-5 grid gap-4 lg:grid-cols-2">
+              {items.map((item) => (
+                <ModerationCard
+                  key={`${activeTab}-${item.id}`}
+                  item={item}
+                  type={activeTab}
+                  isDeleting={deletingKey === `${activeTab}-${item.id}`}
+                  moderatingKey={moderatingKey}
+                  onDelete={handleDelete}
+                  onModerate={handleContentModeration}
+                  t={t}
+                />
+              ))}
+            </div>
+            {marketplaceMeta?.lastPage > 1 ? (
+              <div className="mt-5 flex items-center justify-center gap-3">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={marketplaceMeta.currentPage <= 1 || isSectionLoading}
+                  onClick={() => setMarketplacePage((page) => Math.max(1, page - 1))}
+                >
+                  {t('landing.marketplacePrevious')}
+                </Button>
+                <span className="text-sm text-stone-600 dark:text-violet-100/76">
+                  {marketplaceMeta.currentPage} / {marketplaceMeta.lastPage}
+                </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={marketplaceMeta.currentPage >= marketplaceMeta.lastPage || isSectionLoading}
+                  onClick={() => setMarketplacePage((page) => page + 1)}
+                >
+                  {t('landing.marketplaceNext')}
+                </Button>
+              </div>
+            ) : null}
+          </>
         ) : null}
       </section>
     </section>
@@ -404,15 +490,17 @@ function ModerationCard({ item, type, onDelete, onModerate, isDeleting, moderati
             ) : null}
           </div>
 
-          <Button
-            type="button"
-            variant="ghost"
-            disabled={isDeleting}
-            onClick={() => onDelete(type, item)}
-            className="w-full border-rose-200 text-rose-700 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-800 focus-visible:outline-rose-200 sm:w-auto"
-          >
-            {isDeleting ? t('admin.moderation.deleting') : t('common.delete')}
-          </Button>
+          {['posts', 'animals', 'products', 'communities'].includes(type) ? (
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={isDeleting}
+              onClick={() => onDelete(type, item)}
+              className="w-full border-rose-200 text-rose-700 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-800 focus-visible:outline-rose-200 sm:w-auto"
+            >
+              {isDeleting ? t('admin.moderation.deleting') : t('common.delete')}
+            </Button>
+          ) : null}
         </div>
 
         <div className="flex items-center gap-3 rounded-[22px] bg-white/90 px-4 py-3 shadow-sm dark:bg-white/8">
@@ -476,7 +564,7 @@ function ModerationCard({ item, type, onDelete, onModerate, isDeleting, moderati
 
         {toContentType(type) ? (
           <div className="flex flex-wrap gap-2">
-            {['hide', 'suspend', 'restore'].map((action) => (
+            {['approve', 'reject', 'suspend'].map((action) => (
               <Button
                 key={action}
                 type="button"
@@ -499,6 +587,8 @@ function TypeBadge({ type, t }) {
     posts: t('admin.moderation.tabs.posts'),
     animals: t('admin.moderation.type.animals'),
     products: t('admin.moderation.type.products'),
+    services: t('admin.moderation.type.services'),
+    veterinarians: t('admin.moderation.type.veterinarians'),
     communities: t('admin.moderation.type.communities'),
   }
 
@@ -506,6 +596,8 @@ function TypeBadge({ type, t }) {
     posts: 'bg-violet-100 text-violet-800',
     animals: 'bg-fuchsia-100 text-fuchsia-800',
     products: 'bg-purple-100 text-purple-800',
+    services: 'bg-sky-100 text-sky-800',
+    veterinarians: 'bg-emerald-100 text-emerald-800',
     communities: 'bg-indigo-100 text-indigo-800',
   }
 
@@ -618,6 +710,15 @@ function buildDeleteLabel(type, item, t) {
     return t('admin.moderation.deleteLabels.product', { title: item.title })
   }
 
+  if (type === 'services' || type === 'veterinarians') {
+    return [
+      { label: t('admin.moderation.meta.category'), value: item.category || t('common.notProvided') },
+      { label: t('admin.moderation.meta.status'), value: item.listingStatus || t('common.notProvided') },
+      { label: t('admin.moderation.meta.location'), value: item.location || t('common.notProvided') },
+      { label: t('admin.moderation.meta.price'), value: item.price === null || item.price === undefined ? t('common.notProvided') : `${item.price} MAD` },
+    ]
+  }
+
   return t('admin.moderation.deleteLabels.community', { title: item.title })
 }
 
@@ -626,6 +727,8 @@ function toContentType(type) {
     posts: 'post',
     animals: 'animal',
     products: 'product',
+    services: 'service',
+    veterinarians: 'veterinarian',
   }
 
   return map[type] ?? ''

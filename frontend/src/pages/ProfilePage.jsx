@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 
 import {
   createCommentRequest,
@@ -27,6 +27,11 @@ import { useI18n } from '../hooks/useI18n'
 import { asArray, extractDataArray, extractDataObject } from '../utils/apiData'
 import { getErrorMessage } from '../utils/getErrorMessage'
 import { normalizeAuthUserMedia, normalizeProfileMediaPayload } from '../utils/media'
+import {
+  addCommentToPost,
+  filterSocialPosts as filterPublications,
+  updateCommentInPost,
+} from '../utils/socialPosts'
 
 function ProfilePage() {
   const { setUser, user } = useAuth()
@@ -1065,76 +1070,6 @@ function getPostStats(post) {
     reactions: post.reactionsCount ?? post.likesCount ?? post.likes ?? reactionTotal,
     comments: post.commentsCount ?? post.comments?.length ?? 0,
     shares: post.sharesCount ?? post.shares ?? 0,
-  }
-}
-
-function filterPublications(publications, searchTerm) {
-  const safePublications = asArray(publications)
-
-  if (!searchTerm) {
-    return safePublications
-  }
-
-  const normalizedSearch = normalizeSearchText(searchTerm)
-
-  return safePublications.filter((post) =>
-    [
-      post.content,
-      post.location,
-      post.author?.name,
-      post.author?.email,
-      ...(post.tags ?? []),
-    ].some((value) => normalizeSearchText(value).includes(normalizedSearch)),
-  )
-}
-
-function normalizeSearchText(value) {
-  return String(value ?? '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-}
-
-function addCommentToPost(post, comment) {
-  const isReply = Boolean(comment.parentId)
-
-  if (!isReply) {
-    return {
-      ...post,
-      comments: [...(post.comments ?? []), comment],
-      commentsCount: (post.commentsCount ?? post.comments?.length ?? 0) + 1,
-    }
-  }
-
-  return {
-    ...post,
-    comments: (post.comments ?? []).map((currentComment) =>
-      currentComment.id === comment.parentId
-        ? {
-            ...currentComment,
-            replies: [...(currentComment.replies ?? []), comment],
-          }
-        : currentComment,
-    ),
-    commentsCount: (post.commentsCount ?? post.comments?.length ?? 0) + 1,
-  }
-}
-
-function updateCommentInPost(post, nextComment) {
-  return {
-    ...post,
-    comments: (post.comments ?? []).map((comment) => {
-      if (comment.id === nextComment.id) {
-        return nextComment
-      }
-
-      return {
-        ...comment,
-        replies: (comment.replies ?? []).map((reply) =>
-          reply.id === nextComment.id ? nextComment : reply,
-        ),
-      }
-    }),
   }
 }
 

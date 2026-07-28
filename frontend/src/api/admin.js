@@ -4,6 +4,9 @@ export const getAdminOrdersDashboardRequest = () => api.get('/admin/orders')
 
 export const getAdminModerationRequest = () => api.get('/admin/moderation')
 
+export const getAdminModerationSectionRequest = (type, params = {}) =>
+  api.get(`/admin/moderation/${type}`, { params })
+
 export const getAdminStatsRequest = () => api.get('/admin/stats')
 
 export const getAdminReportsRequest = (params = {}) =>

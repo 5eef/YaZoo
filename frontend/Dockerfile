@@ -1,4 +1,4 @@
-FROM node:22-alpine AS build
+FROM node:22.22-alpine AS build
 
 WORKDIR /app/frontend
 
@@ -13,6 +13,7 @@ ARG VITE_MONITORING_ENABLED=false
 ARG VITE_MONITORING_ENDPOINT=https://yazoo-api.azurewebsites.net/api/monitoring/frontend-error
 ARG VITE_NOTIFICATIONS_POLL_MS=30000
 ARG VITE_BUILD_SOURCEMAPS=false
+ARG APP_VERSION=local
 
 ENV VITE_APP_NAME=$VITE_APP_NAME \
     VITE_API_URL=$VITE_API_URL \
@@ -34,6 +35,8 @@ RUN npm run build
 
 FROM nginx:1.27-alpine
 
+ARG APP_VERSION=local
+
 LABEL org.opencontainers.image.title="YaZoo Frontend" \
       org.opencontainers.image.description="YaZoo social platform and animal marketplace frontend." \
       org.opencontainers.image.authors="Youssef BOUGHIOUL <youssefboughioul@gmail.com>" \
@@ -43,6 +46,7 @@ LABEL org.opencontainers.image.title="YaZoo Frontend" \
 COPY infra/nginx/frontend.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/frontend/dist /usr/share/nginx/html
 COPY LICENSE /usr/share/nginx/html/LICENSE.txt
+RUN printf '{"version":"%s"}\n' "$APP_VERSION" > /usr/share/nginx/html/version.json
 
 EXPOSE 80
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \

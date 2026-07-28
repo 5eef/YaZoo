@@ -1,5 +1,5 @@
 import { createElement, useEffect, useMemo, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router'
 import PropTypes from 'prop-types'
 
 import { globalSearchRequest } from '../api/search'

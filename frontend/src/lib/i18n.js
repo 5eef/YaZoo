@@ -1,3 +1,5 @@
+import { professionalMarketplaceMessages } from './locales/professionalMarketplace.js'
+
 export const LOCALE_STORAGE_KEY = 'yazoo-locale'
 
 export const SUPPORTED_LOCALES = ['fr', 'ar', 'en']
@@ -3428,6 +3430,14 @@ messages.fr = deepMerge(messages.fr, {
       failed: 'Impossible de réinitialiser le mot de passe.',
     },
   },
+  admin: {
+    moderation: {
+      tabs: { services: 'Services', veterinarians: 'Veterinaires' },
+      stats: { services: 'Services', veterinarians: 'Veterinaires' },
+      type: { services: 'Service', veterinarians: 'Veterinaire' },
+      actions: { approve: 'Approuver', reject: 'Rejeter' },
+    },
+  },
 })
 
 messages.ar = deepMerge(messages.ar, {
@@ -3522,6 +3532,14 @@ messages.ar = deepMerge(messages.ar, {
       failed: 'تعذر إعادة تعيين كلمة المرور.',
     },
   },
+  admin: {
+    moderation: {
+      tabs: { services: 'الخدمات', veterinarians: 'الأطباء البيطريون' },
+      stats: { services: 'الخدمات', veterinarians: 'الأطباء البيطريون' },
+      type: { services: 'خدمة', veterinarians: 'طبيب بيطري' },
+      actions: { approve: 'موافقة', reject: 'رفض' },
+    },
+  },
 })
 
 messages.en = deepMerge(messages.en, {
@@ -3614,6 +3632,14 @@ messages.en = deepMerge(messages.en, {
       submit: 'Reset password',
       success: 'Password reset successfully.',
       failed: 'Unable to reset the password.',
+    },
+  },
+  admin: {
+    moderation: {
+      tabs: { services: 'Services', veterinarians: 'Veterinarians' },
+      stats: { services: 'Services', veterinarians: 'Veterinarians' },
+      type: { services: 'Service', veterinarians: 'Veterinarian' },
+      actions: { approve: 'Approve', reject: 'Reject' },
     },
   },
 })
@@ -4506,7 +4532,7 @@ messages.fr = deepMerge(messages.fr, {
       title: 'Confidentialite',
       intro: "YaZoo traite les donnees necessaires au compte, aux annonces, aux messages, aux reservations et a la securite de la plateforme.",
       controllerTitle: 'Responsable du traitement',
-      controllerBody: "Responsable du traitement: Youssef BOUGHIOUL. Contact donnees personnelles: youssefboughioul@gmail.com. Hebergeur actuel: Microsoft Azure App Service. Statut juridique, adresse officielle et ICE restent a completer avant toute production publique.",
+      controllerBody: "Les coordonnees officielles du responsable du traitement sont fournies par la configuration de l environnement. Le statut juridique, l adresse officielle et l ICE restent a completer avant toute production publique.",
       dataTitle: 'Donnees traitees',
       dataBody: 'Les profils, coordonnees, telephone, email, ville, pays, contenus, annonces, images, messages, reservations, signalements, preferences de langue et traces techniques peuvent etre traites pour fournir le service.',
       purposesTitle: 'Finalites',
@@ -4520,7 +4546,7 @@ messages.fr = deepMerge(messages.fr, {
       rightsTitle: 'Vos droits',
       rightsBody: "Sous reserve de la loi applicable, vous pouvez demander l'acces, la rectification, l'opposition, la limitation ou la suppression de vos donnees personnelles.",
       claimTitle: 'Reclamation',
-      claimBody: "Pour exercer vos droits ou signaler un probleme de donnees personnelles, contactez youssefboughioul@gmail.com. Une procedure CNDP/Loi 09-08 complete devra etre finalisee avec les informations administratives reelles.",
+      claimBody: "Pour exercer vos droits ou signaler un probleme de donnees personnelles, utilisez la page de contact lorsque le service est configure. Une procedure CNDP/Loi 09-08 complete devra etre finalisee avec les informations administratives reelles.",
     },
     rules: {
       eyebrow: 'Publication responsable',
@@ -4554,9 +4580,9 @@ messages.fr = deepMerge(messages.fr, {
       communityTitle: 'Communaute',
       communityBody: 'Feed, stories, communautes et marketplace permettent de partager, rechercher et organiser les besoins autour des animaux.',
       legalNoticeTitle: 'Mentions legales',
-      legalNoticeBody: "Editeur et responsable du traitement: Youssef BOUGHIOUL. Contact administratif et donnees personnelles: youssefboughioul@gmail.com. Telephone: +212606610014. Hebergeur actuel: Microsoft Azure App Service. Statut juridique, adresse officielle et ICE: [A completer].",
+      legalNoticeBody: "Les coordonnees officielles de l editeur et du responsable du traitement sont configurees par environnement. Hebergeur actuel: Microsoft Azure App Service. Statut juridique, adresse officielle et ICE: [A completer].",
       dataContactTitle: 'Donnees personnelles',
-      dataContactBody: "Les demandes relatives aux donnees personnelles doivent etre adressees a youssefboughioul@gmail.com. YaZoo prevoit une demarche CNDP/Loi 09-08 progressive avant exploitation publique complete.",
+      dataContactBody: "Les demandes relatives aux donnees personnelles passent par le service de contact configure. YaZoo prevoit une demarche CNDP/Loi 09-08 progressive avant exploitation publique complete.",
       limitsTitle: 'Role de YaZoo',
       limitsBody: "YaZoo facilite la mise en relation mais ne remplace pas les controles legaux, veterinaires ou contractuels entre utilisateurs.",
     },
@@ -4799,7 +4825,7 @@ messages.ar = deepMerge(messages.ar, {
       title: 'الخصوصية',
       intro: 'يعالج YaZoo المعطيات اللازمة للحسابات والإعلانات والرسائل والحجوزات وأمن المنصة.',
       controllerTitle: 'المسؤول عن المعالجة',
-      controllerBody: 'المسؤول عن المعالجة: Youssef BOUGHIOUL. جهة الاتصال الخاصة بالمعطيات الشخصية: youssefboughioul@gmail.com. الاستضافة الحالية: Microsoft Azure App Service. يبقى الشكل القانوني والعنوان الرسمي ورقم ICE قيد الاستكمال قبل أي إطلاق عمومي.',
+      controllerBody: 'تحدد بيانات الاتصال الرسمية بمسؤول المعالجة من خلال إعدادات البيئة. تبقى الصفة القانونية والعنوان الرسمي ورقم ICE قيد الاستكمال قبل أي إطلاق عمومي.',
       dataTitle: 'المعطيات المعالجة',
       dataBody: 'يمكن معالجة بيانات الحساب والاتصال والهاتف والبريد الإلكتروني والمدينة والبلد والمحتوى والإعلانات والصور والرسائل والحجوزات والبلاغات وتفضيلات اللغة والآثار التقنية لتقديم الخدمة.',
       purposesTitle: 'أغراض المعالجة',
@@ -4813,7 +4839,7 @@ messages.ar = deepMerge(messages.ar, {
       rightsTitle: 'حقوقك',
       rightsBody: 'مع مراعاة القانون المعمول به، يمكنك طلب الولوج إلى معطياتك أو تصحيحها أو الاعتراض على معالجتها أو تقييدها أو حذفها.',
       claimTitle: 'الشكاية',
-      claimBody: 'لممارسة حقوقك أو التبليغ عن مشكل متعلق بالمعطيات الشخصية، تواصل عبر youssefboughioul@gmail.com. يجب استكمال مسطرة CNDP/القانون 09-08 بالمعلومات الإدارية الحقيقية.',
+      claimBody: 'لممارسة حقوقك أو التبليغ عن مشكل متعلق بالمعطيات الشخصية، استخدم صفحة التواصل عندما تكون الخدمة مهيأة. يجب استكمال مسطرة CNDP/القانون 09-08 بالمعلومات الإدارية الحقيقية.',
     },
     rules: {
       eyebrow: 'نشر مسؤول',
@@ -4847,9 +4873,9 @@ messages.ar = deepMerge(messages.ar, {
       communityTitle: 'المجتمع',
       communityBody: 'المنشورات والقصص والمجتمعات والسوق تساعد على المشاركة والبحث وتنظيم الاحتياجات حول الحيوانات.',
       legalNoticeTitle: 'البيانات القانونية',
-      legalNoticeBody: 'الناشر والمسؤول عن المعالجة: Youssef BOUGHIOUL. جهة الاتصال الإدارية والمعطيات الشخصية: youssefboughioul@gmail.com. الهاتف: +212606610014. الاستضافة الحالية: Microsoft Azure App Service. الشكل القانوني والعنوان الرسمي ورقم ICE: [يستكمل].',
+      legalNoticeBody: 'تحدد بيانات الناشر ومسؤول المعالجة من خلال إعدادات البيئة. الاستضافة الحالية: Microsoft Azure App Service. الشكل القانوني والعنوان الرسمي ورقم ICE: [يستكمل].',
       dataContactTitle: 'المعطيات الشخصية',
-      dataContactBody: 'توجه الطلبات المتعلقة بالمعطيات الشخصية إلى youssefboughioul@gmail.com. يعتمد YaZoo مسارا تدريجيا للامتثال لـ CNDP/القانون 09-08 قبل الاستغلال العمومي الكامل.',
+      dataContactBody: 'توجه الطلبات المتعلقة بالمعطيات الشخصية عبر خدمة التواصل المهيأة. يعتمد YaZoo مسارا تدريجيا للامتثال لـ CNDP/القانون 09-08 قبل الاستغلال العمومي الكامل.',
       limitsTitle: 'دور YaZoo',
       limitsBody: 'يسهل YaZoo الربط بين الأطراف ولا يعوض التحقق القانوني أو البيطري أو التعاقدي بين المستخدمين.',
     },
@@ -5164,7 +5190,7 @@ messages.en = deepMerge(messages.en, {
       title: 'Privacy',
       intro: 'YaZoo processes the data needed for accounts, listings, messages, reservations, and platform safety.',
       controllerTitle: 'Data controller',
-      controllerBody: 'Data controller: Youssef BOUGHIOUL. Personal data contact: youssefboughioul@gmail.com. Current hosting provider: Microsoft Azure App Service. Legal status, official address, and ICE remain to be completed before public production.',
+      controllerBody: 'The official data-controller contact details are supplied by environment configuration. Legal status, official address, and ICE remain to be completed before public production.',
       dataTitle: 'Processed data',
       dataBody: 'Profiles, contact details, phone number, email, city, country, content, listings, images, messages, reservations, reports, language preferences, and technical traces may be processed to provide the service.',
       purposesTitle: 'Purposes',
@@ -5178,7 +5204,7 @@ messages.en = deepMerge(messages.en, {
       rightsTitle: 'Your rights',
       rightsBody: 'Subject to applicable law, you may request access, correction, objection, restriction, or deletion of your personal data.',
       claimTitle: 'Complaint',
-      claimBody: 'To exercise your rights or report a personal-data issue, contact youssefboughioul@gmail.com. A full CNDP/Law 09-08 process must be finalized with the real administrative information.',
+      claimBody: 'To exercise your rights or report a personal-data issue, use the contact page when the service is configured. A full CNDP/Law 09-08 process must be finalized with the real administrative information.',
     },
     rules: {
       eyebrow: 'Responsible publishing',
@@ -5212,9 +5238,9 @@ messages.en = deepMerge(messages.en, {
       communityTitle: 'Community',
       communityBody: 'Feed, stories, communities, and marketplace help people share, search, and organize animal-related needs.',
       legalNoticeTitle: 'Legal notice',
-      legalNoticeBody: 'Publisher and data controller: Youssef BOUGHIOUL. Administrative and personal-data contact: youssefboughioul@gmail.com. Phone: +212606610014. Current hosting provider: Microsoft Azure App Service. Legal status, official address, and ICE: [To be completed].',
+      legalNoticeBody: 'Publisher and data-controller contact details are configured per environment. Current hosting provider: Microsoft Azure App Service. Legal status, official address, and ICE: [To be completed].',
       dataContactTitle: 'Personal data',
-      dataContactBody: 'Personal data requests must be sent to youssefboughioul@gmail.com. YaZoo plans a progressive CNDP/Law 09-08 compliance process before full public operation.',
+      dataContactBody: 'Personal-data requests use the configured contact service. YaZoo plans a progressive CNDP/Law 09-08 compliance process before full public operation.',
       limitsTitle: 'YaZoo role',
       limitsBody: 'YaZoo facilitates connections but does not replace legal, veterinary, or contractual checks between users.',
     },
@@ -7423,6 +7449,36 @@ messages.en = deepMerge(messages.en, {
   },
 })
 
+messages.fr = deepMerge(messages.fr, {
+  auth: {
+    smsUnavailable:
+      'La connexion par SMS est temporairement indisponible. Utilisez votre email et mot de passe ou Google. Le telephone reste facultatif.',
+  },
+  contact: {
+    unavailable: 'Le formulaire est indisponible tant que le service email n est pas configure.',
+  },
+})
+
+messages.ar = deepMerge(messages.ar, {
+  auth: {
+    smsUnavailable:
+      'تسجيل الدخول بالرسائل القصيرة غير متاح مؤقتا. استخدم البريد الإلكتروني وكلمة المرور أو Google. يبقى رقم الهاتف اختياريا.',
+  },
+  contact: {
+    unavailable: 'نموذج التواصل غير متاح حتى تتم تهيئة خدمة البريد الإلكتروني.',
+  },
+})
+
+messages.en = deepMerge(messages.en, {
+  auth: {
+    smsUnavailable:
+      'SMS sign-in is temporarily unavailable. Use your email and password or Google. Phone remains optional.',
+  },
+  contact: {
+    unavailable: 'The form is unavailable until the email service is configured.',
+  },
+})
+
 const PUBLIC_MARKETPLACE_TRANSLATIONS = {
   landing: {
     marketplaceTitle: {
@@ -7556,6 +7612,36 @@ const PUBLIC_MARKETPLACE_TRANSLATIONS = {
         ar: 'مهني معتمد',
         en: 'Verified professional',
       },
+      verified_seller: {
+        fr: 'Vendeur verifie',
+        ar: 'بائع موثق',
+        en: 'Verified seller',
+      },
+      verified_pet_shop: {
+        fr: 'Animalerie verifiee',
+        ar: 'متجر حيوانات موثق',
+        en: 'Verified pet shop',
+      },
+      verified_breeder: {
+        fr: 'Eleveur verifie',
+        ar: 'مربٍ موثق',
+        en: 'Verified breeder',
+      },
+      verified_trainer: {
+        fr: 'Dresseur verifie',
+        ar: 'مدرب موثق',
+        en: 'Verified trainer',
+      },
+      verified_service_provider: {
+        fr: 'Prestataire verifie',
+        ar: 'مقدم خدمات موثق',
+        en: 'Verified service provider',
+      },
+      verified_veterinarian: {
+        fr: 'Veterinaire verifie',
+        ar: 'طبيب بيطري موثق',
+        en: 'Verified veterinarian',
+      },
     },
   },
   auth: {
@@ -7574,6 +7660,10 @@ const PUBLIC_MARKETPLACE_TRANSLATIONS = {
       },
     },
   },
+}
+
+for (const locale of SUPPORTED_LOCALES) {
+  messages[locale] = deepMerge(messages[locale], professionalMarketplaceMessages[locale])
 }
 
 for (const locale of SUPPORTED_LOCALES) {

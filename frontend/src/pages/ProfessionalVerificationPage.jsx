@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 
 import {
   createProfessionalVerificationRequest,
@@ -53,6 +53,7 @@ function ProfessionalVerificationPage() {
   const [successMessage, setSuccessMessage] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const isVeterinarian = form.business_type === 'veterinarian'
 
   const loadVerifications = async () => {
     try {
@@ -73,6 +74,18 @@ function ProfessionalVerificationPage() {
 
   const handleChange = (field) => (event) => {
     setForm((current) => ({ ...current, [field]: event.target.value }))
+  }
+
+  const handleBusinessTypeChange = (event) => {
+    const businessType = event.target.value
+
+    setForm((current) => ({
+      ...current,
+      business_type: businessType,
+      document_type: businessType === 'veterinarian'
+        ? 'veterinarian_license'
+        : (current.document_type === 'veterinarian_license' ? 'other' : current.document_type),
+    }))
   }
 
   const handleFileChange = (event) => {
@@ -124,7 +137,7 @@ function ProfessionalVerificationPage() {
               <span className="mb-2 block text-sm font-medium text-stone-700 dark:text-violet-100">{t('professionalVerification.businessType')}</span>
               <select
                 value={form.business_type}
-                onChange={handleChange('business_type')}
+                onChange={handleBusinessTypeChange}
                 className="w-full rounded-2xl border border-violet-100 bg-violet-50/55 px-4 py-3 text-sm text-stone-700 outline-none transition focus:border-violet-400 focus:bg-white dark:border-violet-300/18 dark:bg-white/10 dark:text-violet-50"
               >
                 {BUSINESS_TYPES.map((type) => (
@@ -135,7 +148,12 @@ function ProfessionalVerificationPage() {
             <Field label={t('professionalVerification.legalName')} value={form.legal_name} onChange={handleChange('legal_name')} />
             <Field label={t('professionalVerification.ice')} value={form.ice} onChange={handleChange('ice')} />
             <Field label={t('professionalVerification.onssaNumber')} value={form.onssa_authorization_number} onChange={handleChange('onssa_authorization_number')} />
-            <Field label={t('professionalVerification.licenseNumber')} value={form.professional_license_number} onChange={handleChange('professional_license_number')} />
+            <Field
+              label={t('professionalVerification.licenseNumber')}
+              value={form.professional_license_number}
+              onChange={handleChange('professional_license_number')}
+              required={isVeterinarian}
+            />
             <label className="block">
               <span className="mb-2 block text-sm font-medium text-stone-700 dark:text-violet-100">{t('professionalVerification.documentType')}</span>
               <select
@@ -143,18 +161,26 @@ function ProfessionalVerificationPage() {
                 onChange={handleChange('document_type')}
                 className="w-full rounded-2xl border border-violet-100 bg-violet-50/55 px-4 py-3 text-sm text-stone-700 outline-none transition focus:border-violet-400 focus:bg-white dark:border-violet-300/18 dark:bg-white/10 dark:text-violet-50"
               >
-                {DOCUMENT_TYPES.map((type) => (
+                {(isVeterinarian ? ['veterinarian_license'] : DOCUMENT_TYPES).map((type) => (
                   <option key={type} value={type}>{t(`professionalVerification.documentTypes.${type}`)}</option>
                 ))}
               </select>
             </label>
-            <Field type="date" label={t('professionalVerification.documentExpiresAt')} value={form.document_expires_at} onChange={handleChange('document_expires_at')} />
+            <Field
+              type="date"
+              label={t('professionalVerification.documentExpiresAt')}
+              value={form.document_expires_at}
+              onChange={handleChange('document_expires_at')}
+              min={tomorrowDate()}
+              required={isVeterinarian}
+            />
             <label className="block md:col-span-2">
               <span className="mb-2 block text-sm font-medium text-stone-700 dark:text-violet-100">{t('professionalVerification.documentFile')}</span>
               <input
                 type="file"
                 accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp"
                 onChange={handleFileChange}
+                required={isVeterinarian}
                 className="w-full rounded-2xl border border-violet-100 bg-violet-50/55 px-4 py-3 text-sm text-stone-700 outline-none transition file:me-3 file:rounded-full file:border-0 file:bg-violet-100 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-violet-800 focus:border-violet-400 focus:bg-white dark:border-violet-300/18 dark:bg-white/10 dark:text-violet-50 dark:file:bg-violet-300/18 dark:file:text-violet-50"
               />
               <span className="mt-2 block text-xs text-stone-500 dark:text-violet-100/64">
@@ -162,6 +188,12 @@ function ProfessionalVerificationPage() {
               </span>
             </label>
           </div>
+
+          {isVeterinarian ? (
+            <div className="mt-4 rounded-[22px] border border-violet-200 bg-violet-50/80 px-4 py-3 text-sm leading-6 text-violet-950 dark:border-violet-300/18 dark:bg-violet-400/10 dark:text-violet-100">
+              {t('professionalVerification.veterinarianRequirements')}
+            </div>
+          ) : null}
 
           <div className="mt-4 rounded-[22px] border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm leading-6 text-amber-950 dark:border-amber-300/18 dark:bg-amber-400/10 dark:text-amber-100">
             {t('professionalVerification.manualNotice')}
@@ -236,6 +268,17 @@ function buildProfessionalVerificationPayload(form) {
   }
 
   return payload
+}
+
+function tomorrowDate() {
+  const tomorrow = new Date()
+  tomorrow.setDate(tomorrow.getDate() + 1)
+
+  const year = tomorrow.getFullYear()
+  const month = String(tomorrow.getMonth() + 1).padStart(2, '0')
+  const day = String(tomorrow.getDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
 }
 
 function StatusBadge({ status }) {

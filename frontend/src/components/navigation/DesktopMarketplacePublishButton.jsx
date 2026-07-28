@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 
 import { getMarketplacePublishRoute, PROFESSIONAL_VERIFICATION_ROUTE } from '../../utils/marketplacePublishing'
 import AppIcon from '../ui/AppIcon'

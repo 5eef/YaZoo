@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 
 import Footer from '../components/ui/Footer'
 import { useI18n } from '../hooks/useI18n'

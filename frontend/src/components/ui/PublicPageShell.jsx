@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 
 import Footer from './Footer'
 import { useI18n } from '../../hooks/useI18n'

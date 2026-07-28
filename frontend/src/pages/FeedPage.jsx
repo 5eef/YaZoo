@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router'
 import PropTypes from 'prop-types'
 
 import { getAnimalsRequest } from '../api/animals'
@@ -36,6 +36,11 @@ import { useI18n } from '../hooks/useI18n'
 import { asArray, extractDataArray, extractDataObject } from '../utils/apiData'
 import { getErrorMessage } from '../utils/getErrorMessage'
 import { normalizeProfileMediaPayload } from '../utils/media'
+import {
+  addCommentToPost,
+  filterSocialPosts as filterPosts,
+  updateCommentInPost,
+} from '../utils/socialPosts'
 
 const FEED_COLUMN_CLASS = 'mx-auto w-full max-w-[42rem] min-w-0'
 const FEED_GRID_CLASS =
@@ -1243,33 +1248,6 @@ function truncateText(text, maxLength) {
   return `${text.slice(0, Math.max(0, maxLength - 3)).trim()}...`
 }
 
-function filterPosts(posts, searchTerm) {
-  const safePosts = asArray(posts)
-
-  if (!searchTerm) {
-    return safePosts
-  }
-
-  const normalizedSearch = normalizeSearchText(searchTerm)
-
-  return safePosts.filter((post) =>
-    [
-      post.content,
-      post.location,
-      post.author?.name,
-      post.author?.email,
-      ...(post.tags ?? []),
-    ].some((value) => normalizeSearchText(value).includes(normalizedSearch)),
-  )
-}
-
-function normalizeSearchText(value) {
-  return String(value ?? '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-}
-
 function getStoryInitials(name) {
   if (!name) return 'YZ'
 
@@ -1383,49 +1361,6 @@ function buildOrganicFeedItems(posts, suggestions) {
   }
 
   return feedItems
-}
-
-function addCommentToPost(post, comment) {
-  const isReply = Boolean(comment.parentId)
-
-  if (!isReply) {
-    return {
-      ...post,
-      comments: [...(post.comments ?? []), comment],
-      commentsCount: (post.commentsCount ?? post.comments?.length ?? 0) + 1,
-    }
-  }
-
-  return {
-    ...post,
-    comments: (post.comments ?? []).map((currentComment) =>
-      currentComment.id === comment.parentId
-        ? {
-            ...currentComment,
-            replies: [...(currentComment.replies ?? []), comment],
-          }
-        : currentComment,
-    ),
-    commentsCount: (post.commentsCount ?? post.comments?.length ?? 0) + 1,
-  }
-}
-
-function updateCommentInPost(post, nextComment) {
-  return {
-    ...post,
-    comments: (post.comments ?? []).map((comment) => {
-      if (comment.id === nextComment.id) {
-        return nextComment
-      }
-
-      return {
-        ...comment,
-        replies: (comment.replies ?? []).map((reply) =>
-          reply.id === nextComment.id ? nextComment : reply,
-        ),
-      }
-    }),
-  }
 }
 
 export default FeedPage

@@ -1,11 +1,18 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter } from 'react-router'
 import { describe, expect, it, vi } from 'vitest'
 
 import AnimalCard from './AnimalCard'
 import ProductCard from './ProductCard'
+import ServiceCard from './ServiceCard'
+import VeterinarianCard from './VeterinarianCard'
 import { I18nProvider } from '../../contexts/I18nContext'
+import { createReservationRequest } from '../../api/reservations'
+
+vi.mock('../../api/reservations', () => ({
+  createReservationRequest: vi.fn(),
+}))
 
 const animal = {
   id: 1,
@@ -103,6 +110,7 @@ describe('marketplace cards', () => {
             ...animal.author,
             isPhoneVerified: true,
             isProfessionalVerified: true,
+            professionalBadge: 'verified_breeder',
           },
         }}
         onEdit={vi.fn()}
@@ -111,6 +119,7 @@ describe('marketplace cards', () => {
     )
 
     expect(screen.getAllByText('Documents verifies par YaZoo').length).toBeGreaterThan(0)
+    expect(screen.getByText('Eleveur verifie')).toBeInTheDocument()
     expect(screen.getAllByText('Professionnel').length).toBeGreaterThan(0)
     expect(screen.getByText('Paiement a la remise')).toBeInTheDocument()
     expect(screen.getByText('Virement bancaire')).toBeInTheDocument()
@@ -227,5 +236,93 @@ describe('marketplace cards', () => {
       'href',
       'https://wa.me/212606610014',
     )
+  })
+
+  it('reserve un service approuve avec le message saisi', async () => {
+    const user = userEvent.setup()
+    const onReserved = vi.fn()
+    createReservationRequest.mockResolvedValueOnce({ data: { id: 99 } })
+
+    renderWithRouter(
+      <ServiceCard
+        service={{
+          id: 12,
+          type: 'training',
+          title: 'Education positive',
+          description: 'Seances individuelles',
+          city: 'Rabat',
+          price: 250,
+          priceType: 'fixed',
+          whatsappEnabled: false,
+          isOwner: false,
+          provider: { name: 'Coach YaZoo', isProfessionalVerified: true },
+        }}
+        onReserved={onReserved}
+      />,
+    )
+
+    await user.type(
+      screen.getByPlaceholderText('Ajoutez un message optionnel pour le prestataire.'),
+      'Disponible samedi ?',
+    )
+    await user.click(screen.getByRole('button', { name: 'Reserver une seance' }))
+
+    expect(createReservationRequest).toHaveBeenCalledWith({
+      category: 'training',
+      reservable_id: 12,
+      message: 'Disponible samedi ?',
+    })
+    expect(onReserved).toHaveBeenCalledOnce()
+    expect(await screen.findByText('Demande envoyee')).toBeInTheDocument()
+  })
+
+  it('affiche les contacts et le badge veterinaire seulement quand ils sont fournis par l API', () => {
+    const veterinarian = {
+      id: 7,
+      name: 'Dr Amine',
+      clinicName: 'Clinique Atlas',
+      description: 'Consultations',
+      city: 'Casablanca',
+      address: 'Quartier Maarif',
+      phone: '+212 522 00 00 00',
+      whatsapp: '+212 600 00 00 00',
+      email: 'cabinet@example.test',
+      specialties: ['Chiens', 'Chats'],
+      latitude: 33.5731,
+      longitude: -7.5898,
+      isOwner: false,
+      owner: {
+        name: 'Dr Amine',
+        isProfessionalVerified: true,
+        professionalBadge: 'verified_veterinarian',
+      },
+    }
+
+    const { rerender } = renderWithRouter(<VeterinarianCard veterinarian={veterinarian} />)
+
+    expect(screen.getByText('Veterinaire verifie')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Appeler/ })).toHaveAttribute(
+      'href',
+      'tel:+212 522 00 00 00',
+    )
+    expect(screen.getByRole('link', { name: /WhatsApp/ })).toHaveAttribute(
+      'href',
+      'https://wa.me/212600000000',
+    )
+
+    rerender(
+      <MemoryRouter>
+        <I18nProvider>
+          <VeterinarianCard
+            veterinarian={{
+              ...veterinarian,
+              owner: { name: 'Profil non valide', isProfessionalVerified: false },
+            }}
+          />
+        </I18nProvider>
+      </MemoryRouter>,
+    )
+
+    expect(screen.queryByText('Veterinaire verifie')).not.toBeInTheDocument()
   })
 })

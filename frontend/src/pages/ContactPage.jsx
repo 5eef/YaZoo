@@ -1,16 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 
 import api from '../api/client'
 import Footer from '../components/ui/Footer'
 import { useAuth } from '../hooks/useAuth'
 import { useI18n } from '../hooks/useI18n'
-
-const companyContact = {
-  phone: '+212606610014',
-  whatsapp: '212606610014',
-  email: 'youssefboughioul@gmail.com',
-}
 
 function ContactPage() {
   const { user } = useAuth()
@@ -21,12 +15,39 @@ function ContactPage() {
   const [sent, setSent] = useState(false)
   const [contactError, setContactError] = useState('')
   const [senderEmail, setSenderEmail] = useState(user?.email ?? '')
+  const [contactConfig, setContactConfig] = useState({
+    contactAvailable: null,
+    contactEmail: '',
+    contactPhone: '',
+    contactWhatsapp: '',
+  })
 
   useEffect(() => {
     if (user?.email) {
       setSenderEmail(user.email)
     }
   }, [user?.email])
+
+  useEffect(() => {
+    let cancelled = false
+
+    api.get('/legal/config', {
+      skipAuthSessionExpired: true,
+      skipGlobalErrorToast: true,
+    }).then((response) => {
+      if (!cancelled) {
+        setContactConfig(response.data ?? {})
+      }
+    }).catch(() => {
+      if (!cancelled) {
+        setContactConfig((current) => ({ ...current, contactAvailable: false }))
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const handleSend = async (event) => {
     event.preventDefault()
@@ -82,38 +103,46 @@ function ContactPage() {
           </div>
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            {contactConfig.contactPhone ? (
             <a
-              href={`tel:${companyContact.phone}`}
+              href={`tel:${contactConfig.contactPhone}`}
                 className="rounded-[24px] border border-violet-100 bg-[linear-gradient(180deg,_rgba(255,255,255,0.98),_rgba(244,237,255,0.84))] px-5 py-5 transition hover:-translate-y-0.5 hover:border-violet-200 dark:border-violet-300/16 dark:bg-[linear-gradient(135deg,_rgba(5,3,10,0.98),_rgba(30,15,52,0.92))]"
             >
               <p className="text-xs uppercase tracking-[0.18em] text-stone-500">{t('contact.number')}</p>
-              <p className="mt-3 text-xl font-semibold text-stone-950">{companyContact.phone}</p>
+              <p className="mt-3 text-xl font-semibold text-stone-950">{contactConfig.contactPhone}</p>
             </a>
+            ) : null}
 
+            {contactConfig.contactEmail ? (
             <a
-              href={`mailto:${companyContact.email}`}
+              href={`mailto:${contactConfig.contactEmail}`}
                 className="rounded-[24px] border border-violet-100 bg-[linear-gradient(180deg,_rgba(255,255,255,0.98),_rgba(244,237,255,0.84))] px-5 py-5 transition hover:-translate-y-0.5 hover:border-violet-200 dark:border-violet-300/16 dark:bg-[linear-gradient(135deg,_rgba(5,3,10,0.98),_rgba(30,15,52,0.92))]"
             >
               <p className="text-xs uppercase tracking-[0.18em] text-stone-500">{t('common.email')}</p>
-              <p className="mt-3 text-xl font-semibold text-stone-950">{companyContact.email}</p>
+              <p className="mt-3 text-xl font-semibold text-stone-950">{contactConfig.contactEmail}</p>
             </a>
+            ) : null}
           </div>
 
           <div className="mt-4 flex flex-wrap gap-3">
+            {contactConfig.contactWhatsapp ? (
             <a
-              href={`https://wa.me/${companyContact.whatsapp}`}
+              href={`https://wa.me/${contactConfig.contactWhatsapp}`}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center justify-center rounded-2xl bg-green-500 px-5 py-3 text-sm font-semibold text-black shadow-lg shadow-green-500/20 transition hover:bg-green-400 focus:outline-none focus:ring-2 focus:ring-green-300 focus:ring-offset-2 dark:bg-green-400 dark:text-black dark:hover:bg-green-300 dark:focus:ring-green-300"
             >
               {t('contact.openWhatsapp')}
             </a>
+            ) : null}
+            {contactConfig.contactPhone ? (
             <a
-              href={`tel:${companyContact.phone}`}
+              href={`tel:${contactConfig.contactPhone}`}
               className="inline-flex items-center justify-center rounded-full border border-violet-100 bg-white px-4 py-2 text-sm font-semibold text-violet-900 transition hover:-translate-y-0.5 hover:border-violet-200 hover:bg-violet-50 dark:border-violet-300/18 dark:bg-white/8 dark:text-violet-50 dark:hover:bg-white/12"
             >
-              {t('contact.callPhone', { phone: companyContact.phone })}
+              {t('contact.callPhone', { phone: contactConfig.contactPhone })}
             </a>
+            ) : null}
           </div>
 
           <section className="mt-5 rounded-[26px] border border-violet-100 bg-violet-50/70 px-5 py-5 transition-colors dark:border-violet-300/16 dark:bg-[linear-gradient(135deg,_rgba(5,3,10,0.98),_rgba(25,12,44,0.94))]">
@@ -128,6 +157,11 @@ function ContactPage() {
             </p>
 
             <form onSubmit={handleSend} className="mt-5 grid gap-4">
+              {contactConfig.contactAvailable === false ? (
+                <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                  {t('contact.unavailable')}
+                </p>
+              ) : null}
               <label className="block">
                 <span className="mb-2 block text-sm font-medium text-stone-700 dark:text-violet-50">
                   {t('contact.yourEmail')}
@@ -188,7 +222,7 @@ function ContactPage() {
               <div className="flex justify-end">
                 <button
                   type="submit"
-                  disabled={sending || !message.trim() || !senderEmail.trim()}
+                  disabled={contactConfig.contactAvailable !== true || sending || !message.trim() || !senderEmail.trim()}
                   className="inline-flex rounded-full bg-[linear-gradient(135deg,#7c3aed,#a855f7)] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(124,58,237,0.2)] transition hover:-translate-y-0.5 hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {sending ? t('contact.sending') : t('contact.send')}

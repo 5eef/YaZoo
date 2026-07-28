@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { getPublicMarketplacePreviewRequest } from '../../api/publicMarketplace'
@@ -44,6 +44,7 @@ describe('PublicMarketplaceShowcase', () => {
               price: null,
               imageUrl: null,
               badge: 'adoption',
+              professionalBadge: 'verified_breeder',
               createdAt: '2026-07-24T12:00:00.000Z',
               author: { name: 'Association locale', avatar: null },
             },
@@ -61,6 +62,7 @@ describe('PublicMarketplaceShowcase', () => {
     ).toBeInTheDocument()
     expect(await screen.findByText('Luna')).toBeInTheDocument()
     expect(screen.getByText('Adoption')).toBeInTheDocument()
+    expect(screen.getByText('Eleveur verifie')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Voir les détails' })).toHaveAttribute(
       'href',
       '/login',
@@ -123,6 +125,9 @@ describe('PublicMarketplaceShowcase', () => {
     ['fr', 'landing.marketplaceBadges.verified_professional', 'Professionnel vérifié'],
     ['ar', 'landing.marketplaceBadges.verified_professional', 'مهني معتمد'],
     ['en', 'landing.marketplaceBadges.verified_professional', 'Verified professional'],
+    ['fr', 'landing.marketplaceBadges.verified_veterinarian', 'Veterinaire verifie'],
+    ['ar', 'landing.marketplaceBadges.verified_veterinarian', 'طبيب بيطري موثق'],
+    ['en', 'landing.marketplaceBadges.verified_veterinarian', 'Verified veterinarian'],
     [
       'fr',
       'auth.login.googleFailed',

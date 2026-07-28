@@ -1,6 +1,6 @@
 import Avatar from '../ui/Avatar'
 import Button from '../ui/Button'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import ReportButton from '../reports/ReportButton'
 import VerifiedPhoneBadge from '../ui/VerifiedPhoneBadge'
 import { FavoriteButton, Info, LinkButton, ManualPaymentBadges, RatingSummary, SellerTrustBadges } from './MarketplaceCommon'

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router'
 
 import { getProductRequest } from '../api/products'
 import { createProductReservationRequest } from '../api/reservations'

@@ -2,6 +2,8 @@
 
 Application React/Vite reliee a l'API Laravel YaZoo.
 
+Prerequis: Node.js 22.22 ou ulterieur (React Router 8.3.0).
+
 ## Installation
 
 ```powershell

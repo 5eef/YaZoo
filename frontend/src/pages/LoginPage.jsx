@@ -1,5 +1,5 @@
 import { useContext, useMemo, useState } from 'react'
-import { Link, Navigate, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useSearchParams } from 'react-router'
 
 import { getGoogleAuthUrl, isGoogleAuthEnabled } from '../api/auth'
 import GoogleAuthErrorNotice from '../components/auth/GoogleAuthErrorNotice'
@@ -8,6 +8,7 @@ import Footer from '../components/ui/Footer'
 import PasswordField from '../components/ui/PasswordField'
 import { I18nContext } from '../contexts/i18n-context'
 import { useAuth } from '../hooks/useAuth'
+import { useSmsAvailability } from '../hooks/useSmsAvailability'
 import { getGoogleAuthErrorMessage } from '../lib/googleAuthErrors'
 import { translate } from '../lib/i18n'
 import { getErrorMessage } from '../utils/getErrorMessage'
@@ -24,6 +25,7 @@ function LoginPage() {
   const [password, setPassword] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const smsAvailable = useSmsAvailability()
   const googleAuthEnabled = isGoogleAuthEnabled()
   const authError = searchParams.get('auth_error')
   const googleAuthErrorMessage = getGoogleAuthErrorMessage(authError, 'login', t)
@@ -146,6 +148,12 @@ function LoginPage() {
               showLabel={t('auth.showPassword')}
               hideLabel={t('auth.hidePassword')}
             />
+
+            {smsAvailable === false ? (
+              <p className="rounded-[20px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900 dark:border-amber-300/20 dark:bg-amber-500/10 dark:text-amber-100">
+                {t('auth.smsUnavailable')}
+              </p>
+            ) : null}
 
             <GoogleAuthErrorNotice message={googleAuthErrorMessage} />
 

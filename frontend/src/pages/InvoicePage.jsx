@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router'
 
 import { getReservationInvoiceRequest } from '../api/reservations'
 import Button from '../components/ui/Button'

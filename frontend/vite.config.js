@@ -20,7 +20,7 @@ export default defineConfig({
             return undefined
           }
 
-          if (/[\\/]node_modules[\\/](react|react-dom|react-router-dom)[\\/]/.test(id)) {
+          if (/[\\/]node_modules[\\/](react|react-dom|react-router)[\\/]/.test(id)) {
             return 'react-vendor'
           }
 
