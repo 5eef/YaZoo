@@ -1,77 +1,70 @@
 #!/usr/bin/env pwsh
-[CmdletBinding()]
+[CmdletBinding(SupportsShouldProcess)]
 param(
-    [ValidateSet('acr', 'dockerhub')]
-    [string] $Registry = 'acr',
-    [string] $ResourceGroup = 'yazoo-rg',
-    [string] $AcrName = 'yazooacr',
-    [string] $DockerHubUser = '',
-    [string] $DockerHubRepository = 'yazoo-api',
-    [ValidateSet('backend', 'frontend')]
-    [string] $App = 'backend',
-    [string] $Tag = 'latest',
+    [Parameter(Mandatory)][string] $DockerHubUser,
+    [string] $DockerHubRepository = '',
+    [ValidateSet('backend', 'frontend')][string] $App = 'backend',
+    [Parameter(Mandatory)][ValidatePattern('^[0-9a-f]{40}$')][string] $Tag,
     [string] $FrontendApiUrl = 'https://yazoo-api.azurewebsites.net/api',
     [string] $FrontendStorageUrl = 'https://yazoo-api.azurewebsites.net/storage',
+    [switch] $AlsoTagLatest,
     [switch] $SkipDockerHubLogin
 )
 
 $ErrorActionPreference = 'Stop'
 
+function Invoke-NativeCommand {
+    param([string] $FilePath, [string[]] $Arguments)
+
+    Write-Host ("Running: {0} {1}" -f $FilePath, ($Arguments -join ' '))
+    if ($WhatIfPreference) {
+        return
+    }
+
+    & $FilePath @Arguments
+    if ($LASTEXITCODE -ne 0) {
+        throw "$FilePath failed with exit code $LASTEXITCODE."
+    }
+}
+
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 Set-Location $repoRoot
 
-if ($Registry -eq 'acr') {
-    Write-Host 'Resolving Azure Container Registry login server...'
-    $loginServer = az acr show --resource-group $ResourceGroup --name $AcrName --query loginServer -o tsv
-    if (-not $loginServer) {
-        throw "Unable to resolve ACR login server for '$AcrName'."
-    }
-
-    $imageName = if ($App -eq 'frontend') { 'yazoo-frontend' } else { 'yazoo-api' }
-    $image = "${loginServer}/${imageName}:$Tag"
-
-    Write-Host "Building $App image: $image"
-    if ($App -eq 'frontend') {
-        docker build -t $image -f frontend/Dockerfile --build-arg VITE_API_URL=$FrontendApiUrl --build-arg VITE_STORAGE_URL=$FrontendStorageUrl .
-    } else {
-        docker build -t $image -f backend/Dockerfile .
-    }
-    if ($LASTEXITCODE -ne 0) { throw 'Docker build failed.' }
-
-    Write-Host "Logging in to ACR: $AcrName"
-    az acr login --name $AcrName
-    if ($LASTEXITCODE -ne 0) { throw 'ACR login failed.' }
-
-    Write-Host "Pushing image: $image"
-    docker push $image
-    if ($LASTEXITCODE -ne 0) { throw 'Docker push failed.' }
-
-    Write-Host "Image pushed: $image"
-    return
-}
-
-if (-not $DockerHubUser) {
-    $DockerHubUser = Read-Host 'Docker Hub username'
-}
-
-$image = "$DockerHubUser/${DockerHubRepository}:$Tag"
-
-Write-Host "Building $App image: $image"
-if ($App -eq 'frontend') {
-    docker build -t $image -f frontend/Dockerfile --build-arg VITE_API_URL=$FrontendApiUrl --build-arg VITE_STORAGE_URL=$FrontendStorageUrl .
+$imageName = if ($DockerHubRepository) {
+    $DockerHubRepository
+} elseif ($App -eq 'frontend') {
+    'yazoo-frontend'
 } else {
-    docker build -t $image -f backend/Dockerfile .
+    'yazoo-api'
 }
-if ($LASTEXITCODE -ne 0) { throw 'Docker build failed.' }
+$immutableImage = "$DockerHubUser/${imageName}:$Tag"
+$buildArguments = @(
+    'build',
+    '--build-arg', "APP_VERSION=$Tag",
+    '-t', $immutableImage,
+    '-f', "$App/Dockerfile"
+)
+
+if ($App -eq 'frontend') {
+    $buildArguments += @(
+        '--build-arg', "VITE_API_URL=$FrontendApiUrl",
+        '--build-arg', "VITE_STORAGE_URL=$FrontendStorageUrl"
+    )
+}
+if ($AlsoTagLatest) {
+    $buildArguments += @('-t', "$DockerHubUser/${imageName}:latest")
+}
+$buildArguments += '.'
+
+Invoke-NativeCommand docker $buildArguments
 
 if (-not $SkipDockerHubLogin) {
-    Write-Host "Logging in to Docker Hub as '$DockerHubUser'..."
-    docker login --username $DockerHubUser
-    if ($LASTEXITCODE -ne 0) { throw 'Docker Hub login failed.' }
+    Invoke-NativeCommand docker @('login', '--username', $DockerHubUser)
 }
 
-Write-Host "Pushing image: $image"
-docker push $image
-if ($LASTEXITCODE -ne 0) { throw 'Docker Hub push failed.' }
+Invoke-NativeCommand docker @('push', $immutableImage)
+if ($AlsoTagLatest) {
+    Invoke-NativeCommand docker @('push', "$DockerHubUser/${imageName}:latest")
+}
 
-Write-Host "Image pushed: $image"
+Write-Host "Immutable image pushed: $immutableImage"

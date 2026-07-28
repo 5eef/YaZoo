@@ -17,6 +17,9 @@ RUN composer install --no-dev --prefer-dist --no-interaction --no-progress --no-
 
 FROM php:8.4-fpm-alpine AS production
 
+ARG APP_VERSION=local
+ENV APP_VERSION=$APP_VERSION
+
 LABEL org.opencontainers.image.title="YaZoo API" \
       org.opencontainers.image.description="YaZoo social platform and animal marketplace backend." \
       org.opencontainers.image.authors="Youssef BOUGHIOUL <youssefboughioul@gmail.com>" \

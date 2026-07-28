@@ -30,7 +30,7 @@ class HealthController extends Controller
             ),
             'scheduler' => $this->checkHeartbeat(
                 'operations:scheduler-heartbeat',
-                (bool) config('operations.run_scheduler'),
+                (bool) config('operations.require_scheduler_heartbeat'),
             ),
         ];
 

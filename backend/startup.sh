@@ -21,8 +21,8 @@ if [ -d /home/site/yazoo-storage ]; then
 fi
 cp /var/www/html/nginx.conf /etc/nginx/http.d/default.conf
 
-if [ "${YAZOO_RUN_MIGRATIONS:-true}" = "true" ]; then
-    su-exec www-data php artisan migrate --force
+if [ "${YAZOO_RUN_MIGRATIONS:-false}" = "true" ]; then
+    su-exec www-data php artisan yazoo:migrate-production
 fi
 
 if [ "${YAZOO_RUNTIME_OPTIMIZE:-true}" = "true" ]; then

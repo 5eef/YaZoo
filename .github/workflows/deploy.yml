@@ -5,162 +5,169 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 concurrency:
   group: deploy-production
   cancel-in-progress: false
 
 jobs:
-  changes:
-    runs-on: ubuntu-latest
-    outputs:
-      backend: ${{ steps.scope.outputs.backend }}
-      frontend: ${{ steps.scope.outputs.frontend }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Detect deployment scope
-        id: scope
-        shell: bash
-        env:
-          BEFORE_SHA: ${{ github.event.before }}
-          CURRENT_SHA: ${{ github.sha }}
-          EVENT_NAME: ${{ github.event_name }}
-        run: |
-          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
-            echo "backend=true" >> "$GITHUB_OUTPUT"
-            echo "frontend=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          if git diff --quiet "$BEFORE_SHA" "$CURRENT_SHA" -- \
-            backend/ infra/nginx/api.conf .github/workflows/deploy.yml LICENSE .dockerignore; then
-            echo "backend=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "backend=true" >> "$GITHUB_OUTPUT"
-          fi
-
-          if git diff --quiet "$BEFORE_SHA" "$CURRENT_SHA" -- \
-            frontend/ infra/nginx/frontend.conf .github/workflows/deploy.yml LICENSE .dockerignore; then
-            echo "frontend=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "frontend=true" >> "$GITHUB_OUTPUT"
-          fi
-
-  tests:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: "8.4"
-          extensions: bcmath, intl, mbstring, pdo_mysql, pdo_sqlite, sqlite3, mongodb, redis
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-      - name: Backend dependencies
-        working-directory: backend
-        run: composer install --no-interaction --prefer-dist --no-progress
-      - name: Backend tests
-        working-directory: backend
-        run: php artisan test
-      - name: Frontend dependencies
-        working-directory: frontend
-        run: npm ci
-      - name: Frontend tests
-        working-directory: frontend
-        run: npm run test:coverage -- --run
-      - name: Frontend build
-        working-directory: frontend
-        run: npm run build
+  required-ci:
+    uses: ./.github/workflows/ci.yml
+    secrets: inherit
 
   build-and-deploy:
-    needs: [changes, tests]
+    needs: required-ci
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
+    environment: production
+    env:
+      RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+      BACKEND_WEBAPP: ${{ vars.AZURE_BACKEND_WEBAPP_NAME }}
+      FRONTEND_WEBAPP: ${{ vars.AZURE_FRONTEND_WEBAPP_NAME }}
+      BACKEND_URL: ${{ vars.AZURE_BACKEND_URL }}
+      FRONTEND_URL: ${{ vars.AZURE_FRONTEND_URL }}
+      BACKEND_IMAGE: 5eef/yazoo-api:${{ github.sha }}
+      FRONTEND_IMAGE: 5eef/yazoo-frontend:${{ github.sha }}
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: docker/login-action@v3
-        if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true'
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Build and push backend image
-        if: needs.changes.outputs.backend == 'true'
-        run: |
-          docker build -f backend/Dockerfile \
-            -t "${{ secrets.DOCKERHUB_USERNAME }}/yazoo-api:${{ github.sha }}" \
-            -t "${{ secrets.DOCKERHUB_USERNAME }}/yazoo-api:latest" \
-            .
-          docker push "${{ secrets.DOCKERHUB_USERNAME }}/yazoo-api:${{ github.sha }}"
-          docker push "${{ secrets.DOCKERHUB_USERNAME }}/yazoo-api:latest"
-      - name: Refresh backend App Service container
-        if: needs.changes.outputs.backend == 'true'
-        env:
-          PUBLISH_PROFILE: ${{ secrets.AZURE_API_PUBLISH_PROFILE }}
-        run: |
-          python3 - <<'PY' > /tmp/backend-kudu.env
-          import os
-          import shlex
-          import xml.etree.ElementTree as ET
 
-          root = ET.fromstring(os.environ["PUBLISH_PROFILE"])
-          profile = next(
-              (item for item in root.findall("publishProfile") if item.attrib.get("publishMethod") == "ZipDeploy"),
-              None,
-          )
-          if profile is None:
-              raise SystemExit("ZipDeploy publish profile not found")
+      - name: Build immutable images
+        run: |
+          docker build --build-arg APP_VERSION="${GITHUB_SHA}" -f backend/Dockerfile \
+            -t "${BACKEND_IMAGE}" \
+            -t "5eef/yazoo-api:latest" .
+          docker build --build-arg APP_VERSION="${GITHUB_SHA}" -f frontend/Dockerfile \
+            -t "${FRONTEND_IMAGE}" \
+            -t "5eef/yazoo-frontend:latest" .
 
-          print(f"SCM_USER={shlex.quote(profile.attrib['userName'])}")
-          print(f"SCM_PASS={shlex.quote(profile.attrib['userPWD'])}")
-          PY
-          . /tmp/backend-kudu.env
-          curl --fail --silent --show-error --output /dev/null --write-out "Backend hook HTTP %{http_code}\n" \
-            -X POST \
-            -u "$SCM_USER:$SCM_PASS" \
-            "https://yazoo-api.scm.azurewebsites.net/docker/hook"
-      - uses: actions/setup-node@v4
-        if: needs.changes.outputs.frontend == 'true'
+      - name: Push immutable images and convenience aliases
+        run: |
+          docker push "${BACKEND_IMAGE}"
+          docker push "${FRONTEND_IMAGE}"
+          docker push "5eef/yazoo-api:latest"
+          docker push "5eef/yazoo-frontend:latest"
+
+      - uses: azure/login@v2
         with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-      - name: Build and push frontend image
-        if: needs.changes.outputs.frontend == 'true'
-        run: |
-          docker build -f frontend/Dockerfile \
-            -t "${{ secrets.DOCKERHUB_USERNAME }}/yazoo-frontend:${{ github.sha }}" \
-            -t "${{ secrets.DOCKERHUB_USERNAME }}/yazoo-frontend:latest" \
-            .
-          docker push "${{ secrets.DOCKERHUB_USERNAME }}/yazoo-frontend:${{ github.sha }}"
-          docker push "${{ secrets.DOCKERHUB_USERNAME }}/yazoo-frontend:latest"
-      - name: Refresh frontend App Service container
-        if: needs.changes.outputs.frontend == 'true'
-        env:
-          PUBLISH_PROFILE: ${{ secrets.AZURE_FRONTEND_PUBLISH_PROFILE }}
-        run: |
-          python3 - <<'PY' > /tmp/frontend-kudu.env
-          import os
-          import shlex
-          import xml.etree.ElementTree as ET
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-          root = ET.fromstring(os.environ["PUBLISH_PROFILE"])
-          profile = next(
-              (item for item in root.findall("publishProfile") if item.attrib.get("publishMethod") == "ZipDeploy"),
-              None,
-          )
-          if profile is None:
-              raise SystemExit("ZipDeploy publish profile not found")
+      - name: Validate Azure deployment configuration
+        run: |
+          set -euo pipefail
+          for value in RESOURCE_GROUP BACKEND_WEBAPP FRONTEND_WEBAPP BACKEND_URL FRONTEND_URL; do
+            if [ -z "${!value}" ]; then
+              echo "::error::$value is not configured for the production environment."
+              exit 1
+            fi
+          done
 
-          print(f"SCM_USER={shlex.quote(profile.attrib['userName'])}")
-          print(f"SCM_PASS={shlex.quote(profile.attrib['userPWD'])}")
-          PY
-          . /tmp/frontend-kudu.env
-          curl --fail --silent --show-error --output /dev/null --write-out "Frontend hook HTTP %{http_code}\n" \
-            -X POST \
-            -u "$SCM_USER:$SCM_PASS" \
-            "https://yazoo.scm.azurewebsites.net/docker/hook"
+      - name: Record previously deployed images
+        id: previous
+        run: |
+          set -euo pipefail
+          backend_previous="$(az webapp config show --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP" --query linuxFxVersion -o tsv)"
+          frontend_previous="$(az webapp config show --resource-group "$RESOURCE_GROUP" --name "$FRONTEND_WEBAPP" --query linuxFxVersion -o tsv)"
+          backend_previous="${backend_previous#DOCKER|}"
+          frontend_previous="${frontend_previous#DOCKER|}"
+          backend_version_previous="$(az webapp config appsettings list --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP" --query "[?name=='APP_VERSION'].value | [0]" -o tsv)"
+          test -n "$backend_previous"
+          test -n "$frontend_previous"
+          {
+            echo "backend=$backend_previous"
+            echo "frontend=$frontend_previous"
+            echo "backend_version=${backend_version_previous:-local}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Deploy exact SHA with one locked startup migration
+        id: rollout
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+
+          wait_backend() {
+            for _attempt in $(seq 1 20); do
+              backend_live="$(curl --fail --silent --show-error --max-time 10 "$BACKEND_URL/health/live" || true)"
+              backend_ready="$(curl --fail --silent --show-error --max-time 10 "$BACKEND_URL/health/ready" || true)"
+              if printf '%s' "$backend_live" | grep -Fq "\"version\":\"${GITHUB_SHA}\"" \
+                && printf '%s' "$backend_ready" | grep -Fq '"status":"ok"'; then
+                return 0
+              fi
+              sleep 15
+            done
+            return 1
+          }
+
+          az webapp stop --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP"
+          az webapp config appsettings set --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP" \
+            --settings "APP_VERSION=${GITHUB_SHA}" "YAZOO_RUN_MIGRATIONS=true" --output none
+          az webapp config container set --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP" \
+            --docker-custom-image-name "$BACKEND_IMAGE" --docker-registry-server-url https://index.docker.io --output none
+          az webapp start --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP"
+
+          if ! wait_backend; then
+            echo "::error::Backend migration, health, or SHA verification failed."
+            exit 1
+          fi
+
+          az webapp config appsettings set --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP" \
+            --settings "APP_VERSION=${GITHUB_SHA}" "YAZOO_RUN_MIGRATIONS=false" --output none
+          az webapp restart --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP"
+
+          if ! wait_backend; then
+            echo "::error::Backend failed after disabling startup migrations."
+            exit 1
+          fi
+
+          az webapp config container set --resource-group "$RESOURCE_GROUP" --name "$FRONTEND_WEBAPP" \
+            --docker-custom-image-name "$FRONTEND_IMAGE" --docker-registry-server-url https://index.docker.io --output none
+          az webapp restart --resource-group "$RESOURCE_GROUP" --name "$FRONTEND_WEBAPP"
+
+          for _attempt in $(seq 1 20); do
+            frontend_version="$(curl --fail --silent --show-error --max-time 10 "$FRONTEND_URL/version.json" || true)"
+            if printf '%s' "$frontend_version" | grep -Fq "\"version\":\"${GITHUB_SHA}\""; then
+              curl --fail --silent --show-error --max-time 10 --output /dev/null "$FRONTEND_URL/"
+              exit 0
+            fi
+            sleep 15
+          done
+
+          echo "::error::The exact SHA failed health or version verification."
+          exit 1
+
+      - name: Roll back both applications after a failed rollout
+        if: steps.rollout.outcome == 'failure'
+        id: rollback
+        run: |
+          set -euo pipefail
+          az webapp config container set --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP" \
+            --docker-custom-image-name "${{ steps.previous.outputs.backend }}" --docker-registry-server-url https://index.docker.io --output none
+          az webapp config appsettings set --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP" \
+            --settings "APP_VERSION=${{ steps.previous.outputs.backend_version }}" "YAZOO_RUN_MIGRATIONS=false" --output none
+          az webapp config container set --resource-group "$RESOURCE_GROUP" --name "$FRONTEND_WEBAPP" \
+            --docker-custom-image-name "${{ steps.previous.outputs.frontend }}" --docker-registry-server-url https://index.docker.io --output none
+          az webapp restart --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP"
+          az webapp restart --resource-group "$RESOURCE_GROUP" --name "$FRONTEND_WEBAPP"
+
+          for _attempt in $(seq 1 20); do
+            if curl --fail --silent --show-error --max-time 10 --output /dev/null "$BACKEND_URL/health/ready" \
+              && curl --fail --silent --show-error --max-time 10 --output /dev/null "$FRONTEND_URL/"; then
+              exit 0
+            fi
+            sleep 15
+          done
+
+          echo "::error::Automatic rollback also failed health verification."
+          exit 1
+
+      - name: Fail deployment after rollback
+        if: steps.rollout.outcome == 'failure'
+        run: |
+          echo "::error::Deployment failed and rollback was attempted."
+          exit 1

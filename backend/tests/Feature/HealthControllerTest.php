@@ -14,7 +14,7 @@ class HealthControllerTest extends TestCase
             'cache.default' => 'array',
             'queue.default' => 'sync',
             'session.driver' => 'array',
-            'operations.run_scheduler' => false,
+            'operations.require_scheduler_heartbeat' => false,
         ]);
 
         $this->getJson('/health/live')
@@ -40,7 +40,7 @@ class HealthControllerTest extends TestCase
             'cache.default' => 'array',
             'queue.default' => 'database',
             'session.driver' => 'array',
-            'operations.run_scheduler' => true,
+            'operations.require_scheduler_heartbeat' => true,
         ]);
 
         $this->getJson('/health/ready')

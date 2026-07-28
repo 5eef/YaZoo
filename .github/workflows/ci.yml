@@ -4,12 +4,13 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_call:
 
 permissions:
   contents: read
 
 jobs:
-  test-and-scan:
+  quality:
     runs-on: ubuntu-latest
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -21,22 +22,27 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: "8.4"
-          extensions: mbstring, dom, fileinfo, pdo_sqlite, sqlite3, mongodb, redis
+          extensions: bcmath, intl, mbstring, dom, fileinfo, pdo_mysql, pdo_sqlite, sqlite3, mongodb, redis
           coverage: xdebug
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "22.22.0"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Install backend dependencies
+      - name: Validate and install backend dependencies
         working-directory: backend
-        run: composer install --no-interaction --prefer-dist --no-progress
+        run: |
+          composer validate --strict
+          composer install --no-interaction --prefer-dist --no-progress
 
       - name: Audit backend dependencies
         working-directory: backend
         run: composer audit --no-interaction
+
+      - name: Validate PHP syntax
+        run: find backend -path backend/vendor -prune -o -name '*.php' -print0 | xargs -0 -n1 php -l
 
       - name: Run backend tests and coverage
         working-directory: backend
@@ -46,16 +52,34 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      - name: Audit frontend production dependencies
+      - name: Audit frontend dependencies
         working-directory: frontend
-        run: npm audit --omit=dev
+        run: |
+          npm audit --omit=dev
+          npm audit
 
-      - name: Run frontend checks
+      - name: Run frontend static checks
         working-directory: frontend
         run: |
           npm run lint
-          npm run test:coverage
-          npm run build
+          npm run typecheck
+          npm run audit:i18n
+
+      - name: Run frontend tests and coverage
+        working-directory: frontend
+        run: npm run test:coverage -- --run
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Install Playwright browser
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright smoke tests
+        working-directory: frontend
+        run: npm run test:e2e
 
       - name: SonarCloud scan
         if: env.SONAR_TOKEN != '' && env.SONAR_ORGANIZATION != ''
@@ -66,3 +90,32 @@ jobs:
             -Dsonar.host.url=https://sonarcloud.io
         env:
           SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
+
+  container-and-secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate Docker Compose
+        env:
+          APP_KEY: base64:ci-placeholder-key
+          DB_DATABASE: yazoo_ci
+          DB_USERNAME: yazoo_ci
+          DB_PASSWORD: ci-placeholder-password
+          DB_ROOT_PASSWORD: ci-placeholder-root-password
+          REDIS_PASSWORD: ci-placeholder-redis-password
+          SONAR_DB_NAME: sonar_ci
+          SONAR_DB_USERNAME: sonar_ci
+          SONAR_DB_PASSWORD: ci-placeholder-sonar-password
+        run: docker compose config --quiet
+
+      - name: Build backend container
+        run: docker build --build-arg APP_VERSION="${GITHUB_SHA}" -f backend/Dockerfile -t yazoo-api:ci .
+
+      - name: Build frontend container
+        run: docker build --build-arg APP_VERSION="${GITHUB_SHA}" -f frontend/Dockerfile -t yazoo-frontend:ci .
+
+      - name: Scan repository for secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
