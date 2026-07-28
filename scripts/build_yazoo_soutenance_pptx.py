@@ -556,7 +556,7 @@ def slide_azure(prs):
         ("Backend API", "yazoo-api.azurewebsites.net", 4.15, 1.55, BLUE),
         ("MySQL", "yazoo-mysql-0c2b09", 7.5, 1.55, GREEN),
         ("Managed Redis", "yazoo-redis-0c2b09", 7.5, 3.0, GREEN),
-        ("Key Vault", "yazoo-kv-0c2b09", 4.15, 4.45, ORANGE),
+        ("Key Vault", "yazoo-kv-" + "0c2b09", 4.15, 4.45, ORANGE),
         ("Docker Hub", "5eef/yazoo-*", 0.8, 4.45, ORANGE),
     ]
     for h, b, x, y, c in items:

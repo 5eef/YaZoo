@@ -17,6 +17,9 @@
 sonar-hotspots.json
 sonar-issues.json
 
+# Local point-in-time audit reports
+/AUDIT_COMPLET_YAZOO_STARTUP_INDH_2026.md
+
 # Backup and disaster recovery artifacts
 /infra/backups/mysql/*
 !/infra/backups/mysql/.gitkeep

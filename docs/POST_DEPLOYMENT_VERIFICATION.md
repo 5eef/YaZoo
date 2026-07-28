@@ -13,9 +13,9 @@ Date: 2026-07-07T21:46:51+01:00
   - Deploy YaZoo: success (`28895250438`)
 - Images DockerHub:
   - `5eef/yazoo-api:latest`
-  - `5eef/yazoo-api:62db185701679ef7c22e8e79599ad270b6a18fec`
+  - image immuable `5eef/yazoo-api`, commit `62db185701679ef7c22e8e79599ad270b6a18fec`
   - `5eef/yazoo-frontend:latest`
-  - `5eef/yazoo-frontend:62db185701679ef7c22e8e79599ad270b6a18fec`
+  - image immuable `5eef/yazoo-frontend`, meme commit
 - Azure App Service:
   - Backend: `yazoo-api`
   - Frontend: `yazoo`

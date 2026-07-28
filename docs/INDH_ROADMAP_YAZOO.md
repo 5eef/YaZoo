@@ -308,7 +308,10 @@ Aucune migration creee ou appliquee. La phase concerne le frontend, les assets p
 - Le scan local a confirme la presence de sauvegardes et logs a exclure du partage: `infra/backups`, `backend/storage/logs`, fichiers `.sql.gz`, `.zip`, `.log`.
 - Phase 2: les IP et user-agents de consentement sont haches, pas stockes en clair.
 - Phase 2: l'export exclut les messages prives complets pour ne pas exposer les donnees d'autres utilisateurs.
-- Phase 2: la suppression de compte n'est pas automatique; elle cree une demande manuelle.
+- Phase 2 puis durcissement 2026: la demande est initiee par l'utilisateur et
+  traitee par un administrateur; sa completion execute desormais le service
+  transactionnel de suppression/anonymisation et ne peut plus etre seulement
+  marquee manuellement.
 - Phase 2: une API admin minimale de suivi des demandes de suppression existe; la Phase 4 a ajoute la journalisation admin associee.
 - Phase 3: ne pas presenter YaZoo comme autorite ONSSA; utiliser des mentions prudentes comme informations de conformite, documents en cours de verification et professionnel verifie par l'administration YaZoo.
 - Phase 3: les champs documentaires animaux et professionnels restent des references texte; aucun upload prive documentaire n'a ete introduit pour eviter un stockage dangereux premature.
