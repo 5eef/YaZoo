@@ -12,6 +12,7 @@ const ci = read('.github/workflows/ci.yml')
 const startup = read('backend/startup.sh')
 const setup = read('deploy/azure-setup.ps1')
 const initialConfiguration = read('deploy/azure-dockerhub-deploy.ps1')
+const workflowContents = [ci, deploy, dockerHubPublish]
 
 const immutablePush = deploy.indexOf('name: Push immutable SHA images')
 const mysqlValidation = deploy.indexOf('name: Validate MySQL backup and restore readiness')
@@ -49,9 +50,31 @@ assert.match(
 assert.match(dockerHubPublish, /\^\[0-9a-f\]\{40\}\$/)
 assert.match(dockerHubPublish, /refs\/heads\/\*/)
 
-assert.match(ci, /SONAR_TOKEN:\s*\n\s+required: false/)
+assert.match(ci, /SONAR_TOKEN:[^\S\r\n]*\r?\n[^\S\r\n]+required: false/)
 assert.doesNotMatch(deploy, /secrets: inherit/)
 assert.doesNotMatch(dockerHubPublish, /secrets: inherit/)
+
+const actionReferences = workflowContents.flatMap((workflow) =>
+  workflow
+    .split(/\r?\n/u)
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith('- uses:') || line.startsWith('uses:'))
+    .map((line) => line.slice(line.indexOf('uses:') + 'uses:'.length).trim().split(/[ \t]+#/u)[0]))
+
+for (const reference of actionReferences) {
+  if (reference.startsWith('./')) {
+    continue
+  }
+  assert.match(reference, /^[^@\s]+@[0-9a-f]{40}$/u, `action must use an immutable SHA: ${reference}`)
+}
+
+const containerJob = ci.slice(ci.indexOf('container-and-secrets:'))
+const containerCheckout = containerJob.indexOf('uses: actions/checkout@')
+const fullHistoryCheckout = containerJob.indexOf('fetch-depth: 0')
+assert.ok(containerCheckout >= 0 && fullHistoryCheckout > containerCheckout)
+assert.match(ci, /npm ci --ignore-scripts/)
+assert.match(ci, /\.\/node_modules\/\.bin\/playwright install --with-deps chromium/)
+assert.doesNotMatch(ci, /\bnpx\s+playwright\b/u)
 
 const startupPreflight = startup.indexOf('run-production-preflight.sh')
 const startupMigration = startup.indexOf('YAZOO_RUN_MIGRATIONS')
@@ -70,8 +93,10 @@ assert.match(initialConfiguration, /initial configuration only/i)
 const shouldPublishLatest = (rolloutOutcome) => rolloutOutcome === 'success'
 assert.equal(shouldPublishLatest('success'), true)
 assert.equal(shouldPublishLatest('failure'), false)
-assert.equal('refs/heads/main' === 'refs/heads/main', true)
-assert.equal('refs/heads/feature/release' === 'refs/heads/main', false)
+
+const isMainBranchRef = (ref) => ref === 'refs/heads/main'
+assert.equal(isMainBranchRef('refs/heads/main'), true)
+assert.equal(isMainBranchRef('refs/heads/feature/release'), false)
 
 const mysqlAllowsMigration = ({ state, retentionDays, earliestRestoreDate }) =>
   state === 'Ready'

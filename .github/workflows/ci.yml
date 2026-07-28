@@ -20,15 +20,15 @@ jobs:
       SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: shivammathur/setup-php@v2
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
         with:
           php-version: "8.4"
           extensions: bcmath, intl, mbstring, dom, fileinfo, pdo_mysql, pdo_sqlite, sqlite3, mongodb, redis
           coverage: xdebug
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "22.22.0"
           cache: npm
@@ -53,7 +53,7 @@ jobs:
 
       - name: Install frontend dependencies
         working-directory: frontend
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Audit frontend dependencies
         working-directory: frontend
@@ -78,7 +78,7 @@ jobs:
 
       - name: Install Playwright browser
         working-directory: frontend
-        run: npx playwright install --with-deps chromium
+        run: ./node_modules/.bin/playwright install --with-deps chromium
 
       - name: Run Playwright smoke tests
         working-directory: frontend
@@ -86,7 +86,7 @@ jobs:
 
       - name: SonarCloud scan
         if: env.SONAR_TOKEN != '' && env.SONAR_ORGANIZATION != ''
-        uses: SonarSource/sonarqube-scan-action@v5
+        uses: SonarSource/sonarqube-scan-action@2f77a1ec69fb1d595b06f35ab27e97605bdef703 # v5
         with:
           args: >
             -Dsonar.organization=${{ env.SONAR_ORGANIZATION }}
@@ -97,7 +97,9 @@ jobs:
   container-and-secrets:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
 
       - name: Validate release guard policies
         run: node scripts/validate-release-guards.mjs
@@ -129,6 +131,6 @@ jobs:
         run: docker build --build-arg APP_VERSION="${GITHUB_SHA}" -f frontend/Dockerfile -t yazoo-frontend:ci .
 
       - name: Scan repository for secrets
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

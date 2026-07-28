@@ -33,7 +33,7 @@ jobs:
       FRONTEND_IMAGE: 5eef/yazoo-frontend:${{ github.sha }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Validate production ref and SHA
         shell: bash
@@ -48,7 +48,7 @@ jobs:
             exit 1
           fi
 
-      - uses: docker/login-action@v3
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -65,7 +65,7 @@ jobs:
           docker push "${BACKEND_IMAGE}"
           docker push "${FRONTEND_IMAGE}"
 
-      - uses: azure/login@v2
+      - uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5 # v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
