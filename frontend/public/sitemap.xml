@@ -4,6 +4,7 @@
   <url><loc>https://yazoo.azurewebsites.net/about</loc></url>
   <url><loc>https://yazoo.azurewebsites.net/privacy</loc></url>
   <url><loc>https://yazoo.azurewebsites.net/cgu</loc></url>
+  <url><loc>https://yazoo.azurewebsites.net/trust</loc></url>
   <url><loc>https://yazoo.azurewebsites.net/rules</loc></url>
   <url><loc>https://yazoo.azurewebsites.net/partner</loc></url>
   <url><loc>https://yazoo.azurewebsites.net/pros</loc></url>
@@ -11,9 +12,8 @@
   <url><loc>https://yazoo.azurewebsites.net/accessibility</loc></url>
   <url><loc>https://yazoo.azurewebsites.net/impact</loc></url>
   <url><loc>https://yazoo.azurewebsites.net/contact</loc></url>
-  <url><loc>https://yazoo.azurewebsites.net/marketplace</loc></url>
-  <url><loc>https://yazoo.azurewebsites.net/marketplace/animals</loc></url>
-  <url><loc>https://yazoo.azurewebsites.net/marketplace/products</loc></url>
-  <url><loc>https://yazoo.azurewebsites.net/marketplace/services</loc></url>
-  <url><loc>https://yazoo.azurewebsites.net/marketplace/veterinarians</loc></url>
+  <url><loc>https://yazoo.azurewebsites.net/discover/animals</loc></url>
+  <url><loc>https://yazoo.azurewebsites.net/discover/products</loc></url>
+  <url><loc>https://yazoo.azurewebsites.net/discover/services</loc></url>
+  <url><loc>https://yazoo.azurewebsites.net/discover/veterinarians</loc></url>
 </urlset>

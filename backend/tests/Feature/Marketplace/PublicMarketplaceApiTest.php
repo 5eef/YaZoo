@@ -141,6 +141,57 @@ class PublicMarketplaceApiTest extends TestCase
             ->assertJsonCount(12, 'data.animals');
     }
 
+    public function test_guest_can_paginate_only_approved_public_animals(): void
+    {
+        Animal::factory()->count(13)->create([
+            'legal_status' => 'approved',
+            'listing_status' => 'available',
+        ]);
+        Animal::factory()->create([
+            'name' => 'Animal prive',
+            'legal_status' => 'pending_review',
+            'listing_status' => 'available',
+        ]);
+
+        $this->getJson('/api/marketplace/public/animals?page=2&per_page=6')
+            ->assertOk()
+            ->assertJsonCount(6, 'data')
+            ->assertJsonPath('meta.currentPage', 2)
+            ->assertJsonPath('meta.lastPage', 3)
+            ->assertJsonPath('meta.perPage', 6)
+            ->assertJsonPath('meta.total', 13)
+            ->assertJsonMissing(['title' => 'Animal prive']);
+    }
+
+    public function test_guest_can_read_an_approved_listing_but_not_a_hidden_one(): void
+    {
+        $approved = ServiceListing::factory()->create([
+            'title' => 'Garde publique',
+            'description' => 'Contact private@example.com ou +212611111111',
+            'status' => 'active',
+            'moderation_status' => 'active',
+            'contact_email' => 'private@example.com',
+            'contact_phone' => '+212611111111',
+        ]);
+        $hidden = ServiceListing::factory()->create([
+            'title' => 'Garde privee',
+            'status' => 'active',
+            'moderation_status' => 'suspended',
+        ]);
+
+        $response = $this->getJson("/api/marketplace/public/services/{$approved->id}")
+            ->assertOk()
+            ->assertJsonPath('data.title', 'Garde publique');
+
+        $this->assertNoSensitiveKeys($response->json('data'));
+        $this->assertStringNotContainsString(
+            'private@example.com',
+            json_encode($response->json(), JSON_THROW_ON_ERROR),
+        );
+        $this->getJson("/api/marketplace/public/services/{$hidden->id}")
+            ->assertNotFound();
+    }
+
     public function test_public_text_cleanup_only_removes_separators_at_the_edges(): void
     {
         $seller = User::factory()->create([

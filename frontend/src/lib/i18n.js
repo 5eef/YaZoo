@@ -7644,6 +7644,143 @@ const PUBLIC_MARKETPLACE_TRANSLATIONS = {
       },
     },
   },
+  publicMarketplace: {
+    eyebrow: {
+      fr: 'Découvrir le Marché YaZoo',
+      ar: 'اكتشف سوق YaZoo',
+      en: 'Discover the YaZoo Market',
+    },
+    viewAll: {
+      fr: "Plus d'annonces",
+      ar: 'المزيد من الإعلانات',
+      en: 'More listings',
+    },
+    categoriesLabel: {
+      fr: 'Catégories publiques du marché',
+      ar: 'فئات السوق العامة',
+      en: 'Public market categories',
+    },
+    approvedOnly: {
+      fr: 'Affichage public limité aux annonces validées et actives',
+      ar: 'العرض العام مقتصر على الإعلانات المعتمدة والنشطة',
+      en: 'Public display is limited to reviewed and active listings',
+    },
+    animalsTitle: {
+      fr: 'Animaux à adopter ou disponibles au Maroc',
+      ar: 'حيوانات للتبني أو متاحة في المغرب',
+      en: 'Animals for adoption or available in Morocco',
+    },
+    animalsDescription: {
+      fr: 'Consultez gratuitement les annonces animales approuvées. Les coordonnées et les actions de contact restent protégées par la connexion.',
+      ar: 'تصفح مجانا إعلانات الحيوانات المعتمدة. تبقى معلومات التواصل وإجراءاته محمية بتسجيل الدخول.',
+      en: 'Browse approved animal listings for free. Contact details and actions remain protected behind sign-in.',
+    },
+    productsTitle: {
+      fr: 'Produits récents pour animaux',
+      ar: 'منتجات حديثة للحيوانات',
+      en: 'Recent products for animals',
+    },
+    productsDescription: {
+      fr: 'Découvrez les produits disponibles et modérés pour prendre soin de vos compagnons.',
+      ar: 'اكتشف المنتجات المتاحة والخاضعة للمراجعة للعناية بحيواناتك.',
+      en: 'Discover available, moderated products for caring for your companions.',
+    },
+    servicesTitle: {
+      fr: 'Services animaliers au Maroc',
+      ar: 'خدمات الحيوانات في المغرب',
+      en: 'Animal services in Morocco',
+    },
+    servicesDescription: {
+      fr: 'Parcourez les services animaliers actifs et validés proposés par la communauté et les professionnels.',
+      ar: 'تصفح خدمات الحيوانات النشطة والمعتمدة التي يقدمها المجتمع والمهنيون.',
+      en: 'Browse active, reviewed animal services offered by the community and professionals.',
+    },
+    veterinariansTitle: {
+      fr: 'Vétérinaires et cabinets présents sur YaZoo',
+      ar: 'أطباء وعيادات بيطرية على YaZoo',
+      en: 'Veterinarians and clinics on YaZoo',
+    },
+    veterinariansDescription: {
+      fr: 'Consultez les profils publics actifs des vétérinaires et cabinets référencés sur YaZoo.',
+      ar: 'اطلع على الملفات العامة النشطة للأطباء والعيادات البيطرية المدرجة في YaZoo.',
+      en: 'Browse active public profiles for veterinarians and clinics listed on YaZoo.',
+    },
+    loadErrorTitle: {
+      fr: 'Cette annonce est momentanément indisponible',
+      ar: 'هذا الإعلان غير متاح مؤقتا',
+      en: 'This listing is temporarily unavailable',
+    },
+    loadError: {
+      fr: 'Les annonces publiques ne peuvent pas être chargées pour le moment.',
+      ar: 'لا يمكن تحميل الإعلانات العامة حاليا.',
+      en: 'Public listings cannot be loaded right now.',
+    },
+    paginationLabel: {
+      fr: 'Pagination des annonces publiques',
+      ar: 'صفحات الإعلانات العامة',
+      en: 'Public listing pagination',
+    },
+    previousPage: {
+      fr: 'Précédent',
+      ar: 'السابق',
+      en: 'Previous',
+    },
+    nextPage: {
+      fr: 'Suivant',
+      ar: 'التالي',
+      en: 'Next',
+    },
+    pageStatus: {
+      fr: 'Page {current} sur {total}',
+      ar: 'الصفحة {current} من {total}',
+      en: 'Page {current} of {total}',
+    },
+    backToCategory: {
+      fr: 'Retour aux annonces',
+      ar: 'العودة إلى الإعلانات',
+      en: 'Back to listings',
+    },
+    notFoundTitle: {
+      fr: 'Annonce introuvable',
+      ar: 'الإعلان غير موجود',
+      en: 'Listing not found',
+    },
+    notFoundDescription: {
+      fr: "Cette annonce n'existe plus, n'est pas publique ou attend une validation.",
+      ar: 'هذا الإعلان لم يعد موجودا أو ليس عاما أو ينتظر المراجعة.',
+      en: 'This listing no longer exists, is not public, or is awaiting review.',
+    },
+    location: {
+      fr: 'Ville',
+      ar: 'المدينة',
+      en: 'City',
+    },
+    publishedAt: {
+      fr: 'Publié le',
+      ar: 'تاريخ النشر',
+      en: 'Published',
+    },
+    descriptionTitle: {
+      fr: "À propos de l'annonce",
+      ar: 'حول الإعلان',
+      en: 'About this listing',
+    },
+    publishedBy: {
+      fr: 'Publié par',
+      ar: 'نشره',
+      en: 'Published by',
+    },
+    readOnlyNotice: {
+      fr: 'Cette page est publique et en lecture seule. Connectez-vous pour contacter, réserver ou enregistrer une annonce.',
+      ar: 'هذه الصفحة عامة وللقراءة فقط. سجل الدخول للتواصل أو الحجز أو حفظ الإعلان.',
+      en: 'This page is public and read-only. Sign in to contact, book, or save a listing.',
+    },
+    signInToContact: {
+      fr: 'Se connecter pour contacter',
+      ar: 'تسجيل الدخول للتواصل',
+      en: 'Sign in to contact',
+    },
+  },
   auth: {
     login: {
       googleFailed: {

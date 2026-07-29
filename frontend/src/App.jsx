@@ -4,6 +4,7 @@ import { Navigate, Route, Routes } from 'react-router'
 import { useAuth } from './hooks/useAuth'
 import { useI18n } from './hooks/useI18n'
 import CookieConsentBanner from './components/privacy/CookieConsentBanner'
+import SeoManager from './components/seo/SeoManager'
 
 const AdminModerationPage = lazy(() => import('./pages/AdminModerationPage'))
 const AdminAnimalReviewPage = lazy(() => import('./pages/AdminAnimalReviewPage'))
@@ -34,6 +35,8 @@ const PartnerPage = lazy(() => import('./pages/PartnerPage'))
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'))
 const PrivacySettingsPage = lazy(() => import('./pages/PrivacySettingsPage'))
 const ProfessionalVerificationPage = lazy(() => import('./pages/ProfessionalVerificationPage'))
+const PublicListingPage = lazy(() => import('./pages/PublicListingPage'))
+const PublicMarketplacePage = lazy(() => import('./pages/PublicMarketplacePage'))
 const ProductDetailPage = lazy(() => import('./pages/ProductDetailPage'))
 const ProductsMarketplacePage = lazy(() => import('./pages/ProductsMarketplacePage'))
 const ProfilePage = lazy(() => import('./pages/ProfilePage'))
@@ -52,8 +55,10 @@ function App() {
   const { isAuthenticated } = useAuth()
 
   return (
-    <Suspense fallback={<RouteLoader />}>
-      <Routes>
+    <>
+      <SeoManager />
+      <Suspense fallback={<RouteLoader />}>
+        <Routes>
         <Route
           path="/"
           element={isAuthenticated ? <Navigate to="/feed" replace /> : <LandingPage />}
@@ -72,6 +77,8 @@ function App() {
         <Route path="/partner" element={<PartnerPage />} />
         <Route path="/pros" element={<ProsPage />} />
         <Route path="/demo-mobile" element={<MobileDemoPage />} />
+        <Route path="/discover/:section" element={<PublicMarketplacePage />} />
+        <Route path="/discover/:section/:listingId" element={<PublicListingPage />} />
         <Route element={<Layout />}>
           <Route path="/feed" element={<FeedPage />} />
           <Route path="/profile" element={<ProfilePage />} />
@@ -121,9 +128,10 @@ function App() {
           path="*"
           element={<Navigate to={isAuthenticated ? '/feed' : '/'} replace />}
         />
-      </Routes>
-      <CookieConsentBanner />
-    </Suspense>
+        </Routes>
+        <CookieConsentBanner />
+      </Suspense>
+    </>
   )
 }
 

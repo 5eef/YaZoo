@@ -84,6 +84,13 @@ Route::middleware([ForceJsonResponse::class, SetApiLocale::class, 'throttle:api'
 
     Route::get('/marketplace/public-preview', PublicMarketplaceController::class)
         ->middleware('throttle:60,1');
+    Route::get('/marketplace/public/{section}', [PublicMarketplaceController::class, 'index'])
+        ->whereIn('section', ['animals', 'products', 'services', 'veterinarians'])
+        ->middleware('throttle:60,1');
+    Route::get('/marketplace/public/{section}/{listing}', [PublicMarketplaceController::class, 'show'])
+        ->whereIn('section', ['animals', 'products', 'services', 'veterinarians'])
+        ->whereNumber('listing')
+        ->middleware('throttle:60,1');
 
     Route::post('/payments/cmi/callback', [PaymentController::class, 'cmiCallback'])
         ->middleware('throttle:30,1');

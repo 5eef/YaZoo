@@ -10,6 +10,7 @@ use App\Models\Veterinarian;
 use App\Services\MarketplacePublishingResolver;
 use App\Support\MarketplaceMedia;
 use App\Support\MediaStorage;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -26,91 +27,136 @@ class PublicMarketplaceController extends Controller
 
         return response()->json([
             'data' => [
-                'animals' => Animal::query()
-                    ->select([
-                        'id',
-                        'user_id',
-                        'name',
-                        'type',
-                        'breed',
-                        'description',
-                        'price',
-                        'photo_url',
-                        'is_for_adoption',
-                        'listing_status',
-                        'created_at',
-                    ])
-                    ->with($this->professionalVerificationRelations())
-                    ->where('legal_status', 'approved')
-                    ->whereIn('listing_status', ['available', 'reserved'])
-                    ->latest()
-                    ->limit($perSection)
-                    ->get()
-                    ->map(fn (Animal $animal): array => $this->animalPayload($animal))
-                    ->values(),
-                'products' => Product::query()
-                    ->select([
-                        'id',
-                        'user_id',
-                        'name',
-                        'category',
-                        'description',
-                        'price',
-                        'image_url',
-                        'condition_status',
-                        'created_at',
-                    ])
-                    ->with($this->professionalVerificationRelations())
-                    ->where('moderation_status', 'active')
-                    ->whereIn('listing_status', ['available', 'reserved'])
-                    ->where('stock', '>', 0)
-                    ->latest()
-                    ->limit($perSection)
-                    ->get()
-                    ->map(fn (Product $product): array => $this->productPayload($product))
-                    ->values(),
-                'services' => ServiceListing::query()
-                    ->select([
-                        'id',
-                        'user_id',
-                        'title',
-                        'type',
-                        'description',
-                        'city',
-                        'price',
-                        'price_type',
-                        'media',
-                        'created_at',
-                    ])
-                    ->with($this->professionalVerificationRelations())
-                    ->where('status', 'active')
-                    ->where('moderation_status', 'active')
-                    ->latest()
-                    ->limit($perSection)
-                    ->get()
-                    ->map(fn (ServiceListing $service): array => $this->servicePayload($service))
-                    ->values(),
-                'veterinarians' => Veterinarian::query()
-                    ->select([
-                        'id',
-                        'user_id',
-                        'name',
-                        'clinic_name',
-                        'description',
-                        'city',
-                        'image_path',
-                        'created_at',
-                    ])
-                    ->with($this->professionalVerificationRelations())
-                    ->where('is_active', true)
-                    ->where('moderation_status', 'active')
-                    ->latest()
-                    ->limit($perSection)
-                    ->get()
-                    ->map(fn (Veterinarian $veterinarian): array => $this->veterinarianPayload($veterinarian))
-                    ->values(),
+                'animals' => $this->sectionItems('animals', $perSection),
+                'products' => $this->sectionItems('products', $perSection),
+                'services' => $this->sectionItems('services', $perSection),
+                'veterinarians' => $this->sectionItems('veterinarians', $perSection),
             ],
         ]);
+    }
+
+    public function index(Request $request, string $section): JsonResponse
+    {
+        $page = max($request->integer('page', 1), 1);
+        $perPage = min(max($request->integer('per_page', 12), 1), 24);
+        $query = $this->sectionQuery($section);
+        $total = (clone $query)->count();
+        $items = $query
+            ->forPage($page, $perPage)
+            ->get()
+            ->map(fn (Model $listing): array => $this->sectionPayload($section, $listing))
+            ->values();
+
+        return response()->json([
+            'data' => $items,
+            'meta' => [
+                'currentPage' => $page,
+                'lastPage' => max((int) ceil($total / $perPage), 1),
+                'perPage' => $perPage,
+                'total' => $total,
+            ],
+        ]);
+    }
+
+    public function show(string $section, int $listing): JsonResponse
+    {
+        $item = $this->sectionQuery($section)->findOrFail($listing);
+
+        return response()->json([
+            'data' => $this->sectionPayload($section, $item),
+        ]);
+    }
+
+    private function sectionItems(string $section, int $limit)
+    {
+        return $this->sectionQuery($section)
+            ->limit($limit)
+            ->get()
+            ->map(fn (Model $listing): array => $this->sectionPayload($section, $listing))
+            ->values();
+    }
+
+    private function sectionQuery(string $section): Builder
+    {
+        return match ($section) {
+            'animals' => Animal::query()
+                ->select([
+                    'id',
+                    'user_id',
+                    'name',
+                    'type',
+                    'breed',
+                    'description',
+                    'price',
+                    'photo_url',
+                    'is_for_adoption',
+                    'listing_status',
+                    'created_at',
+                ])
+                ->with($this->professionalVerificationRelations())
+                ->where('legal_status', 'approved')
+                ->whereIn('listing_status', ['available', 'reserved'])
+                ->latest(),
+            'products' => Product::query()
+                ->select([
+                    'id',
+                    'user_id',
+                    'name',
+                    'category',
+                    'description',
+                    'price',
+                    'image_url',
+                    'condition_status',
+                    'created_at',
+                ])
+                ->with($this->professionalVerificationRelations())
+                ->where('moderation_status', 'active')
+                ->whereIn('listing_status', ['available', 'reserved'])
+                ->where('stock', '>', 0)
+                ->latest(),
+            'services' => ServiceListing::query()
+                ->select([
+                    'id',
+                    'user_id',
+                    'title',
+                    'type',
+                    'description',
+                    'city',
+                    'price',
+                    'price_type',
+                    'media',
+                    'created_at',
+                ])
+                ->with($this->professionalVerificationRelations())
+                ->where('status', 'active')
+                ->where('moderation_status', 'active')
+                ->latest(),
+            'veterinarians' => Veterinarian::query()
+                ->select([
+                    'id',
+                    'user_id',
+                    'name',
+                    'clinic_name',
+                    'description',
+                    'city',
+                    'image_path',
+                    'created_at',
+                ])
+                ->with($this->professionalVerificationRelations())
+                ->where('is_active', true)
+                ->where('moderation_status', 'active')
+                ->latest(),
+        };
+    }
+
+    private function sectionPayload(string $section, Model $listing): array
+    {
+        return match ($section) {
+            'animals' => $this->animalPayload($listing),
+            'products' => $this->productPayload($listing),
+            'services' => $this->servicePayload($listing),
+            'veterinarians' => $this->veterinarianPayload($listing),
+        };
     }
 
     private function animalPayload(Animal $animal): array

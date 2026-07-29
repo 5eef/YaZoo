@@ -28,7 +28,7 @@ describe('PublicMarketplaceShowcase', () => {
     localStorage.setItem('yazoo-locale', 'fr')
   })
 
-  it('affiche les annonces publiques et dirige les actions privées vers l’authentification', async () => {
+  it('affiche les annonces publiques, ouvre leur fiche et protège la publication', async () => {
     getPublicMarketplacePreviewRequest.mockResolvedValue({
       data: {
         data: {
@@ -65,7 +65,7 @@ describe('PublicMarketplaceShowcase', () => {
     expect(screen.getByText('Eleveur verifie')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Voir les détails' })).toHaveAttribute(
       'href',
-      '/login',
+      '/discover/animals/1',
     )
     expect(screen.getByRole('link', { name: 'Publier une annonce' })).toHaveAttribute(
       'href',

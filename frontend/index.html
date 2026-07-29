@@ -11,9 +11,14 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta
+      name="robots"
+      content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
+    />
+    <meta
       name="description"
       content="YaZoo est une plateforme marocaine de mise en relation responsable autour de l'adoption animale, des services animaliers et des professionnels locaux."
     />
+    <link rel="canonical" href="https://yazoo.azurewebsites.net/" />
     <meta
       property="og:title"
       content="YaZoo | Adoption responsable et services animaliers au Maroc"
@@ -23,7 +28,13 @@
       content="YaZoo connecte particuliers, associations et professionnels locaux autour d'une adoption animale plus responsable, avec moderation et signalements."
     />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="/yazoo-logo.svg" />
+    <meta property="og:url" content="https://yazoo.azurewebsites.net/" />
+    <meta property="og:locale" content="fr_MA" />
+    <meta
+      property="og:image"
+      content="https://yazoo.azurewebsites.net/yazoo-logo.svg"
+    />
+    <meta property="og:image:alt" content="Logo YaZoo" />
     <meta property="og:site_name" content="YaZoo" />
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:title" content="YaZoo | Adoption responsable et services animaliers au Maroc" />
@@ -31,7 +42,35 @@
       name="twitter:description"
       content="Plateforme marocaine de mise en relation responsable autour de l'adoption animale et des services animaliers."
     />
-    <meta name="twitter:image" content="/yazoo-logo.svg" />
+    <meta
+      name="twitter:image"
+      content="https://yazoo.azurewebsites.net/yazoo-logo.svg"
+    />
+    <meta name="twitter:image:alt" content="Logo YaZoo" />
+    <script id="yazoo-structured-data" type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "https://yazoo.azurewebsites.net/#organization",
+            "name": "YaZoo",
+            "url": "https://yazoo.azurewebsites.net/",
+            "logo": "https://yazoo.azurewebsites.net/yazoo-logo.svg"
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://yazoo.azurewebsites.net/#website",
+            "url": "https://yazoo.azurewebsites.net/",
+            "name": "YaZoo",
+            "inLanguage": ["fr", "ar", "en"],
+            "publisher": {
+              "@id": "https://yazoo.azurewebsites.net/#organization"
+            }
+          }
+        ]
+      }
+    </script>
     <title>YaZoo | Adoption responsable et services animaliers au Maroc</title>
   </head>
   <body>

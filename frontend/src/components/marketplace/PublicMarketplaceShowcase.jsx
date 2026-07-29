@@ -3,7 +3,11 @@ import { Link } from 'react-router'
 
 import { getPublicMarketplacePreviewRequest } from '../../api/publicMarketplace'
 import { useI18n } from '../../hooks/useI18n'
-import Avatar from '../ui/Avatar'
+import PublicListingCard from './PublicListingCard'
+import {
+  PUBLIC_MARKETPLACE_SECTIONS,
+  getPublicMarketplaceSectionPath,
+} from './publicMarketplaceConfig'
 
 const EMPTY_SECTIONS = {
   animals: [],
@@ -11,26 +15,6 @@ const EMPTY_SECTIONS = {
   services: [],
   veterinarians: [],
 }
-
-const TRANSLATED_BADGES = new Set([
-  'adoption',
-  'available',
-  'reserved',
-  'new',
-  'used',
-  'fixed',
-  'hourly',
-  'daily',
-  'session',
-  'negotiable',
-  'verified_professional',
-  'verified_seller',
-  'verified_pet_shop',
-  'verified_breeder',
-  'verified_trainer',
-  'verified_service_provider',
-  'verified_veterinarian',
-])
 
 function PublicMarketplaceShowcase() {
   const { isRtl, locale, t } = useI18n()
@@ -72,13 +56,6 @@ function PublicMarketplaceShowcase() {
       cancelled = true
     }
   }, [reloadKey])
-
-  const definitions = [
-    { key: 'animals', title: t('landing.marketplaceAnimals') },
-    { key: 'products', title: t('landing.marketplaceProducts') },
-    { key: 'services', title: t('landing.marketplaceServices') },
-    { key: 'veterinarians', title: t('landing.marketplaceVeterinarians') },
-  ]
 
   return (
     <section
@@ -126,10 +103,11 @@ function PublicMarketplaceShowcase() {
         </div>
       ) : (
         <div className="mt-7 min-w-0 space-y-8">
-          {definitions.map((definition) => (
+          {PUBLIC_MARKETPLACE_SECTIONS.map((definition) => (
             <PreviewRow
               key={definition.key}
-              title={definition.title}
+              title={t(definition.titleKey)}
+              section={definition.key}
               listings={sections[definition.key]}
               isLoading={isLoading}
               isRtl={isRtl}
@@ -143,7 +121,7 @@ function PublicMarketplaceShowcase() {
   )
 }
 
-function PreviewRow({ title, listings, isLoading, isRtl, locale, t }) {
+function PreviewRow({ title, section, listings, isLoading, isRtl, locale, t }) {
   const scrollerRef = useRef(null)
   const hasListings = listings.length > 0
 
@@ -163,7 +141,13 @@ function PreviewRow({ title, listings, isLoading, isRtl, locale, t }) {
         <h3 className="text-lg font-semibold text-stone-900 dark:text-violet-50 sm:text-xl">
           {title}
         </h3>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <Link
+            to={getPublicMarketplaceSectionPath(section)}
+            className="me-1 hidden text-sm font-semibold text-violet-700 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 sm:inline"
+          >
+            {t('publicMarketplace.viewAll')}
+          </Link>
           <ScrollButton
             label={t('landing.marketplacePrevious')}
             onClick={() => scroll(-1)}
@@ -190,12 +174,17 @@ function PreviewRow({ title, listings, isLoading, isRtl, locale, t }) {
           {isLoading
             ? Array.from({ length: 4 }, (_, index) => <PreviewSkeleton key={index} />)
             : listings.map((listing) => (
-                <PreviewCard
+                <div
                   key={`${listing.type}-${listing.id}`}
-                  listing={listing}
-                  locale={locale}
-                  t={t}
-                />
+                  className="w-[82vw] max-w-[310px] shrink-0 snap-start sm:w-[285px]"
+                >
+                  <PublicListingCard
+                    listing={listing}
+                    locale={locale}
+                    section={section}
+                    t={t}
+                  />
+                </div>
               ))}
         </div>
       ) : (
@@ -203,94 +192,14 @@ function PreviewRow({ title, listings, isLoading, isRtl, locale, t }) {
           {t('landing.marketplaceSectionEmpty')}
         </p>
       )}
+
+      <Link
+        to={getPublicMarketplaceSectionPath(section)}
+        className="mt-3 inline-flex text-sm font-semibold text-violet-700 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 sm:hidden"
+      >
+        {t('publicMarketplace.viewAll')}
+      </Link>
     </div>
-  )
-}
-
-function PreviewCard({ listing, locale, t }) {
-  const dateLabel = formatListingDate(listing.createdAt, locale)
-  const badgeKey = TRANSLATED_BADGES.has(listing.badge)
-    ? `landing.marketplaceBadges.${listing.badge}`
-    : null
-  const professionalBadgeKey = TRANSLATED_BADGES.has(listing.professionalBadge)
-    ? `landing.marketplaceBadges.${listing.professionalBadge}`
-    : null
-
-  return (
-    <article className="w-[82vw] max-w-[310px] shrink-0 snap-start overflow-hidden rounded-[24px] border border-violet-100 bg-[linear-gradient(180deg,#ffffff,#f8f3ff)] shadow-[0_14px_34px_rgba(124,58,237,0.08)] dark:border-violet-300/14 dark:bg-[linear-gradient(180deg,_rgba(24,16,38,0.98),_rgba(36,20,61,0.94))] sm:w-[285px]">
-      <div className="h-44 bg-violet-50 dark:bg-white/8">
-        {listing.imageUrl ? (
-          <img
-            src={listing.imageUrl}
-            alt={listing.title || ''}
-            className="h-full w-full object-cover"
-            loading="lazy"
-            decoding="async"
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center px-6 text-center text-sm text-violet-500 dark:text-violet-200/65">
-            {t('landing.marketplaceImageMissing')}
-          </div>
-        )}
-      </div>
-
-      <div className="space-y-3 p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="truncate text-base font-semibold text-stone-950 dark:text-white">
-              {listing.title}
-            </p>
-            <p className="mt-1 truncate text-xs text-stone-500 dark:text-violet-100/60">
-              {listing.subtitle || listing.location}
-            </p>
-          </div>
-          <div className="flex shrink-0 flex-col items-end gap-1.5">
-            {professionalBadgeKey ? (
-              <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-800 dark:bg-emerald-400/18 dark:text-emerald-100">
-                {t(professionalBadgeKey)}
-              </span>
-            ) : null}
-            {badgeKey ? (
-              <span className="rounded-full bg-violet-100 px-2.5 py-1 text-[11px] font-semibold text-violet-800 dark:bg-violet-400/18 dark:text-violet-100">
-                {t(badgeKey)}
-              </span>
-            ) : null}
-          </div>
-        </div>
-
-        {listing.price !== null ? (
-          <p className="text-sm font-semibold text-violet-700 dark:text-violet-300">
-            {formatListingPrice(listing.price, locale)}
-          </p>
-        ) : null}
-
-        <p className="line-clamp-2 min-h-10 text-sm leading-5 text-stone-600 dark:text-violet-100/74">
-          {listing.description || t('landing.marketplaceNoDescription')}
-        </p>
-
-        <div className="flex items-center gap-2 border-t border-violet-100 pt-3 dark:border-violet-300/12">
-          <Avatar
-            name={listing.author?.name || t('common.user')}
-            src={listing.author?.avatar || ''}
-            size="sm"
-          />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-medium text-stone-700 dark:text-violet-50">
-              {listing.author?.name || t('common.user')}
-            </p>
-            <p className="truncate text-[11px] text-stone-400 dark:text-violet-100/50">
-              {[listing.location, dateLabel].filter(Boolean).join(' · ')}
-            </p>
-          </div>
-          <Link
-            to="/login"
-            className="shrink-0 rounded-full bg-violet-700 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-violet-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#24143d]"
-          >
-            {t('landing.marketplaceDetails')}
-          </Link>
-        </div>
-      </div>
-    </article>
   )
 }
 
@@ -322,30 +231,6 @@ function PreviewSkeleton() {
       </div>
     </div>
   )
-}
-
-function formatListingDate(value, locale) {
-  if (!value) {
-    return ''
-  }
-
-  const date = new Date(value)
-
-  if (Number.isNaN(date.getTime())) {
-    return ''
-  }
-
-  return new Intl.DateTimeFormat(locale === 'ar' ? 'ar-MA' : locale, {
-    dateStyle: 'medium',
-  }).format(date)
-}
-
-function formatListingPrice(value, locale) {
-  return new Intl.NumberFormat(locale === 'ar' ? 'ar-MA' : locale, {
-    style: 'currency',
-    currency: 'MAD',
-    maximumFractionDigits: 2,
-  }).format(value)
 }
 
 export default PublicMarketplaceShowcase

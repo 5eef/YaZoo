@@ -11,6 +11,7 @@ function Footer({ className = '' }) {
     { to: '/cgu', label: t('footer.terms') },
     { to: '/privacy', label: t('footer.privacy') },
     { to: '/rules', label: t('footer.rules') },
+    { to: '/trust', label: t('trustSafety.eyebrow') },
     { to: '/about', label: t('footer.about') },
     { to: '/impact', label: t('footer.impact') },
     { to: '/partner', label: t('footer.partner') },
