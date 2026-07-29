@@ -92,9 +92,12 @@ describe('PublicMarketplaceShowcase', () => {
 
     renderShowcase()
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(
+    const alert = await screen.findByRole('alert')
+
+    expect(alert).toHaveTextContent(
       'Les annonces publiques sont temporairement indisponibles.',
     )
+    expect(alert).toHaveClass('dark:bg-amber-950/60', 'dark:text-amber-100')
 
     fireEvent.click(screen.getByRole('button', { name: 'Réessayer' }))
 

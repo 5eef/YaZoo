@@ -89,7 +89,7 @@ function PublicMarketplaceShowcase() {
 
       {hasError ? (
         <div
-          className="mt-6 flex flex-col items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800 dark:border-amber-300/20 dark:bg-amber-500/12 dark:text-amber-100 sm:flex-row sm:items-center sm:justify-between"
+          className="mt-6 flex flex-col items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800 dark:border-amber-300/20 dark:bg-amber-950/60 dark:text-amber-100 sm:flex-row sm:items-center sm:justify-between"
           role="alert"
         >
           <p>{t('landing.marketplaceLoadError')}</p>
