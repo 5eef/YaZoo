@@ -37,7 +37,7 @@ describe('GoogleAuthErrorNotice', () => {
     expect(screen.getByText('Google indisponible')).toHaveClass(
       'rounded-2xl',
       'border-amber-200',
-      'dark:bg-amber-500/12',
+      'dark:bg-amber-950/60',
     )
   })
 })

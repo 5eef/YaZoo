@@ -77,6 +77,9 @@ describe('LoginPage', () => {
     await user.type(screen.getByLabelText('Mot de passe'), 'bad-password')
     await user.click(screen.getByRole('button', { name: 'Se connecter' }))
 
-    expect(await screen.findByText('Identifiants invalides.')).toBeInTheDocument()
+    expect(await screen.findByText('Identifiants invalides.')).toHaveClass(
+      'dark:bg-rose-950/60',
+      'dark:text-rose-100',
+    )
   })
 })

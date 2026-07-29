@@ -83,6 +83,7 @@ describe('PublicMarketplaceShowcase', () => {
         'Aucune annonce approuvée dans cette catégorie pour le moment.',
       ),
     ).toHaveLength(4)
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
   it('affiche une erreur compréhensible et permet de relancer le chargement', async () => {
