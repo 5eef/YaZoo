@@ -3,12 +3,14 @@
 namespace Tests\Feature\Feed;
 
 use App\Models\Comment;
+use App\Models\Community;
 use App\Models\Post;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
+use RuntimeException;
 use Tests\TestCase;
 
 class FeedApiTest extends TestCase
@@ -101,6 +103,53 @@ class FeedApiTest extends TestCase
 
         $this->assertNotNull($path);
         Storage::disk('public')->assertExists($path);
+    }
+
+    public function test_non_member_is_rejected_before_community_media_is_written(): void
+    {
+        Storage::fake('public');
+        $user = User::factory()->create();
+        $community = Community::factory()->create();
+        Sanctum::actingAs($user, ['*']);
+
+        $this->post('/api/posts', [
+            'content' => 'Publication non autorisee',
+            'community_id' => $community->id,
+            'media_file' => $this->fakeImageUpload('denied.jpg'),
+        ], [
+            'Accept' => 'application/json',
+        ])->assertForbidden();
+
+        $this->assertSame([], Storage::disk('public')->allFiles('feed/posts'));
+        $this->assertDatabaseMissing('posts', [
+            'community_id' => $community->id,
+            'user_id' => $user->id,
+        ]);
+    }
+
+    public function test_database_failure_after_upload_removes_only_the_new_media(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('feed/posts/existing.jpg', 'existing-content');
+        $user = User::factory()->create();
+        Sanctum::actingAs($user, ['*']);
+        Post::creating(static function (): void {
+            throw new RuntimeException('Simulated database failure.');
+        });
+
+        $this->post('/api/posts', [
+            'content' => 'Publication qui echoue',
+            'media_file' => $this->fakeImageUpload('cleanup.jpg'),
+        ], [
+            'Accept' => 'application/json',
+        ])->assertServerError();
+
+        Storage::disk('public')->assertExists('feed/posts/existing.jpg');
+        $this->assertSame(
+            ['feed/posts/existing.jpg'],
+            Storage::disk('public')->allFiles('feed/posts'),
+        );
+        $this->assertDatabaseCount('posts', 0);
     }
 
     public function test_authenticated_user_can_create_post_with_uploaded_video_only(): void

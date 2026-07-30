@@ -48,6 +48,7 @@ class ServiceListing extends Model
         'price',
         'price_type',
         'availability',
+        'contact_visibility',
         'contact_phone',
         'contact_email',
         'whatsapp_enabled',

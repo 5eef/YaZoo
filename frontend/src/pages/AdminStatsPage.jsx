@@ -10,19 +10,14 @@ import { useI18n } from '../hooks/useI18n'
 import { getErrorMessage } from '../utils/getErrorMessage'
 
 const STAT_KEYS = [
-  'total_users',
-  'total_posts',
-  'total_animals',
-  'total_products',
-  'total_services',
-  'total_veterinarians',
-  'total_conversations',
-  'total_messages',
-  'total_reports_pending',
-  'total_reservations',
-  'users_last_7_days',
-  'posts_last_7_days',
-  'reports_last_7_days',
+  'users_registered', 'active_users_7_days', 'active_users_30_days',
+  'professionals_submitted', 'professionals_approved', 'professionals_rejected', 'professionals_expired',
+  'listings_submitted', 'listings_approved', 'listings_rejected', 'listings_pending',
+  'moderation_average_hours', 'moderation_median_hours',
+  'reservations_created', 'reservations_approved', 'reservations_completed', 'reservations_cancelled',
+  'completed_reservation_gmv_mad', 'active_sellers', 'active_buyers', 'average_published_review',
+  'pending_reports', 'pending_deletion_requests', 'appointments_created', 'appointments_pending',
+  'appointments_confirmed', 'appointments_completed', 'appointments_cancelled', 'revenue_yazoo',
 ]
 
 function AdminStatsPage() {
@@ -31,11 +26,12 @@ function AdminStatsPage() {
   const [stats, setStats] = useState({})
   const [errorMessage, setErrorMessage] = useState('')
   const [isLoading, setIsLoading] = useState(true)
+  const [days, setDays] = useState(30)
 
   const loadStats = async () => {
     setIsLoading(true)
     try {
-      const response = await getAdminStatsRequest()
+      const response = await getAdminStatsRequest(days)
       setStats(response.data ?? {})
       setErrorMessage('')
     } catch (error) {
@@ -50,7 +46,7 @@ function AdminStatsPage() {
       void loadStats()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.isAdmin])
+  }, [days, user?.isAdmin])
 
   if (!user?.isAdmin) {
     return <Navigate to="/feed" replace />
@@ -58,7 +54,7 @@ function AdminStatsPage() {
 
   const handleExportStats = async () => {
     try {
-      const response = await exportAdminStatsCsvRequest()
+      const response = await exportAdminStatsCsvRequest(days)
       downloadCsvResponse(response, 'yazoo-admin-stats.csv')
       setErrorMessage('')
     } catch (error) {
@@ -79,6 +75,12 @@ function AdminStatsPage() {
           {t('adminStats.subtitle')}
         </p>
         <div className="mt-5 flex flex-wrap gap-3">
+          <label className="flex items-center gap-2 text-sm text-stone-700 dark:text-violet-100">
+            {t('adminKpi.period')}
+            <select value={days} onChange={(event) => setDays(Number(event.target.value))} className="rounded-full border border-violet-200 bg-white px-3 py-2 dark:bg-stone-950">
+              {[7, 30, 90].map((value) => <option key={value} value={value}>{value} {t('adminKpi.days')}</option>)}
+            </select>
+          </label>
           <LinkButton to="/admin/moderation">{t('common.adminContent')}</LinkButton>
           <LinkButton to="/admin/orders">{t('common.adminOrders')}</LinkButton>
           <Button type="button" variant="secondary" onClick={handleExportStats}>{t('exports.stats')}</Button>
@@ -102,10 +104,10 @@ function AdminStatsPage() {
               className="rounded-[26px] border border-white/80 bg-white/86 p-5 shadow-[0_18px_40px_rgba(124,58,237,0.08)] dark:border-violet-300/12 dark:bg-white/8"
             >
               <p className="text-xs uppercase tracking-[0.16em] text-stone-500 dark:text-violet-100/58">
-                {t(`adminStats.labels.${key}`)}
+                {t(`adminKpi.labels.${key}`)}
               </p>
               <p className="mt-3 text-3xl font-semibold text-stone-950 dark:text-violet-50">
-                {stats[key] ?? 0}
+                {stats[key] === null || stats[key] === 'not_measured' ? t('adminKpi.notMeasured') : stats[key]}
               </p>
             </article>
           ))}

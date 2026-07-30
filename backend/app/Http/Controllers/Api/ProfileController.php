@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\DTOs\PaginationData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Profile\UpdateProfileRequest;
-use App\Http\Resources\UserResource;
 use App\Http\Resources\Profile\UserProfileResource;
+use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Notifications\UserFollowedNotification;
 use App\Support\MediaStorage;
@@ -72,7 +72,19 @@ class ProfileController extends Controller
             $updates['cover_photo'] = $coverPath;
         }
 
-        $user->update($updates);
+        $emailChanged = isset($updates['email'])
+            && strcasecmp((string) $updates['email'], (string) $user->email) !== 0;
+
+        if ($emailChanged) {
+            $updates['email_verified_at'] = null;
+        }
+
+        $user->forceFill($updates)->save();
+
+        if ($emailChanged) {
+            $user->tokens()->delete();
+        }
+
         $this->loadProfileAggregates($user);
 
         return UserProfileResource::make($user);

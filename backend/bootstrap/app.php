@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\HealthController;
 use App\Http\Middleware\EnsureAccountCanMutate;
+use App\Http\Middleware\EnsureAdminMfaVerified;
 use App\Http\Middleware\EnsureCookieAuthenticatedMutationsAreCsrfProtected;
 use App\Http\Middleware\EnsureUserIsAdmin;
 use App\Http\Middleware\EnsureUserIsNotSuspended;
@@ -72,6 +73,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'admin' => EnsureUserIsAdmin::class,
+            'admin_mfa' => EnsureAdminMfaVerified::class,
             'active_mutation' => EnsureAccountCanMutate::class,
             'cookie_csrf' => EnsureCookieAuthenticatedMutationsAreCsrfProtected::class,
             'not_suspended' => EnsureUserIsNotSuspended::class,

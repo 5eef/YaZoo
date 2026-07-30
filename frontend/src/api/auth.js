@@ -9,6 +9,10 @@ export const logoutRequest = () => api.post('/auth/logout')
 
 export const meRequest = () => api.get('/auth/me')
 
+export const requestPasswordReset = (payload) => api.post('/auth/password/forgot', payload)
+
+export const resetPassword = (payload) => api.post('/auth/password/reset', payload)
+
 export const getGoogleAuthUrl = () => `${getBackendBaseUrl()}/api/auth/google`
 
 export const isGoogleAuthEnabled = () => {

@@ -31,6 +31,12 @@ class UpdateProfileRequest extends FormRequest
 
         return [
             'name' => ['required', 'string', 'max:120'],
+            'email' => [
+                'sometimes',
+                'email',
+                'max:255',
+                Rule::unique('users', 'email')->ignore($routeUser?->id),
+            ],
             'phone' => [
                 'nullable',
                 'string',
@@ -40,7 +46,7 @@ class UpdateProfileRequest extends FormRequest
             'country' => ['nullable', 'string', 'max:100'],
             'city' => ['nullable', 'string', 'max:100'],
             'bio' => ['nullable', 'string', 'max:2000'],
-            'preferred_locale' => ['nullable', 'string', 'in:fr,ar,en,es,nl,pt,it,ru'],
+            'preferred_locale' => ['nullable', 'string', Rule::in(User::SUPPORTED_LOCALES)],
             'avatar' => ['nullable', 'string', 'max:2048'],
             'cover_photo' => ['nullable', 'string', 'max:2048'],
             'avatar_file' => ['nullable', 'file', 'image', 'max:10240'],
@@ -57,6 +63,7 @@ class UpdateProfileRequest extends FormRequest
     {
         $fields = [
             'name',
+            'email',
             'phone',
             'country',
             'city',

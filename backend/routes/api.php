@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AdminAnimalReviewController;
 use App\Http\Controllers\Api\AdminContentModerationController;
 use App\Http\Controllers\Api\AdminExportController;
+use App\Http\Controllers\Api\AdminMfaController;
 use App\Http\Controllers\Api\AdminModerationActionController;
 use App\Http\Controllers\Api\AdminModerationController;
 use App\Http\Controllers\Api\AdminOrdersController;
@@ -37,10 +38,12 @@ use App\Http\Controllers\Api\SearchController;
 use App\Http\Controllers\Api\ServiceListingController;
 use App\Http\Controllers\Api\StoryController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\VeterinarianAppointmentController;
 use App\Http\Controllers\Api\VeterinarianController;
 use App\Http\Middleware\ForceJsonResponse;
 use App\Http\Middleware\SetApiLocale;
 use App\Http\Middleware\UseSanctumTokenFromCookie;
+use App\Support\Sms\SmsSender;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware([ForceJsonResponse::class, SetApiLocale::class, 'throttle:api'])->group(function (): void {
@@ -63,7 +66,7 @@ Route::middleware([ForceJsonResponse::class, SetApiLocale::class, 'throttle:api'
         'contactWhatsapp' => config('services.contact.public_whatsapp'),
         'contactAvailable' => filled(config('services.contact.recipient'))
             && (! app()->isProduction() || ! in_array(config('mail.default'), ['log', 'array'], true)),
-        'smsAvailable' => app(\App\Support\Sms\SmsSender::class)->isAvailable(),
+        'smsAvailable' => app(SmsSender::class)->isAvailable(),
         'notice' => 'Informations administratives a valider juridiquement avant publication officielle.',
     ]))->middleware('throttle:30,1');
 
@@ -99,6 +102,13 @@ Route::middleware([ForceJsonResponse::class, SetApiLocale::class, 'throttle:api'
         Route::post('/otp/request', [AuthController::class, 'requestOtp'])->middleware('throttle:otp-request');
         Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:10,1');
         Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
+        Route::post('/password/forgot', [AuthController::class, 'requestPasswordReset'])
+            ->middleware('throttle:5,1');
+        Route::post('/password/reset', [AuthController::class, 'resetPassword'])
+            ->middleware('throttle:10,1');
+        Route::get('/email/verify/{user}/{hash}', [AuthController::class, 'verifyEmail'])
+            ->middleware(['signed', 'throttle:10,1'])
+            ->name('verification.verify');
         Route::get('/google', [AuthController::class, 'redirectToGoogle'])
             ->middleware(['web', 'throttle:10,1']);
         Route::get('/google/callback', [AuthController::class, 'handleGoogleCallback'])
@@ -107,6 +117,8 @@ Route::middleware([ForceJsonResponse::class, SetApiLocale::class, 'throttle:api'
         Route::middleware(['cookie_csrf', UseSanctumTokenFromCookie::class, 'auth:sanctum', 'active_mutation'])->group(function (): void {
             Route::get('/me', [AuthController::class, 'me']);
             Route::post('/logout', [AuthController::class, 'logout']);
+            Route::post('/email/verification-notification', [AuthController::class, 'resendEmailVerification'])
+                ->middleware('throttle:3,10');
         });
     });
 
@@ -156,6 +168,15 @@ Route::middleware([ForceJsonResponse::class, SetApiLocale::class, 'throttle:api'
 
         Route::get('/veterinarians', [VeterinarianController::class, 'index']);
         Route::get('/veterinarians/{veterinarian}', [VeterinarianController::class, 'show']);
+        Route::get('/veterinarians/{veterinarian}/availability', [VeterinarianAppointmentController::class, 'availability']);
+        Route::get('/veterinarian-appointments', [VeterinarianAppointmentController::class, 'index']);
+        Route::middleware(['throttle:appointments-write', 'not_suspended'])->group(function (): void {
+            Route::post('/veterinarians/{veterinarian}/availability', [VeterinarianAppointmentController::class, 'storeAvailability']);
+            Route::delete('/veterinarian-availability/{slot}', [VeterinarianAppointmentController::class, 'destroyAvailability']);
+            Route::post('/veterinarians/{veterinarian}/appointments', [VeterinarianAppointmentController::class, 'store']);
+            Route::patch('/veterinarian-appointments/{appointment}/status', [VeterinarianAppointmentController::class, 'updateStatus']);
+            Route::post('/veterinarian-appointments/{appointment}/review', [VeterinarianAppointmentController::class, 'review']);
+        });
 
         Route::middleware(['throttle:marketplace-write', 'not_suspended'])->group(function (): void {
             Route::post('/animals', [AnimalController::class, 'store']);
@@ -243,36 +264,44 @@ Route::middleware([ForceJsonResponse::class, SetApiLocale::class, 'throttle:api'
             ->middleware('throttle:20,1');
 
         Route::prefix('admin')->middleware('admin')->group(function (): void {
+            Route::prefix('mfa')->middleware('throttle:10,1')->group(function (): void {
+                Route::get('/', [AdminMfaController::class, 'status']);
+                Route::post('/enroll', [AdminMfaController::class, 'enroll']);
+                Route::post('/confirm', [AdminMfaController::class, 'confirm']);
+                Route::post('/challenge', [AdminMfaController::class, 'challenge'])->middleware('throttle:5,1');
+                Route::post('/recovery-codes', [AdminMfaController::class, 'regenerateRecoveryCodes']);
+                Route::delete('/', [AdminMfaController::class, 'disable']);
+            });
             Route::get('/users', [AdminUserModerationController::class, 'index']);
             Route::post('/users', [UserController::class, 'store']);
-            Route::patch('/users/{user}/suspension', [AdminUserModerationController::class, 'updateSuspension']);
-            Route::patch('/users/{user}/ban', [AdminUserModerationController::class, 'updateBan']);
+            Route::patch('/users/{user}/suspension', [AdminUserModerationController::class, 'updateSuspension'])->middleware('admin_mfa');
+            Route::patch('/users/{user}/ban', [AdminUserModerationController::class, 'updateBan'])->middleware('admin_mfa');
             Route::get('/stats', AdminStatsController::class);
             Route::get('/reports', [ReportController::class, 'index']);
-            Route::patch('/reports/{report}/status', [ReportController::class, 'updateStatus']);
+            Route::patch('/reports/{report}/status', [ReportController::class, 'updateStatus'])->middleware('admin_mfa');
             Route::get('/moderation-actions', [AdminModerationActionController::class, 'index']);
             Route::get('/reviews', [AdminReservationReviewController::class, 'index']);
-            Route::patch('/reviews/{reservationReview}/status', [AdminReservationReviewController::class, 'updateStatus']);
-            Route::patch('/content/{type}/{id}/moderation-status', [AdminContentModerationController::class, 'update']);
-            Route::get('/exports/stats.csv', [AdminExportController::class, 'stats']);
-            Route::get('/exports/reports.csv', [AdminExportController::class, 'reports']);
-            Route::get('/exports/moderation-actions.csv', [AdminExportController::class, 'moderationActions']);
-            Route::get('/exports/professional-verifications.csv', [AdminExportController::class, 'professionalVerifications']);
+            Route::patch('/reviews/{reservationReview}/status', [AdminReservationReviewController::class, 'updateStatus'])->middleware('admin_mfa');
+            Route::patch('/content/{type}/{id}/moderation-status', [AdminContentModerationController::class, 'update'])->middleware('admin_mfa');
+            Route::get('/exports/stats.csv', [AdminExportController::class, 'stats'])->middleware('admin_mfa');
+            Route::get('/exports/reports.csv', [AdminExportController::class, 'reports'])->middleware('admin_mfa');
+            Route::get('/exports/moderation-actions.csv', [AdminExportController::class, 'moderationActions'])->middleware('admin_mfa');
+            Route::get('/exports/professional-verifications.csv', [AdminExportController::class, 'professionalVerifications'])->middleware('admin_mfa');
             Route::get('/privacy/delete-requests', [DataDeletionRequestController::class, 'adminIndex']);
-            Route::patch('/privacy/delete-requests/{dataDeletionRequest}/status', [DataDeletionRequestController::class, 'updateStatus']);
+            Route::patch('/privacy/delete-requests/{dataDeletionRequest}/status', [DataDeletionRequestController::class, 'updateStatus'])->middleware('admin_mfa');
             Route::get('/professional-verifications', [ProfessionalVerificationController::class, 'adminIndex']);
             Route::get('/professional-verifications/{professionalVerification}/document', [ProfessionalVerificationController::class, 'downloadDocument'])
-                ->middleware('throttle:20,1');
-            Route::patch('/professional-verifications/{professionalVerification}/status', [ProfessionalVerificationController::class, 'updateStatus']);
+                ->middleware(['throttle:20,1', 'admin_mfa']);
+            Route::patch('/professional-verifications/{professionalVerification}/status', [ProfessionalVerificationController::class, 'updateStatus'])->middleware('admin_mfa');
             Route::get('/animals/review', [AdminAnimalReviewController::class, 'index']);
-            Route::patch('/animals/{animal}/legal-status', [AdminAnimalReviewController::class, 'updateStatus']);
+            Route::patch('/animals/{animal}/legal-status', [AdminAnimalReviewController::class, 'updateStatus'])->middleware('admin_mfa');
             Route::get('/orders', [AdminOrdersController::class, 'index']);
             Route::get('/moderation', [AdminModerationController::class, 'index']);
             Route::get('/moderation/{type}', [AdminModerationController::class, 'marketplaceSection']);
-            Route::delete('/posts/{post}', [AdminModerationController::class, 'destroyPost']);
-            Route::delete('/animals/{animal}', [AdminModerationController::class, 'destroyAnimal']);
-            Route::delete('/products/{product}', [AdminModerationController::class, 'destroyProduct']);
-            Route::delete('/communities/{community}', [AdminModerationController::class, 'destroyCommunity']);
+            Route::delete('/posts/{post}', [AdminModerationController::class, 'destroyPost'])->middleware('admin_mfa');
+            Route::delete('/animals/{animal}', [AdminModerationController::class, 'destroyAnimal'])->middleware('admin_mfa');
+            Route::delete('/products/{product}', [AdminModerationController::class, 'destroyProduct'])->middleware('admin_mfa');
+            Route::delete('/communities/{community}', [AdminModerationController::class, 'destroyCommunity'])->middleware('admin_mfa');
         });
     });
 });

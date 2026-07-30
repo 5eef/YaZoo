@@ -12,7 +12,7 @@ export type RegisterPayload = {
   phone?: string
   password: string
   password_confirmation: string
-  preferred_locale?: 'fr' | 'en' | 'ar' | 'de'
+  preferred_locale?: 'fr' | 'en' | 'ar'
   device_name?: string
 }
 

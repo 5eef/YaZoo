@@ -29,7 +29,7 @@ class ProductMarketplaceService
     {
         return Product::query()
             ->with([
-                'user:id,name,email,phone,phone_verified_at,avatar,city,country',
+                'user:id,name,phone_verified_at,avatar,city,country',
                 'user.latestProfessionalVerification.reviewer:id,is_admin',
             ])
             ->withCount([
@@ -134,7 +134,7 @@ class ProductMarketplaceService
     public function loadForResponse(Product $product): Product
     {
         $product->load([
-            'user:id,name,email,phone,phone_verified_at,avatar,city,country',
+            'user:id,name,phone_verified_at,avatar,city,country',
             'user.latestProfessionalVerification.reviewer:id,is_admin',
         ])
             ->loadCount([

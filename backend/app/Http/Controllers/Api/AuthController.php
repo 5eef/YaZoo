@@ -7,6 +7,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Requests\Auth\RequestOtpRequest;
+use App\Http\Requests\Auth\RequestPasswordResetRequest;
+use App\Http\Requests\Auth\ResetPasswordRequest;
+use App\Models\User;
+use App\Services\AccountSecurityService;
 use App\Services\AuthService;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\JsonResponse;
@@ -19,6 +23,7 @@ class AuthController extends Controller
 {
     public function __construct(
         protected AuthService $auth,
+        protected AccountSecurityService $accountSecurity,
     ) {}
 
     public function requestOtp(RequestOtpRequest $request): JsonResponse
@@ -40,6 +45,8 @@ class AuthController extends Controller
                 'message' => __('messages.auth.register_temporarily_unavailable'),
             ], 503);
         }
+
+        $this->accountSecurity->sendEmailVerification($result->user);
 
         return $this->authResponse(
             $result,
@@ -107,6 +114,42 @@ class AuthController extends Controller
         return response()->json([
             'message' => __('messages.auth.logout_success'),
         ])->withCookie($this->auth->expireAuthCookie());
+    }
+
+    public function requestPasswordReset(RequestPasswordResetRequest $request): JsonResponse
+    {
+        $this->accountSecurity->requestPasswordReset($request->validated(), $request);
+
+        return response()->json([
+            'message' => __('messages.auth.recovery_requested'),
+        ]);
+    }
+
+    public function resetPassword(ResetPasswordRequest $request): JsonResponse
+    {
+        $this->accountSecurity->resetPassword($request->validated());
+
+        return response()->json([
+            'message' => __('messages.auth.password_reset'),
+        ]);
+    }
+
+    public function resendEmailVerification(Request $request): JsonResponse
+    {
+        $this->accountSecurity->sendEmailVerification($request->user());
+
+        return response()->json([
+            'message' => __('messages.auth.verification_requested'),
+        ]);
+    }
+
+    public function verifyEmail(Request $request, User $user, string $hash): JsonResponse
+    {
+        $this->accountSecurity->verifyEmail($user, $hash);
+
+        return response()->json([
+            'message' => __('messages.auth.email_verified'),
+        ]);
     }
 
     protected function authResponse(AuthResult $result, string $message, int $statusCode = 200): JsonResponse

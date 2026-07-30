@@ -2,6 +2,7 @@ import PropTypes from 'prop-types'
 import { Link } from 'react-router'
 
 import Footer from './Footer'
+import LegalConfigurationSummary from '../legal/LegalConfigurationSummary'
 import { useI18n } from '../../hooks/useI18n'
 
 function PublicPageShell({ titleKey, eyebrowKey, introKey, sections = [], ctaKey = 'publicPages.contactCta' }) {
@@ -54,6 +55,8 @@ function PublicPageShell({ titleKey, eyebrowKey, introKey, sections = [], ctaKey
               </article>
             ))}
           </div>
+
+          <LegalConfigurationSummary />
 
           <section className="mt-5 rounded-[26px] border border-amber-200/70 bg-amber-50/86 p-5 text-sm leading-7 text-amber-950 shadow-[0_18px_40px_rgba(245,158,11,0.08)] dark:border-amber-300/18 dark:bg-amber-400/10 dark:text-amber-100 lg:text-base">
             {t('publicPages.intermediationNotice')}

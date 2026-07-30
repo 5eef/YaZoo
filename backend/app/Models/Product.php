@@ -44,6 +44,10 @@ class Product extends Model
         'image_url',
         'gallery_urls',
         'location',
+        'contact_visibility',
+        'contact_phone',
+        'contact_email',
+        'whatsapp_enabled',
         'stock',
         'listing_status',
         'condition_status',
@@ -64,6 +68,7 @@ class Product extends Model
             'gallery_urls' => 'array',
             'price' => 'decimal:2',
             'stock' => 'integer',
+            'whatsapp_enabled' => 'boolean',
             'moderated_at' => 'datetime',
         ];
     }

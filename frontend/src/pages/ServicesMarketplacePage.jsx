@@ -20,9 +20,10 @@ const defaultServiceForm = {
   address: '',
   price: '',
   price_type: 'negotiable',
+  contact_visibility: 'messages_only',
   contact_phone: '',
   contact_email: '',
-  whatsapp_enabled: true,
+  whatsapp_enabled: false,
 }
 
 function ServicesMarketplacePage() {
@@ -66,9 +67,7 @@ function ServicesMarketplacePage() {
   }, [loadServices])
 
   const handleFormChange = (field) => (event) => {
-    const value = field === 'whatsapp_enabled'
-      ? event.target.checked
-      : event.target.value
+    const value = event.target.value
 
     setServiceForm((current) => ({
       ...current,
@@ -94,7 +93,8 @@ function ServicesMarketplacePage() {
       title,
       description,
       price_type: serviceForm.price_type,
-      whatsapp_enabled: serviceForm.whatsapp_enabled,
+      contact_visibility: serviceForm.contact_visibility,
+      whatsapp_enabled: serviceForm.contact_visibility === 'whatsapp',
     }
 
     const optionalFields = {
@@ -201,9 +201,27 @@ function ServicesMarketplacePage() {
                   { value: 'session', label: t('services.priceTypes.session') },
                 ]}
               />
-              <Field label={t('services.contact')} dir="ltr" value={serviceForm.contact_phone} onChange={handleFormChange('contact_phone')} />
-              <Field label={t('services.email')} dir="ltr" type="email" value={serviceForm.contact_email} onChange={handleFormChange('contact_email')} />
+              <SelectField
+                label={t('marketplaceContact.visibilityLabel')}
+                value={serviceForm.contact_visibility}
+                onChange={handleFormChange('contact_visibility')}
+                options={[
+                  { value: 'messages_only', label: t('marketplaceContact.modes.messagesOnly') },
+                  { value: 'phone', label: t('marketplaceContact.modes.phone') },
+                  { value: 'email', label: t('marketplaceContact.modes.email') },
+                  { value: 'whatsapp', label: t('marketplaceContact.modes.whatsapp') },
+                ]}
+              />
+              {['phone', 'whatsapp'].includes(serviceForm.contact_visibility) ? (
+                <Field label={t('marketplaceContact.phoneLabel')} dir="ltr" value={serviceForm.contact_phone} onChange={handleFormChange('contact_phone')} required />
+              ) : null}
+              {serviceForm.contact_visibility === 'email' ? (
+                <Field label={t('marketplaceContact.emailLabel')} dir="ltr" type="email" value={serviceForm.contact_email} onChange={handleFormChange('contact_email')} required />
+              ) : null}
             </div>
+            <p className="rounded-[20px] border border-violet-200 bg-violet-50/80 px-4 py-3 text-sm text-violet-950 dark:border-violet-300/18 dark:bg-violet-400/10 dark:text-violet-100">
+              {t('marketplaceContact.help')}
+            </p>
             <label className="block">
               <span className="mb-2 block text-sm font-medium text-stone-700 dark:text-violet-50">
                 {t('services.description')}
@@ -215,15 +233,6 @@ function ServicesMarketplacePage() {
                 required
                 className="w-full rounded-2xl border border-violet-100 bg-violet-50/55 px-4 py-3 text-sm text-stone-700 outline-none transition focus:border-violet-400 focus:bg-white dark:border-violet-300/18 dark:bg-white/8 dark:text-white"
               />
-            </label>
-            <label className="inline-flex items-center gap-3 text-sm font-medium text-stone-700 dark:text-violet-50">
-              <input
-                type="checkbox"
-                checked={serviceForm.whatsapp_enabled}
-                onChange={handleFormChange('whatsapp_enabled')}
-                className="h-4 w-4 rounded border-violet-200 text-violet-700 focus:ring-violet-300"
-              />
-              {t('services.whatsapp')}
             </label>
             <div className="flex flex-wrap gap-3">
               <button

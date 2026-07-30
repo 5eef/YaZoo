@@ -22,8 +22,22 @@ return [
         'contact_required_register' => 'Un email ou un numero de telephone est obligatoire pour creer un compte.',
         'phone_already_exists' => 'Ce numero de telephone est deja utilise.',
         'phone_not_found' => 'Aucun compte n est associe a ce numero de telephone.',
+        'admin_mfa_required' => 'Une verification MFA administrateur recente est requise.',
+        'admin_mfa_not_enabled' => 'La MFA administrateur n est pas activee.',
+        'admin_mfa_invalid' => 'Le code MFA est invalide.',
+        'admin_mfa_enabled' => 'La MFA administrateur est activee.',
+        'admin_mfa_verified' => 'La verification MFA est confirmee.',
+        'admin_mfa_disabled' => 'La MFA administrateur est desactivee.',
+        'invalid_password' => 'Le mot de passe est invalide.',
         'google_identity_missing' => 'Google n a pas retourne une identite complete et utilisable.',
         'google_account_conflict' => 'Ce compte Google est deja associe a un autre compte YaZoo.',
+        'recovery_requested' => 'Si un compte admissible correspond, les instructions de reinitialisation ont ete preparees.',
+        'recovery_invalid' => 'La demande de reinitialisation est invalide, expiree ou deja utilisee.',
+        'recovery_throttled' => 'Trop de demandes. Reessayez plus tard.',
+        'password_reset' => 'Le mot de passe a ete reinitialise. Reconnectez-vous sur tous vos appareils.',
+        'verification_requested' => 'Si une verification est necessaire, un lien signe a ete prepare.',
+        'verification_invalid' => 'Le lien de verification est invalide ou ne correspond plus a cette adresse.',
+        'email_verified' => 'Adresse email verifiee.',
     ],
     'reviews' => [
         'created' => 'Avis envoye avec succes.',
@@ -103,6 +117,10 @@ return [
     'reports' => [
         'created' => 'Signalement envoye. Notre equipe le verifiera.',
         'self_report' => 'Vous ne pouvez pas signaler votre propre contenu.',
+    ],
+    'appointments' => [
+        'slot_overlap' => 'Ce creneau chevauche une disponibilite existante.',
+        'slot_unavailable' => 'Ce creneau n est plus disponible.',
     ],
     'privacy' => [
         'consent_saved' => 'Preference de confidentialite enregistree.',

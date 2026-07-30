@@ -2,10 +2,12 @@ import { useContext } from 'react'
 import { Link } from 'react-router'
 
 import { I18nContext } from '../../contexts/i18n-context'
+import { useLegalConfig } from '../../hooks/useLegalConfig'
 import { getCurrentLocale, translate } from '../../lib/i18n'
 
 function Footer({ className = '' }) {
   const i18n = useContext(I18nContext)
+  const { config } = useLegalConfig()
   const t = i18n?.t ?? ((key, replacements) => translate(getCurrentLocale(), key, replacements))
   const links = [
     { to: '/cgu', label: t('footer.terms') },
@@ -50,11 +52,19 @@ function Footer({ className = '' }) {
             aria-hidden="true"
           />
           <p>
-            <span className="yz-wordmark text-xs font-semibold">YaZoo</span>
+            <span className="yz-wordmark text-xs font-semibold">{config.entityName || 'YaZoo'}</span>
             {' © 2026 - '}
             {t('footer.platformDescription')}
           </p>
         </div>
+        {config.privacyContactEmail ? (
+          <a
+            href={`mailto:${config.privacyContactEmail}`}
+            className="text-xs font-medium text-violet-700 underline-offset-4 hover:underline dark:text-violet-200"
+          >
+            {config.privacyContactEmail}
+          </a>
+        ) : null}
       </div>
     </footer>
   )

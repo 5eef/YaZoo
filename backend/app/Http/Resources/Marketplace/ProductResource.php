@@ -4,6 +4,7 @@ namespace App\Http\Resources\Marketplace;
 
 use App\Models\Product;
 use App\Services\MarketplacePublishingResolver;
+use App\Support\MarketplaceContact;
 use App\Support\MarketplaceMedia;
 use App\Support\MediaStorage;
 use Illuminate\Http\Request;
@@ -36,6 +37,7 @@ class ProductResource extends JsonResource
             'galleryPaths' => $this->gallery_urls ?? [],
             'galleryUrls' => MarketplaceMedia::resolveUrls($this->gallery_urls),
             'location' => $this->location,
+            ...MarketplaceContact::payload($this->resource, $request, $this->isPubliclyVisible()),
             'stock' => $this->stock,
             'listingStatus' => $this->listing_status,
             'conditionStatus' => $this->condition_status,
@@ -52,8 +54,6 @@ class ProductResource extends JsonResource
             'author' => [
                 'id' => $this->user?->id,
                 'name' => $this->user?->name,
-                'email' => $this->user?->publicEmail(),
-                'phone' => $this->user?->phone,
                 'isPhoneVerified' => $this->user?->hasVerifiedPhone() ?? false,
                 'avatar' => MediaStorage::resolveUrl($this->user?->avatar),
                 'city' => $this->user?->city,

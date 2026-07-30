@@ -21,6 +21,25 @@ async function mockGuestApi(page) {
     })
   })
 
+  await page.route('**/api/legal/config', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        entityName: 'YaZoo',
+        legalStatus: 'Projet communautaire',
+        address: 'Casablanca, Maroc',
+        privacyContactEmail: 'privacy@example.test',
+        dataControllerName: 'YaZoo',
+        dataRetentionDays: 365,
+        dataRequestResponseDays: 30,
+        contactEmail: 'contact@example.test',
+        contactAvailable: true,
+        smsAvailable: false,
+      }),
+    })
+  })
+
   await page.route('**/api/marketplace/public-preview**', async (route) => {
     await route.fulfill({
       status: 200,

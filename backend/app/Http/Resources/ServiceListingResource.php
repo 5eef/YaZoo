@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use App\Models\ServiceListing;
 use App\Services\MarketplacePublishingResolver;
+use App\Support\MarketplaceContact;
 use App\Support\MediaStorage;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -30,9 +31,7 @@ class ServiceListingResource extends JsonResource
             'price' => $this->price !== null ? (float) $this->price : null,
             'priceType' => $this->price_type,
             'availability' => $this->availability ?? [],
-            'contactPhone' => $this->contact_phone,
-            'contactEmail' => $this->contact_email,
-            'whatsappEnabled' => (bool) $this->whatsapp_enabled,
+            ...MarketplaceContact::payload($this->resource, $request, $this->isPubliclyVisible()),
             'status' => $this->status,
             'media' => $this->media ?? [],
             'viewsCount' => $this->views_count,
@@ -50,8 +49,6 @@ class ServiceListingResource extends JsonResource
             'provider' => [
                 'id' => $this->user?->id,
                 'name' => $this->user?->name,
-                'email' => $this->user?->publicEmail(),
-                'phone' => $this->user?->phone,
                 'avatar' => MediaStorage::resolveUrl($this->user?->avatar),
                 'city' => $this->user?->city,
                 'country' => $this->user?->country,

@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types'
+import { Link } from 'react-router'
 
 import { useI18n } from '../../hooks/useI18n'
 import ReportButton from '../reports/ReportButton'
@@ -92,6 +93,12 @@ function VeterinarianCard({ veterinarian }) {
         ) : null}
       </div>
       <div className="mt-4">
+        <Link
+          to={`/veterinarian-appointments?veterinarian=${veterinarian.id}${veterinarian.isOwner ? '&owner=1' : ''}`}
+          className="mb-3 inline-flex rounded-full bg-violet-700 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-800"
+        >
+          {veterinarian.isOwner ? t('vetAppointments.manageSlots') : t('vetAppointments.book')}
+        </Link>
         {!veterinarian.isOwner ? (
           <div className="mb-3">
             <FavoriteButton type="veterinarians" itemId={veterinarian.id} initialFavorited={veterinarian.isFavorited} />

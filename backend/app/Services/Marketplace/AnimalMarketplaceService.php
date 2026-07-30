@@ -29,7 +29,7 @@ class AnimalMarketplaceService
     {
         return Animal::query()
             ->with([
-                'user:id,name,email,phone,phone_verified_at,avatar,city,country',
+                'user:id,name,phone_verified_at,avatar,city,country',
                 'user.latestProfessionalVerification.reviewer:id,is_admin',
             ])
             ->withCount([
@@ -140,7 +140,7 @@ class AnimalMarketplaceService
     public function loadForResponse(Animal $animal): Animal
     {
         $animal->load([
-            'user:id,name,email,phone,phone_verified_at,avatar,city,country',
+            'user:id,name,phone_verified_at,avatar,city,country',
             'user.latestProfessionalVerification.reviewer:id,is_admin',
         ])
             ->loadCount([

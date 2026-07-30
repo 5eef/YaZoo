@@ -7,6 +7,7 @@ use App\Http\Requests\Payment\StoreReservationPaymentRequest;
 use App\Http\Resources\PaymentResource;
 use App\Models\Payment;
 use App\Models\Reservation;
+use App\Services\AdminMfaService;
 use App\Services\Payments\PaymentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -83,6 +84,22 @@ class PaymentController extends Controller
 
     public function confirmManual(Request $request, Payment $payment): JsonResponse
     {
+        $actor = $request->user();
+        if ($actor?->is_admin) {
+            if ($actor->admin_mfa_confirmed_at === null && (bool) config('auth.admin_mfa.enforced')) {
+                abort(423, __('messages.auth.admin_mfa_required'));
+            }
+            if ($actor->admin_mfa_confirmed_at !== null) {
+                $tokenId = $actor->currentAccessToken()?->getKey();
+                $tokenId = is_numeric($tokenId) ? (int) $tokenId : null;
+                abort_unless(
+                    app(AdminMfaService::class)->hasRecentChallenge($actor, $tokenId),
+                    423,
+                    __('messages.auth.admin_mfa_required'),
+                );
+            }
+        }
+
         $validated = $request->validate([
             'note' => ['nullable', 'string', 'max:2000'],
             'provider_reference' => ['nullable', 'string', 'max:190'],

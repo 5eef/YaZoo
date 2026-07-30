@@ -24,7 +24,7 @@ class ServiceListingController extends Controller
 
         $query = ServiceListing::query()
             ->with([
-                'user:id,name,email,phone,phone_verified_at,avatar,city,country',
+                'user:id,name,phone_verified_at,avatar,city,country',
                 'user.latestProfessionalVerification.reviewer:id,is_admin',
             ])
             ->withCount([
@@ -69,7 +69,7 @@ class ServiceListingController extends Controller
         return ServiceListingResource::collection(
             ServiceListing::query()
                 ->with([
-                    'user:id,name,email,phone,phone_verified_at,avatar,city,country',
+                    'user:id,name,phone_verified_at,avatar,city,country',
                     'user.latestProfessionalVerification.reviewer:id,is_admin',
                 ])
                 ->withCount([
@@ -100,7 +100,7 @@ class ServiceListingController extends Controller
         return ServiceListingResource::collection(
             ServiceListing::query()
                 ->with([
-                    'user:id,name,email,phone,phone_verified_at,avatar,city,country',
+                    'user:id,name,phone_verified_at,avatar,city,country',
                     'user.latestProfessionalVerification.reviewer:id,is_admin',
                 ])
                 ->withCount([
@@ -200,7 +200,7 @@ class ServiceListingController extends Controller
     private function loadSocialSignals(ServiceListing $service): ServiceListing
     {
         $service->load([
-            'user:id,name,email,phone,phone_verified_at,avatar,city,country',
+            'user:id,name,phone_verified_at,avatar,city,country',
             'user.latestProfessionalVerification.reviewer:id,is_admin',
         ])
             ->loadCount([

@@ -3,6 +3,7 @@
 namespace App\Http\Requests\ServiceListing;
 
 use App\Models\ServiceListing;
+use App\Support\MarketplaceContact;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -26,8 +27,9 @@ class StoreServiceListingRequest extends FormRequest
             'price' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
             'price_type' => ['nullable', Rule::in(ServiceListing::PRICE_TYPES)],
             'availability' => ['nullable', 'array'],
-            'contact_phone' => ['nullable', 'string', 'max:50'],
-            'contact_email' => ['nullable', 'email', 'max:255'],
+            'contact_visibility' => ['required', Rule::in(MarketplaceContact::VISIBILITIES)],
+            'contact_phone' => ['nullable', 'string', 'max:50', 'required_if:contact_visibility,phone,whatsapp'],
+            'contact_email' => ['nullable', 'email', 'max:255', 'required_if:contact_visibility,email'],
             'whatsapp_enabled' => ['nullable', 'boolean'],
             'media' => ['nullable', 'array'],
         ];
@@ -42,9 +44,10 @@ class StoreServiceListingRequest extends FormRequest
             'city' => trim((string) $this->input('city')),
             'address' => trim((string) $this->input('address')),
             'price_type' => $this->input('price_type') ?: 'negotiable',
+            'contact_visibility' => trim((string) ($this->input('contact_visibility') ?: 'messages_only')),
             'contact_phone' => trim((string) $this->input('contact_phone')),
             'contact_email' => trim((string) $this->input('contact_email')),
-            'whatsapp_enabled' => $this->boolean('whatsapp_enabled', true),
+            'whatsapp_enabled' => $this->input('contact_visibility') === 'whatsapp',
         ]);
     }
 }

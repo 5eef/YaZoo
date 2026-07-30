@@ -2,7 +2,11 @@ import PropTypes from 'prop-types'
 
 import Button from '../ui/Button'
 import { Field, FileField, SelectField } from './MarketplaceCommon'
-import { productFormCategoryOptions, productFormStatusOptions } from '../../features/marketplace/marketplaceOptions'
+import {
+  contactVisibilityOptions,
+  productFormCategoryOptions,
+  productFormStatusOptions,
+} from '../../features/marketplace/marketplaceOptions'
 import { useI18n } from '../../hooks/useI18n'
 
 function ProductListingForm({
@@ -44,6 +48,18 @@ function ProductListingForm({
         <SelectField label={t('common.category')} value={form.category} onChange={onFormChange('category')} options={productFormCategoryOptions} />
         <Field label={t('common.price')} type="number" min="0" step="0.01" value={form.price} onChange={onFormChange('price')} />
         <Field label={t('feed.location')} value={form.location} onChange={onFormChange('location')} />
+        <SelectField
+          label={t('marketplaceContact.visibilityLabel')}
+          value={form.contact_visibility}
+          onChange={onFormChange('contact_visibility')}
+          options={contactVisibilityOptions}
+        />
+        {['phone', 'whatsapp'].includes(form.contact_visibility) ? (
+          <Field label={t('marketplaceContact.phoneLabel')} value={form.contact_phone} onChange={onFormChange('contact_phone')} required />
+        ) : null}
+        {form.contact_visibility === 'email' ? (
+          <Field label={t('marketplaceContact.emailLabel')} type="email" value={form.contact_email} onChange={onFormChange('contact_email')} required />
+        ) : null}
         <Field label={t('common.stock')} type="number" min="0" value={form.stock} onChange={onFormChange('stock')} />
         <SelectField label={t('common.status')} value={form.listing_status} onChange={onFormChange('listing_status')} options={productFormStatusOptions} />
         <SelectField
@@ -56,6 +72,10 @@ function ProductListingForm({
           ]}
         />
       </div>
+
+      <p className="mt-3 rounded-[20px] border border-violet-200 bg-violet-50/80 px-4 py-3 text-sm text-violet-950 dark:border-violet-300/18 dark:bg-violet-400/10 dark:text-violet-100">
+        {t('marketplaceContact.help')}
+      </p>
 
       <div className="mt-4 grid gap-4 md:grid-cols-2">
         <FileField label={t('products.mainImage')} accept="image/*" onChange={(event) => onImageFileChange(event.target.files?.[0] ?? null)} />

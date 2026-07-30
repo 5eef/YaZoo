@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -64,6 +65,16 @@ class Veterinarian extends Model
     public function favorites(): MorphMany
     {
         return $this->morphMany(Favorite::class, 'favoritable');
+    }
+
+    public function availabilitySlots(): HasMany
+    {
+        return $this->hasMany(VeterinarianAvailabilitySlot::class);
+    }
+
+    public function appointments(): HasMany
+    {
+        return $this->hasMany(VeterinarianAppointment::class);
     }
 
     public function isPubliclyVisible(): bool

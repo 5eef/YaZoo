@@ -44,7 +44,14 @@ describe('AnimalsMarketplacePage', () => {
     await user.type(within(publicationForm).getByLabelText('Nom'), 'Luna')
     await user.type(within(publicationForm).getByLabelText('Type'), 'Chien')
     await user.type(within(publicationForm).getByLabelText('Localisation'), 'Rabat')
-    await user.type(within(publicationForm).getByLabelText('Telephone de contact'), '+212600000000')
+    await user.selectOptions(
+      within(publicationForm).getByLabelText('Mode de contact public'),
+      'phone',
+    )
+    await user.type(
+      within(publicationForm).getByLabelText('Téléphone dédié à cette annonce'),
+      '+212600000000',
+    )
     await user.type(within(publicationForm).getByLabelText('Description'), 'Jeune chienne douce et sociable')
     await user.click(
       within(publicationForm).getByLabelText(/respecte les regles de publication YaZoo/i),

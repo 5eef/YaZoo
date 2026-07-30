@@ -128,7 +128,12 @@ function CreatePost({ onCreate, focusToken = 0 }) {
           </button>
         </div>
 
-        <div className="yz-horizontal-scroll yz-no-scrollbar mt-4 pb-1">
+        <div
+          className="yz-horizontal-scroll yz-no-scrollbar mt-4 pb-1"
+          role="region"
+          aria-label={t('creation.createPost')}
+          tabIndex={0}
+        >
           {['moment', 'photo', 'video', 'adoption', 'communaute'].map((item) => (
             <span
               key={item}

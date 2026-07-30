@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Marketplace;
 
 use App\Models\Animal;
+use App\Support\MarketplaceContact;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -32,7 +33,10 @@ class StoreAnimalRequest extends FormRequest
             'age' => ['nullable', 'integer', 'min:0', 'max:100'],
             'sex' => ['required', Rule::in(['male', 'female', 'unknown'])],
             'location' => ['required', 'string', 'max:150'],
-            'contact_phone' => ['required', 'string', 'max:50'],
+            'contact_visibility' => ['required', Rule::in(MarketplaceContact::VISIBILITIES)],
+            'contact_phone' => ['nullable', 'string', 'max:50', 'required_if:contact_visibility,phone,whatsapp'],
+            'contact_email' => ['nullable', 'email', 'max:255', 'required_if:contact_visibility,email'],
+            'whatsapp_enabled' => ['nullable', 'boolean'],
             'photo_url' => ['nullable', 'string', 'max:2048'],
             'photo' => ['nullable', 'image', 'max:5120'],
             'gallery_urls' => ['nullable', 'array', 'max:6'],
@@ -64,7 +68,9 @@ class StoreAnimalRequest extends FormRequest
             'type',
             'breed',
             'location',
+            'contact_visibility',
             'contact_phone',
+            'contact_email',
             'photo_url',
             'listing_status',
             'description',
@@ -105,6 +111,8 @@ class StoreAnimalRequest extends FormRequest
         $normalized['category'] = $normalized['category'] ?: 'other';
         $normalized['listing_status'] = $normalized['listing_status'] ?: 'available';
         $normalized['seller_type'] = $normalized['seller_type'] ?: 'individual';
+        $normalized['contact_visibility'] = $normalized['contact_visibility'] ?: 'messages_only';
+        $normalized['whatsapp_enabled'] = $normalized['contact_visibility'] === 'whatsapp';
 
         if (! $normalized['photo_url'] && ! empty($galleryUrls)) {
             $normalized['photo_url'] = $galleryUrls[0];

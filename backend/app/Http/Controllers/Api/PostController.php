@@ -12,7 +12,9 @@ use App\Notifications\PostLikedNotification;
 use App\Support\MediaStorage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Throwable;
 
 class PostController extends Controller
 {
@@ -80,17 +82,6 @@ class PostController extends Controller
     {
         $this->authorize('create', Post::class);
 
-        $mediaPath = null;
-        $mediaKind = null;
-
-        if ($request->hasFile('media_file')) {
-            $mediaPath = MediaStorage::storeUploadedFile(
-                $request->file('media_file'),
-                'feed/posts',
-            );
-            $mediaKind = MediaStorage::detectMediaKind($request->file('media_file'));
-        }
-
         $communityId = $request->validated('community_id');
 
         if ($communityId) {
@@ -103,16 +94,35 @@ class PostController extends Controller
             );
         }
 
-        $post = $request->user()->posts()->create([
-            'community_id' => $communityId,
-            'content' => $request->validated('content'),
-            'image_path' => $mediaKind === 'image' ? $mediaPath : null,
-            'media_path' => $mediaPath,
-            'media_kind' => $mediaKind,
-            'location' => $request->validated('location'),
-            'tags' => $request->validated('tags', []),
-            'visibility' => $request->validated('visibility', Post::VISIBILITY_PUBLIC),
-        ]);
+        $mediaPath = null;
+        $mediaKind = null;
+
+        try {
+            if ($request->hasFile('media_file')) {
+                $mediaKind = MediaStorage::detectMediaKind($request->file('media_file'));
+                $mediaPath = MediaStorage::storeUploadedFile(
+                    $request->file('media_file'),
+                    'feed/posts',
+                );
+            }
+
+            $post = DB::transaction(fn (): Post => $request->user()->posts()->create([
+                'community_id' => $communityId,
+                'content' => $request->validated('content'),
+                'image_path' => $mediaKind === 'image' ? $mediaPath : null,
+                'media_path' => $mediaPath,
+                'media_kind' => $mediaKind,
+                'location' => $request->validated('location'),
+                'tags' => $request->validated('tags', []),
+                'visibility' => $request->validated('visibility', Post::VISIBILITY_PUBLIC),
+            ]));
+        } catch (Throwable $exception) {
+            if ($mediaPath !== null) {
+                MediaStorage::deleteStoredFiles([$mediaPath]);
+            }
+
+            throw $exception;
+        }
 
         $this->loadFeedRelations($post, $request->user()->id);
 

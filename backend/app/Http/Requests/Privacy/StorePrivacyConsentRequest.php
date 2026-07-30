@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Privacy;
 
 use App\Models\PrivacyConsent;
+use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -18,7 +19,7 @@ class StorePrivacyConsentRequest extends FormRequest
         return [
             'type' => ['required', 'string', Rule::in(PrivacyConsent::TYPES)],
             'accepted' => ['required', 'boolean'],
-            'locale' => ['nullable', 'string', 'max:5'],
+            'locale' => ['nullable', 'string', Rule::in(User::SUPPORTED_LOCALES)],
         ];
     }
 

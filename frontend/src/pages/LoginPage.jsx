@@ -148,6 +148,11 @@ function LoginPage() {
               showLabel={t('auth.showPassword')}
               hideLabel={t('auth.hidePassword')}
             />
+            <div className="text-end">
+              <Link className="text-sm font-semibold text-violet-800 dark:text-violet-200" to="/forgot-password">
+                {t('auth.login.forgotPassword')}
+              </Link>
+            </div>
 
             {smsAvailable === false ? (
               <p className="rounded-[20px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900 dark:border-amber-300/20 dark:bg-amber-500/10 dark:text-amber-100">

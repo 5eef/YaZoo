@@ -175,6 +175,12 @@ function ReservationsPage() {
         </div>
       </section>
 
+      {paymentConfig && !paymentConfig.providers?.cmi?.enabled ? (
+        <div className="rounded-[28px] border border-amber-200 bg-amber-50 px-5 py-4 text-sm leading-6 text-amber-900 dark:border-amber-300/25 dark:bg-amber-300/10 dark:text-amber-100">
+          {t('ordersUi.timeline.paymentOnlinePreparing')} {t('ordersUi.timeline.paymentBankTransfer')} {t('ordersUi.timeline.paymentCashOnPickup')}
+        </div>
+      ) : null}
+
       {errorMessage ? (
         <div className="rounded-[28px] border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-700">
           {errorMessage}

@@ -7,6 +7,7 @@ import {
   animalFormCategoryOptions,
   animalFormStatusOptions,
   animalSellerTypeOptions,
+  contactVisibilityOptions,
 } from '../../features/marketplace/marketplaceOptions'
 import { useI18n } from '../../hooks/useI18n'
 
@@ -61,7 +62,18 @@ function AnimalListingForm({
           ]}
         />
         <Field label={t('feed.location')} value={form.location} onChange={onFormChange('location')} />
-        <Field label={t('animals.contactPhone')} value={form.contact_phone} onChange={onFormChange('contact_phone')} required />
+        <SelectField
+          label={t('marketplaceContact.visibilityLabel')}
+          value={form.contact_visibility}
+          onChange={onFormChange('contact_visibility')}
+          options={contactVisibilityOptions}
+        />
+        {['phone', 'whatsapp'].includes(form.contact_visibility) ? (
+          <Field label={t('marketplaceContact.phoneLabel')} value={form.contact_phone} onChange={onFormChange('contact_phone')} required />
+        ) : null}
+        {form.contact_visibility === 'email' ? (
+          <Field label={t('marketplaceContact.emailLabel')} type="email" value={form.contact_email} onChange={onFormChange('contact_email')} required />
+        ) : null}
         <Field label={t('common.price')} type="number" min="0" step="0.01" value={form.price} onChange={onFormChange('price')} />
         <SelectField label={t('common.status')} value={form.listing_status} onChange={onFormChange('listing_status')} options={animalFormStatusOptions} />
         <SelectField label={t('animals.sellerType')} value={form.seller_type} onChange={onFormChange('seller_type')} options={animalSellerTypeOptions} />
@@ -71,6 +83,10 @@ function AnimalListingForm({
         <Field label={t('animals.vaccinationBookPath')} value={form.vaccination_book_path} onChange={onFormChange('vaccination_book_path')} />
         <Field label={t('animals.onssaAuthorizationNumber')} value={form.onssa_authorization_number} onChange={onFormChange('onssa_authorization_number')} />
       </div>
+
+      <p className="mt-3 rounded-[20px] border border-violet-200 bg-violet-50/80 px-4 py-3 text-sm text-violet-950 dark:border-violet-300/18 dark:bg-violet-400/10 dark:text-violet-100">
+        {t('marketplaceContact.help')}
+      </p>
 
       <div className="mt-4 rounded-[22px] border border-violet-200 bg-violet-50/80 px-4 py-3 text-sm leading-6 text-violet-950 dark:border-violet-300/18 dark:bg-violet-400/10 dark:text-violet-100">
         {t('animals.complianceNotice')}

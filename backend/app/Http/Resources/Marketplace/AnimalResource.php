@@ -4,6 +4,7 @@ namespace App\Http\Resources\Marketplace;
 
 use App\Models\Animal;
 use App\Services\MarketplacePublishingResolver;
+use App\Support\MarketplaceContact;
 use App\Support\MarketplaceMedia;
 use App\Support\MediaStorage;
 use Illuminate\Http\Request;
@@ -34,7 +35,7 @@ class AnimalResource extends JsonResource
             'age' => $this->age,
             'sex' => $this->sex,
             'location' => $this->location,
-            'contactPhone' => $this->contact_phone,
+            ...MarketplaceContact::payload($this->resource, $request, $this->isPubliclyVisible()),
             'photoPath' => $this->photo_url,
             'photoUrl' => MarketplaceMedia::resolveUrl($this->photo_url),
             'galleryPaths' => $this->gallery_urls ?? [],
@@ -65,8 +66,6 @@ class AnimalResource extends JsonResource
             'author' => [
                 'id' => $this->user?->id,
                 'name' => $this->user?->name,
-                'email' => $this->user?->publicEmail(),
-                'phone' => $this->user?->phone,
                 'isPhoneVerified' => $this->user?->hasVerifiedPhone() ?? false,
                 'avatar' => MediaStorage::resolveUrl($this->user?->avatar),
                 'city' => $this->user?->city,

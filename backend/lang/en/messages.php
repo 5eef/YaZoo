@@ -22,8 +22,22 @@ return [
         'contact_required_register' => 'An email or phone number is required to create an account.',
         'phone_already_exists' => 'This phone number is already used.',
         'phone_not_found' => 'No account is associated with this phone number.',
+        'admin_mfa_required' => 'A recent administrator MFA verification is required.',
+        'admin_mfa_not_enabled' => 'Administrator MFA is not enabled.',
+        'admin_mfa_invalid' => 'The MFA code is invalid.',
+        'admin_mfa_enabled' => 'Administrator MFA is enabled.',
+        'admin_mfa_verified' => 'MFA verification is confirmed.',
+        'admin_mfa_disabled' => 'Administrator MFA is disabled.',
+        'invalid_password' => 'The password is invalid.',
         'google_identity_missing' => 'Google did not return a complete usable identity.',
         'google_account_conflict' => 'This Google account is already linked to another YaZoo account.',
+        'recovery_requested' => 'If an eligible account matches, reset instructions have been prepared.',
+        'recovery_invalid' => 'The reset request is invalid, expired, or already used.',
+        'recovery_throttled' => 'Too many requests. Try again later.',
+        'password_reset' => 'The password was reset. Sign in again on all your devices.',
+        'verification_requested' => 'If verification is needed, a signed link has been prepared.',
+        'verification_invalid' => 'The verification link is invalid or no longer matches this address.',
+        'email_verified' => 'Email address verified.',
     ],
     'reviews' => [
         'created' => 'Review sent successfully.',
@@ -103,6 +117,10 @@ return [
     'reports' => [
         'created' => 'Report sent. Our team will review it.',
         'self_report' => 'You cannot report your own content.',
+    ],
+    'appointments' => [
+        'slot_overlap' => 'This slot overlaps an existing availability.',
+        'slot_unavailable' => 'This slot is no longer available.',
     ],
     'privacy' => [
         'consent_saved' => 'Privacy preference saved.',

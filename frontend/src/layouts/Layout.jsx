@@ -335,6 +335,7 @@ function Layout() {
     { to: '/communities', label: t('common.communities'), icon: 'communities' },
     { to: '/messages', label: t('common.messages'), icon: 'chat' },
     { to: '/reservations', label: t('common.reservations'), icon: 'reservations' },
+    { to: '/veterinarian-appointments', label: t('vetAppointments.nav'), icon: 'reservations' },
     { to: '/orders/history', label: t('common.history'), icon: 'history' },
   ]
   const secondaryNavigationItems = [
@@ -352,6 +353,7 @@ function Layout() {
       { to: '/admin/animals/review', label: t('common.adminAnimalReview'), icon: 'admin' },
       { to: '/admin/professional-verifications', label: t('common.adminProfessionalVerifications'), icon: 'admin' },
       { to: '/admin/orders', label: t('common.adminOrders'), icon: 'admin' },
+      { to: '/admin/security', label: t('adminMfa.nav'), icon: 'shield' },
     )
   }
   const navigationItems = [

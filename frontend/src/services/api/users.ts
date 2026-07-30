@@ -7,7 +7,7 @@ export type CreateUserPayload = {
   phone?: string | null
   country?: string | null
   city?: string | null
-  preferred_locale?: 'fr' | 'en' | 'ar' | 'de'
+  preferred_locale?: 'fr' | 'en' | 'ar'
   is_admin?: boolean
   password: string
   password_confirmation: string

@@ -1,7 +1,7 @@
 import api from './client'
 
-export const exportAdminStatsCsvRequest = () =>
-  api.get('/admin/exports/stats.csv', { responseType: 'blob' })
+export const exportAdminStatsCsvRequest = (days = 30) =>
+  api.get('/admin/exports/stats.csv', { params: { days }, responseType: 'blob' })
 
 export const exportAdminReportsCsvRequest = () =>
   api.get('/admin/exports/reports.csv', { responseType: 'blob' })

@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Support\PhoneNumber;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -17,6 +18,8 @@ class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
+
+    public const SUPPORTED_LOCALES = ['fr', 'ar', 'en'];
 
     /**
      * The attributes that are mass assignable.
@@ -43,6 +46,9 @@ class User extends Authenticatable
         'password',
         'phone_verified_at',
         'preferred_locale',
+        'admin_mfa_secret',
+        'admin_mfa_recovery_codes',
+        'admin_mfa_confirmed_at',
     ];
 
     /**
@@ -53,6 +59,8 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'admin_mfa_secret',
+        'admin_mfa_recovery_codes',
     ];
 
     /**
@@ -70,7 +78,25 @@ class User extends Authenticatable
             'suspended_at' => 'datetime',
             'banned_at' => 'datetime',
             'password' => 'hashed',
+            'admin_mfa_secret' => 'encrypted',
+            'admin_mfa_recovery_codes' => 'array',
+            'admin_mfa_confirmed_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Normalize unsupported legacy locale values without breaking the session.
+     */
+    protected function preferredLocale(): Attribute
+    {
+        return Attribute::make(
+            get: fn (mixed $value): string => in_array($value, self::SUPPORTED_LOCALES, true)
+                ? $value
+                : 'fr',
+            set: fn (mixed $value): string => in_array($value, self::SUPPORTED_LOCALES, true)
+                ? $value
+                : 'fr',
+        );
     }
 
     /**
@@ -209,6 +235,11 @@ class User extends Authenticatable
     public function reservationsAsSeller(): HasMany
     {
         return $this->hasMany(Reservation::class, 'seller_id');
+    }
+
+    public function veterinarianAppointments(): HasMany
+    {
+        return $this->hasMany(VeterinarianAppointment::class, 'client_id');
     }
 
     /**

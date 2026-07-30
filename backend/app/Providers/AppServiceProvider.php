@@ -80,6 +80,10 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(20)->by($request->user()?->id ?: $request->ip());
         });
 
+        RateLimiter::for('appointments-write', function (Request $request) {
+            return Limit::perMinute(12)->by($request->user()?->id ?: $request->ip());
+        });
+
         Event::listen(NotificationSent::class, function (NotificationSent $event): void {
             if (
                 $event->channel !== 'database'

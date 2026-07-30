@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Models\User;
 use App\Support\PhoneNumber;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -33,7 +34,7 @@ class RegisterRequest extends FormRequest
             'country' => ['nullable', 'string', 'max:100'],
             'city' => ['nullable', 'string', 'max:100'],
             'device_name' => ['nullable', 'string', 'max:120'],
-            'preferred_locale' => ['nullable', 'string', 'in:fr,en,ar,de'],
+            'preferred_locale' => ['nullable', 'string', Rule::in(User::SUPPORTED_LOCALES)],
         ];
     }
 

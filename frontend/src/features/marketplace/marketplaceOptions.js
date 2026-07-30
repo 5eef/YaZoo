@@ -38,6 +38,13 @@ export const animalLegalStatusOptions = [
   { value: 'suspended', labelKey: 'animals.legalStatuses.suspended' },
 ]
 
+export const contactVisibilityOptions = [
+  { value: 'messages_only', labelKey: 'marketplaceContact.modes.messagesOnly' },
+  { value: 'phone', labelKey: 'marketplaceContact.modes.phone' },
+  { value: 'email', labelKey: 'marketplaceContact.modes.email' },
+  { value: 'whatsapp', labelKey: 'marketplaceContact.modes.whatsapp' },
+]
+
 export const defaultAnimalForm = {
   name: '',
   category: 'other',
@@ -46,7 +53,9 @@ export const defaultAnimalForm = {
   age: '',
   sex: 'unknown',
   location: '',
+  contact_visibility: 'messages_only',
   contact_phone: '',
+  contact_email: '',
   price: '',
   is_for_adoption: false,
   accepts_animal_rules: false,
@@ -108,6 +117,9 @@ export const defaultProductForm = {
   description: '',
   price: '',
   location: '',
+  contact_visibility: 'messages_only',
+  contact_phone: '',
+  contact_email: '',
   stock: 1,
   listing_status: 'available',
   condition_status: 'new',

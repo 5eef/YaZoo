@@ -33,7 +33,10 @@ export function buildAnimalFormData(form, photoFile, galleryFiles) {
   formData.append('breed', form.breed)
   formData.append('sex', form.sex)
   formData.append('location', form.location)
+  formData.append('contact_visibility', form.contact_visibility || 'messages_only')
   formData.append('contact_phone', form.contact_phone)
+  formData.append('contact_email', form.contact_email)
+  formData.append('whatsapp_enabled', form.contact_visibility === 'whatsapp' ? '1' : '0')
   formData.append('is_for_adoption', form.is_for_adoption ? '1' : '0')
   formData.append('accepts_animal_rules', form.accepts_animal_rules ? '1' : '0')
   formData.append('listing_status', form.listing_status)
@@ -67,6 +70,10 @@ export function buildProductFormData(form, imageFile, galleryFiles) {
   formData.append('description', form.description)
   formData.append('price', String(form.price))
   formData.append('location', form.location)
+  formData.append('contact_visibility', form.contact_visibility || 'messages_only')
+  formData.append('contact_phone', form.contact_phone)
+  formData.append('contact_email', form.contact_email)
+  formData.append('whatsapp_enabled', form.contact_visibility === 'whatsapp' ? '1' : '0')
   formData.append('stock', String(form.stock))
   formData.append('listing_status', form.listing_status)
   formData.append('condition_status', form.condition_status)
@@ -108,11 +115,11 @@ export function buildPhoneContactHref(phone) {
 }
 
 export function hasAnimalContact(animal) {
-  return Boolean(animal?.author?.id || animal?.contactPhone || animal?.author?.phone)
+  return Boolean(animal?.author?.id || animal?.contactPhone || animal?.contactEmail)
 }
 
 export function hasProductContact(product) {
-  return Boolean(product?.author?.id || product?.contactPhone || product?.author?.phone)
+  return Boolean(product?.author?.id || product?.contactPhone || product?.contactEmail)
 }
 
 export function buildProductContactPath(product, t = null) {

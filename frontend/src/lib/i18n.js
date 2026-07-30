@@ -17,6 +17,39 @@ export const LOCALE_LABELS = {
 
 export const messages = {
   fr: {
+    adminKpi: {
+      period: 'Période', days: 'jours', notMeasured: 'Donnée non mesurée',
+      labels: {
+        users_registered: 'Utilisateurs inscrits', active_users_7_days: 'Utilisateurs actifs (7 j)', active_users_30_days: 'Utilisateurs actifs (30 j)',
+        professionals_submitted: 'Professionnels soumis', professionals_approved: 'Professionnels approuvés', professionals_rejected: 'Professionnels rejetés', professionals_expired: 'Professionnels expirés',
+        listings_submitted: 'Annonces soumises', listings_approved: 'Annonces approuvées', listings_rejected: 'Annonces rejetées', listings_pending: 'Annonces en attente',
+        moderation_average_hours: 'Modération moyenne (h)', moderation_median_hours: 'Modération médiane (h)',
+        reservations_created: 'Réservations créées', reservations_approved: 'Réservations approuvées', reservations_completed: 'Réservations terminées', reservations_cancelled: 'Réservations annulées',
+        completed_reservation_gmv_mad: 'GMV terminé (MAD)', active_sellers: 'Vendeurs actifs', active_buyers: 'Acheteurs actifs', average_published_review: 'Avis moyen publié',
+        pending_reports: 'Signalements en attente', pending_deletion_requests: 'Suppressions en attente', appointments_created: 'Rendez-vous créés',
+        appointments_pending: 'Rendez-vous en attente', appointments_confirmed: 'Rendez-vous confirmés', appointments_completed: 'Rendez-vous terminés', appointments_cancelled: 'Rendez-vous annulés',
+        revenue_yazoo: 'Revenu YaZoo',
+      },
+    },
+    vetAppointments: {
+      nav: 'Rendez-vous vétérinaires', title: 'Rendez-vous vétérinaires', description: 'Gérez des créneaux et demandes sans transmettre de données médicales inutiles.',
+      book: 'Prendre rendez-vous', manageSlots: 'Gérer les créneaux', slot: 'Créneau', choose: 'Choisir un créneau',
+      animalType: 'Type d’animal', reason: 'Motif', request: 'Demander le rendez-vous', requested: 'Demande envoyée.',
+      startsAt: 'Début', endsAt: 'Fin', addSlot: 'Ajouter le créneau', slotCreated: 'Créneau ajouté.',
+      confirm: 'Confirmer', complete: 'Terminer', review: 'Donner un avis 5/5', updated: 'Statut mis à jour.',
+      reviewed: 'Avis enregistré.', loadError: 'Chargement impossible.', actionError: 'Action impossible.',
+      status: { pending: 'En attente', confirmed: 'Confirmé', rejected: 'Refusé', cancelled: 'Annulé', completed: 'Terminé' },
+    },
+    adminMfa: {
+      nav: 'Sécurité admin', eyebrow: 'Sécurité administrateur', title: 'Authentification à deux facteurs',
+      description: 'Utilisez une application TOTP standard. Les codes de récupération ne sont affichés qu’une fois.',
+      statusEnabled: 'MFA activée.', statusDisabled: 'MFA non activée (déploiement progressif).',
+      password: 'Mot de passe actuel', code: 'Code TOTP ou de récupération', scan: 'Importez cette URI dans votre application d’authentification.',
+      saveCodes: 'Conservez ces codes hors ligne maintenant.', enroll: 'Commencer l’enrôlement', confirm: 'Confirmer',
+      challenge: 'Vérifier maintenant', regenerate: 'Régénérer les codes', disable: 'Désactiver',
+      enrollmentReady: 'Enrôlement prêt à confirmer.', enabled: 'MFA activée.', verified: 'Challenge validé.',
+      regenerated: 'Nouveaux codes générés.', disabled: 'MFA désactivée.', error: 'Action MFA impossible.',
+    },
     common: {
       appName: 'YaZoo',
       tagline: 'Reseau social et marketplace animalier',
@@ -449,6 +482,39 @@ export const messages = {
     },
   },
   ar: {
+    adminKpi: {
+      period: 'الفترة', days: 'أيام', notMeasured: 'بيانات غير مقاسة',
+      labels: {
+        users_registered: 'المستخدمون المسجلون', active_users_7_days: 'المستخدمون النشطون (7 أيام)', active_users_30_days: 'المستخدمون النشطون (30 يوماً)',
+        professionals_submitted: 'المهنيون المقدمون', professionals_approved: 'المهنيون المقبولون', professionals_rejected: 'المهنيون المرفوضون', professionals_expired: 'المهنيون المنتهية صلاحيتهم',
+        listings_submitted: 'الإعلانات المقدمة', listings_approved: 'الإعلانات المقبولة', listings_rejected: 'الإعلانات المرفوضة', listings_pending: 'الإعلانات المعلقة',
+        moderation_average_hours: 'متوسط الإشراف (ساعة)', moderation_median_hours: 'وسيط الإشراف (ساعة)',
+        reservations_created: 'الحجوزات المنشأة', reservations_approved: 'الحجوزات المقبولة', reservations_completed: 'الحجوزات المكتملة', reservations_cancelled: 'الحجوزات الملغاة',
+        completed_reservation_gmv_mad: 'حجم المعاملات المكتملة (درهم)', active_sellers: 'البائعون النشطون', active_buyers: 'المشترون النشطون', average_published_review: 'متوسط التقييم',
+        pending_reports: 'البلاغات المعلقة', pending_deletion_requests: 'طلبات الحذف المعلقة', appointments_created: 'المواعيد المنشأة',
+        appointments_pending: 'المواعيد المعلقة', appointments_confirmed: 'المواعيد المؤكدة', appointments_completed: 'المواعيد المكتملة', appointments_cancelled: 'المواعيد الملغاة',
+        revenue_yazoo: 'إيراد YaZoo',
+      },
+    },
+    vetAppointments: {
+      nav: 'مواعيد بيطرية', title: 'المواعيد البيطرية', description: 'إدارة الفترات والطلبات دون جمع بيانات طبية غير ضرورية.',
+      book: 'حجز موعد', manageSlots: 'إدارة الفترات', slot: 'الفترة', choose: 'اختر فترة',
+      animalType: 'نوع الحيوان', reason: 'السبب', request: 'طلب الموعد', requested: 'تم إرسال الطلب.',
+      startsAt: 'البداية', endsAt: 'النهاية', addSlot: 'إضافة فترة', slotCreated: 'تمت إضافة الفترة.',
+      confirm: 'تأكيد', complete: 'إكمال', review: 'إضافة تقييم 5/5', updated: 'تم تحديث الحالة.',
+      reviewed: 'تم حفظ التقييم.', loadError: 'تعذر التحميل.', actionError: 'تعذر تنفيذ الإجراء.',
+      status: { pending: 'قيد الانتظار', confirmed: 'مؤكد', rejected: 'مرفوض', cancelled: 'ملغى', completed: 'مكتمل' },
+    },
+    adminMfa: {
+      nav: 'أمان المشرف', eyebrow: 'أمان المشرف', title: 'المصادقة الثنائية',
+      description: 'استخدم تطبيق TOTP قياسياً. تظهر رموز الاسترداد مرة واحدة فقط.',
+      statusEnabled: 'المصادقة مفعلة.', statusDisabled: 'المصادقة غير مفعلة (تفعيل تدريجي).',
+      password: 'كلمة المرور الحالية', code: 'رمز TOTP أو الاسترداد', scan: 'أضف هذا الرابط إلى تطبيق المصادقة.',
+      saveCodes: 'احفظ هذه الرموز الآن في مكان آمن.', enroll: 'بدء التسجيل', confirm: 'تأكيد',
+      challenge: 'تحقق الآن', regenerate: 'إعادة إنشاء الرموز', disable: 'تعطيل',
+      enrollmentReady: 'التسجيل جاهز للتأكيد.', enabled: 'تم تفعيل المصادقة.', verified: 'تم التحقق.',
+      regenerated: 'تم إنشاء رموز جديدة.', disabled: 'تم تعطيل المصادقة.', error: 'تعذر تنفيذ إجراء المصادقة.',
+    },
     common: {
       appName: 'YaZoo',
       tagline: 'شبكة اجتماعية ومتجر للحيوانات',
@@ -826,6 +892,39 @@ export const messages = {
     },
   },
   en: {
+    adminKpi: {
+      period: 'Period', days: 'days', notMeasured: 'Data not measured',
+      labels: {
+        users_registered: 'Registered users', active_users_7_days: 'Active users (7d)', active_users_30_days: 'Active users (30d)',
+        professionals_submitted: 'Professionals submitted', professionals_approved: 'Professionals approved', professionals_rejected: 'Professionals rejected', professionals_expired: 'Professionals expired',
+        listings_submitted: 'Listings submitted', listings_approved: 'Listings approved', listings_rejected: 'Listings rejected', listings_pending: 'Listings pending',
+        moderation_average_hours: 'Average moderation (h)', moderation_median_hours: 'Median moderation (h)',
+        reservations_created: 'Reservations created', reservations_approved: 'Reservations approved', reservations_completed: 'Reservations completed', reservations_cancelled: 'Reservations cancelled',
+        completed_reservation_gmv_mad: 'Completed GMV (MAD)', active_sellers: 'Active sellers', active_buyers: 'Active buyers', average_published_review: 'Average published review',
+        pending_reports: 'Pending reports', pending_deletion_requests: 'Pending deletion requests', appointments_created: 'Appointments created',
+        appointments_pending: 'Appointments pending', appointments_confirmed: 'Appointments confirmed', appointments_completed: 'Appointments completed', appointments_cancelled: 'Appointments cancelled',
+        revenue_yazoo: 'YaZoo revenue',
+      },
+    },
+    vetAppointments: {
+      nav: 'Vet appointments', title: 'Veterinary appointments', description: 'Manage slots and requests without collecting unnecessary medical data.',
+      book: 'Book appointment', manageSlots: 'Manage slots', slot: 'Slot', choose: 'Choose a slot',
+      animalType: 'Animal type', reason: 'Reason', request: 'Request appointment', requested: 'Request sent.',
+      startsAt: 'Start', endsAt: 'End', addSlot: 'Add slot', slotCreated: 'Slot added.',
+      confirm: 'Confirm', complete: 'Complete', review: 'Leave a 5/5 review', updated: 'Status updated.',
+      reviewed: 'Review saved.', loadError: 'Unable to load.', actionError: 'Unable to complete action.',
+      status: { pending: 'Pending', confirmed: 'Confirmed', rejected: 'Rejected', cancelled: 'Cancelled', completed: 'Completed' },
+    },
+    adminMfa: {
+      nav: 'Admin security', eyebrow: 'Administrator security', title: 'Two-factor authentication',
+      description: 'Use a standard TOTP authenticator. Recovery codes are shown only once.',
+      statusEnabled: 'MFA enabled.', statusDisabled: 'MFA not enabled (staged rollout).',
+      password: 'Current password', code: 'TOTP or recovery code', scan: 'Import this URI into your authenticator app.',
+      saveCodes: 'Save these codes offline now.', enroll: 'Start enrollment', confirm: 'Confirm',
+      challenge: 'Verify now', regenerate: 'Regenerate codes', disable: 'Disable',
+      enrollmentReady: 'Enrollment is ready to confirm.', enabled: 'MFA enabled.', verified: 'Challenge verified.',
+      regenerated: 'New codes generated.', disabled: 'MFA disabled.', error: 'Unable to complete the MFA action.',
+    },
     common: {
       appName: 'YaZoo',
       tagline: 'Social network and marketplace for pet owners',
@@ -4468,7 +4567,7 @@ messages.fr = deepMerge(messages.fr, {
       title: 'Parametres de confidentialite',
       description: 'Consultez vos droits, exportez vos donnees, gerez vos consentements et creez une demande de suppression non immediate.',
       rightsTitle: 'Vos droits',
-      rightsDescription: 'YaZoo prepare une base technique conforme a l esprit de la Loi 09-08. Les contacts officiels restent a completer avant production.',
+      rightsDescription: 'YaZoo prepare une base technique conforme a l esprit de la Loi 09-08. Seules les informations officielles configurees sont publiees.',
       rights: {
         access: 'Droit d acces a vos donnees personnelles.',
         rectification: 'Droit de rectification des donnees inexactes.',
@@ -4532,7 +4631,7 @@ messages.fr = deepMerge(messages.fr, {
       title: 'Confidentialite',
       intro: "YaZoo traite les donnees necessaires au compte, aux annonces, aux messages, aux reservations et a la securite de la plateforme.",
       controllerTitle: 'Responsable du traitement',
-      controllerBody: "Les coordonnees officielles du responsable du traitement sont fournies par la configuration de l environnement. Le statut juridique, l adresse officielle et l ICE restent a completer avant toute production publique.",
+      controllerBody: "Les coordonnees officielles du responsable du traitement sont fournies par la configuration de l environnement. Les informations absentes ne sont pas publiees.",
       dataTitle: 'Donnees traitees',
       dataBody: 'Les profils, coordonnees, telephone, email, ville, pays, contenus, annonces, images, messages, reservations, signalements, preferences de langue et traces techniques peuvent etre traites pour fournir le service.',
       purposesTitle: 'Finalites',
@@ -4580,7 +4679,7 @@ messages.fr = deepMerge(messages.fr, {
       communityTitle: 'Communaute',
       communityBody: 'Feed, stories, communautes et marketplace permettent de partager, rechercher et organiser les besoins autour des animaux.',
       legalNoticeTitle: 'Mentions legales',
-      legalNoticeBody: "Les coordonnees officielles de l editeur et du responsable du traitement sont configurees par environnement. Hebergeur actuel: Microsoft Azure App Service. Statut juridique, adresse officielle et ICE: [A completer].",
+      legalNoticeBody: "Les coordonnees officielles de l editeur et du responsable du traitement sont configurees par environnement et affichees uniquement lorsqu elles sont disponibles. Hebergeur actuel: Microsoft Azure App Service.",
       dataContactTitle: 'Donnees personnelles',
       dataContactBody: "Les demandes relatives aux donnees personnelles passent par le service de contact configure. YaZoo prevoit une demarche CNDP/Loi 09-08 progressive avant exploitation publique complete.",
       limitsTitle: 'Role de YaZoo',
@@ -4825,7 +4924,7 @@ messages.ar = deepMerge(messages.ar, {
       title: 'الخصوصية',
       intro: 'يعالج YaZoo المعطيات اللازمة للحسابات والإعلانات والرسائل والحجوزات وأمن المنصة.',
       controllerTitle: 'المسؤول عن المعالجة',
-      controllerBody: 'تحدد بيانات الاتصال الرسمية بمسؤول المعالجة من خلال إعدادات البيئة. تبقى الصفة القانونية والعنوان الرسمي ورقم ICE قيد الاستكمال قبل أي إطلاق عمومي.',
+      controllerBody: 'تحدد بيانات الاتصال الرسمية بمسؤول المعالجة من خلال إعدادات البيئة. لا تنشر المعلومات غير المتوفرة.',
       dataTitle: 'المعطيات المعالجة',
       dataBody: 'يمكن معالجة بيانات الحساب والاتصال والهاتف والبريد الإلكتروني والمدينة والبلد والمحتوى والإعلانات والصور والرسائل والحجوزات والبلاغات وتفضيلات اللغة والآثار التقنية لتقديم الخدمة.',
       purposesTitle: 'أغراض المعالجة',
@@ -4873,7 +4972,7 @@ messages.ar = deepMerge(messages.ar, {
       communityTitle: 'المجتمع',
       communityBody: 'المنشورات والقصص والمجتمعات والسوق تساعد على المشاركة والبحث وتنظيم الاحتياجات حول الحيوانات.',
       legalNoticeTitle: 'البيانات القانونية',
-      legalNoticeBody: 'تحدد بيانات الناشر ومسؤول المعالجة من خلال إعدادات البيئة. الاستضافة الحالية: Microsoft Azure App Service. الشكل القانوني والعنوان الرسمي ورقم ICE: [يستكمل].',
+      legalNoticeBody: 'تحدد بيانات الناشر ومسؤول المعالجة من خلال إعدادات البيئة ولا تعرض إلا عند توفرها. الاستضافة الحالية: Microsoft Azure App Service.',
       dataContactTitle: 'المعطيات الشخصية',
       dataContactBody: 'توجه الطلبات المتعلقة بالمعطيات الشخصية عبر خدمة التواصل المهيأة. يعتمد YaZoo مسارا تدريجيا للامتثال لـ CNDP/القانون 09-08 قبل الاستغلال العمومي الكامل.',
       limitsTitle: 'دور YaZoo',
@@ -5190,7 +5289,7 @@ messages.en = deepMerge(messages.en, {
       title: 'Privacy',
       intro: 'YaZoo processes the data needed for accounts, listings, messages, reservations, and platform safety.',
       controllerTitle: 'Data controller',
-      controllerBody: 'The official data-controller contact details are supplied by environment configuration. Legal status, official address, and ICE remain to be completed before public production.',
+      controllerBody: 'Official data-controller contact details are supplied by environment configuration. Missing information is not published.',
       dataTitle: 'Processed data',
       dataBody: 'Profiles, contact details, phone number, email, city, country, content, listings, images, messages, reservations, reports, language preferences, and technical traces may be processed to provide the service.',
       purposesTitle: 'Purposes',
@@ -5238,7 +5337,7 @@ messages.en = deepMerge(messages.en, {
       communityTitle: 'Community',
       communityBody: 'Feed, stories, communities, and marketplace help people share, search, and organize animal-related needs.',
       legalNoticeTitle: 'Legal notice',
-      legalNoticeBody: 'Publisher and data-controller contact details are configured per environment. Current hosting provider: Microsoft Azure App Service. Legal status, official address, and ICE: [To be completed].',
+      legalNoticeBody: 'Publisher and data-controller contact details are configured per environment and shown only when available. Current hosting provider: Microsoft Azure App Service.',
       dataContactTitle: 'Personal data',
       dataContactBody: 'Personal-data requests use the configured contact service. YaZoo plans a progressive CNDP/Law 09-08 compliance process before full public operation.',
       limitsTitle: 'YaZoo role',
@@ -7796,6 +7895,33 @@ const PUBLIC_MARKETPLACE_TRANSLATIONS = {
         en: 'Google sign-up failed or was refused. Check your account and try again.',
       },
     },
+    recovery: {
+      channel: {
+        fr: 'Canal de récupération',
+        ar: 'قناة الاسترجاع',
+        en: 'Recovery channel',
+      },
+      genericNotice: {
+        fr: 'Pour protéger les comptes, la réponse reste identique que l’identifiant soit connu ou non. Aucun envoi réel ne peut être garanti sans fournisseur configuré.',
+        ar: 'لحماية الحسابات، تبقى الإجابة نفسها سواء كان المعرّف معروفا أم لا. لا يمكن ضمان التسليم الفعلي دون مزود مهيأ.',
+        en: 'To protect accounts, the response is the same whether or not the identifier is known. Real delivery cannot be guaranteed without a configured provider.',
+      },
+      token: {
+        fr: 'Jeton de réinitialisation',
+        ar: 'رمز إعادة التعيين',
+        en: 'Reset token',
+      },
+      otp: {
+        fr: 'Code OTP',
+        ar: 'رمز التحقق',
+        en: 'OTP code',
+      },
+      passwordRules: {
+        fr: 'Au moins 12 caractères avec majuscule, minuscule, chiffre et symbole.',
+        ar: '12 حرفا على الأقل مع حرف كبير وصغير ورقم ورمز.',
+        en: 'At least 12 characters with uppercase, lowercase, number, and symbol.',
+      },
+    },
   },
 }
 
@@ -7807,6 +7933,114 @@ for (const locale of SUPPORTED_LOCALES) {
   messages[locale] = deepMerge(
     messages[locale],
     buildLocalizedMessages(PUBLIC_MARKETPLACE_TRANSLATIONS, locale),
+  )
+}
+
+const MARKETPLACE_CONTACT_TRANSLATIONS = {
+  marketplaceContact: {
+    visibilityLabel: {
+      fr: 'Mode de contact public',
+      ar: 'طريقة التواصل العلنية',
+      en: 'Public contact method',
+    },
+    phoneLabel: {
+      fr: 'Téléphone dédié à cette annonce',
+      ar: 'رقم الهاتف المخصص لهذا الإعلان',
+      en: 'Phone number for this listing',
+    },
+    emailLabel: {
+      fr: 'Email dédié à cette annonce',
+      ar: 'البريد الإلكتروني المخصص لهذا الإعلان',
+      en: 'Email address for this listing',
+    },
+    help: {
+      fr: 'La messagerie YaZoo est recommandée et utilisée par défaut. Votre téléphone et votre email de connexion ne sont jamais repris automatiquement. Un contact saisi ici ne sera visible qu’après approbation de l’annonce et selon le mode choisi.',
+      ar: 'نوصي بمراسلة YaZoo وهي الخيار الافتراضي. لا نستخدم رقم هاتف تسجيل الدخول أو بريده الإلكتروني تلقائيا. لا تظهر بيانات التواصل المدخلة هنا إلا بعد الموافقة على الإعلان ووفقا للطريقة المختارة.',
+      en: 'YaZoo messaging is recommended and used by default. Your sign-in phone number and email are never copied automatically. Contact entered here is shown only after the listing is approved and according to the selected method.',
+    },
+    modes: {
+      messagesOnly: {
+        fr: 'Messagerie YaZoo uniquement',
+        ar: 'مراسلة YaZoo فقط',
+        en: 'YaZoo messages only',
+      },
+      phone: {
+        fr: 'Téléphone',
+        ar: 'الهاتف',
+        en: 'Phone',
+      },
+      email: {
+        fr: 'Email',
+        ar: 'البريد الإلكتروني',
+        en: 'Email',
+      },
+      whatsapp: {
+        fr: 'WhatsApp',
+        ar: 'واتساب',
+        en: 'WhatsApp',
+      },
+    },
+  },
+  legal: {
+    config: {
+      title: {
+        fr: 'Informations officielles configurées',
+        ar: 'المعلومات الرسمية المهيأة',
+        en: 'Configured official information',
+      },
+      entityName: {
+        fr: 'Entité',
+        ar: 'الجهة',
+        en: 'Entity',
+      },
+      dataControllerName: {
+        fr: 'Responsable du traitement',
+        ar: 'مسؤول معالجة البيانات',
+        en: 'Data controller',
+      },
+      privacyContactEmail: {
+        fr: 'Contact confidentialité',
+        ar: 'جهة اتصال الخصوصية',
+        en: 'Privacy contact',
+      },
+      legalStatus: {
+        fr: 'Statut juridique',
+        ar: 'الوضع القانوني',
+        en: 'Legal status',
+      },
+      address: {
+        fr: 'Adresse officielle',
+        ar: 'العنوان الرسمي',
+        en: 'Official address',
+      },
+      ice: {
+        fr: 'ICE',
+        ar: 'رقم ICE',
+        en: 'ICE',
+      },
+      retention: {
+        fr: 'Durée de conservation',
+        ar: 'مدة الاحتفاظ',
+        en: 'Retention period',
+      },
+      responseTime: {
+        fr: 'Délai de traitement des demandes',
+        ar: 'أجل معالجة الطلبات',
+        en: 'Request response time',
+      },
+      daysValue: {
+        fr: '{count} jours',
+        ar: '{count} يوما',
+        en: '{count} days',
+      },
+    },
+  },
+}
+
+for (const locale of SUPPORTED_LOCALES) {
+  messages[locale] = deepMerge(
+    messages[locale],
+    buildLocalizedMessages(MARKETPLACE_CONTACT_TRANSLATIONS, locale),
   )
 }
 

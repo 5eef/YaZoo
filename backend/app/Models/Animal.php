@@ -63,7 +63,10 @@ class Animal extends Model
         'is_for_adoption',
         'listing_status',
         'description',
+        'contact_visibility',
         'contact_phone',
+        'contact_email',
+        'whatsapp_enabled',
         'accepts_animal_rules',
         'seller_type',
         'origin',
@@ -90,6 +93,7 @@ class Animal extends Model
             'price' => 'decimal:2',
             'is_for_adoption' => 'boolean',
             'accepts_animal_rules' => 'boolean',
+            'whatsapp_enabled' => 'boolean',
             'moderated_at' => 'datetime',
         ];
     }

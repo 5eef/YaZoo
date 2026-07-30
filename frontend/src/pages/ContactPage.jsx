@@ -5,49 +5,24 @@ import api from '../api/client'
 import Footer from '../components/ui/Footer'
 import { useAuth } from '../hooks/useAuth'
 import { useI18n } from '../hooks/useI18n'
+import { useLegalConfig } from '../hooks/useLegalConfig'
 
 function ContactPage() {
   const { user } = useAuth()
   const { t } = useI18n()
+  const { config: contactConfig } = useLegalConfig()
   const [objet, setObjet] = useState('')
   const [message, setMessage] = useState('')
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
   const [contactError, setContactError] = useState('')
   const [senderEmail, setSenderEmail] = useState(user?.email ?? '')
-  const [contactConfig, setContactConfig] = useState({
-    contactAvailable: null,
-    contactEmail: '',
-    contactPhone: '',
-    contactWhatsapp: '',
-  })
 
   useEffect(() => {
     if (user?.email) {
       setSenderEmail(user.email)
     }
   }, [user?.email])
-
-  useEffect(() => {
-    let cancelled = false
-
-    api.get('/legal/config', {
-      skipAuthSessionExpired: true,
-      skipGlobalErrorToast: true,
-    }).then((response) => {
-      if (!cancelled) {
-        setContactConfig(response.data ?? {})
-      }
-    }).catch(() => {
-      if (!cancelled) {
-        setContactConfig((current) => ({ ...current, contactAvailable: false }))
-      }
-    })
-
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   const handleSend = async (event) => {
     event.preventDefault()

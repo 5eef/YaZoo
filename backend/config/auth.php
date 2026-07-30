@@ -114,6 +114,23 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    'account_recovery' => [
+        'expire' => (int) env('PASSWORD_RECOVERY_EXPIRE_MINUTES', 15),
+        'max_attempts' => (int) env('PASSWORD_RECOVERY_MAX_ATTEMPTS', 5),
+        'decay_seconds' => (int) env('PASSWORD_RECOVERY_DECAY_SECONDS', 900),
+    ],
+
+    'email_verification' => [
+        'expire' => (int) env('EMAIL_VERIFICATION_EXPIRE_MINUTES', 30),
+    ],
+
+    'admin_mfa' => [
+        'enforced' => (bool) env('ADMIN_MFA_ENFORCED', false),
+        'issuer' => env('ADMIN_MFA_ISSUER', env('APP_NAME', 'YaZoo')),
+        'challenge_ttl_minutes' => (int) env('ADMIN_MFA_CHALLENGE_TTL_MINUTES', 15),
+        'recovery_code_count' => 8,
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Admin Bootstrap

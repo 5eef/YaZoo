@@ -3,19 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Animal;
-use App\Models\Conversation;
-use App\Models\DataDeletionRequest;
-use App\Models\Message;
 use App\Models\ModerationAction;
-use App\Models\Post;
-use App\Models\Product;
 use App\Models\ProfessionalVerification;
 use App\Models\Report;
-use App\Models\Reservation;
-use App\Models\ServiceListing;
-use App\Models\User;
-use App\Models\Veterinarian;
+use App\Services\Admin\BusinessKpiService;
 use App\Support\CsvCellSanitizer;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -24,25 +15,15 @@ class AdminExportController extends Controller
 {
     public function stats(Request $request): StreamedResponse
     {
-        return $this->csv('yazoo-admin-stats.csv', [
-            ['metric', 'value'],
-            ['users', User::query()->count()],
-            ['posts', Post::query()->count()],
-            ['animals', Animal::query()->count()],
-            ['products', Product::query()->count()],
-            ['services', ServiceListing::query()->count()],
-            ['veterinarians', Veterinarian::query()->count()],
-            ['conversations', Conversation::query()->count()],
-            ['messages', Message::query()->count()],
-            ['reservations', Reservation::query()->count()],
-            ['reports_pending', Report::query()->where('status', 'pending')->count()],
-            ['reports_actioned', Report::query()->where('status', 'actioned')->count()],
-            ['professional_verifications_pending', ProfessionalVerification::query()->where('status', 'pending')->count()],
-            ['professional_verifications_approved', ProfessionalVerification::query()->where('status', 'approved')->count()],
-            ['professional_verifications_rejected', ProfessionalVerification::query()->where('status', 'rejected')->count()],
-            ['data_deletion_requests_pending', DataDeletionRequest::query()->where('status', 'pending')->count()],
-            ['data_deletion_requests_completed', DataDeletionRequest::query()->where('status', 'completed')->count()],
-        ]);
+        $validated = $request->validate(['days' => ['nullable', 'integer', 'in:7,30,90']]);
+        $metrics = app(BusinessKpiService::class)->get((int) ($validated['days'] ?? 30));
+        $rows = collect($metrics)
+            ->map(fn (mixed $value, string $metric): array => [$metric, $value])
+            ->prepend(['metric', 'value'])
+            ->values()
+            ->all();
+
+        return $this->csv('yazoo-admin-stats.csv', $rows);
     }
 
     public function reports(Request $request): StreamedResponse
