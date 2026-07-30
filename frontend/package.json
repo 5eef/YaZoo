@@ -10,10 +10,11 @@
   },
   "scripts": {
     "dev": "vite --configLoader native",
-    "build": "vite build && node scripts/generate-static-seo-pages.mjs",
+    "build": "vite build && node scripts/generate-static-seo-pages.mjs && node scripts/check-legal-placeholders.mjs",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "audit:i18n": "node ../scripts/audit-i18n-completeness.mjs",
+    "audit:legal": "node scripts/check-legal-placeholders.mjs",
     "test": "vitest",
     "test:e2e": "node e2e/run-smoke.mjs",
     "test:e2e:ui": "playwright test --ui",
@@ -30,6 +31,7 @@
     "react-router": "8.3.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.0",
     "@eslint/js": "10.0.1",
     "@playwright/test": "^1.61.1",
     "@testing-library/jest-dom": "^6.9.1",
