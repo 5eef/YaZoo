@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redis;
-use Illuminate\Support\Facades\Cache;
 use Throwable;
 
 class HealthController extends Controller
@@ -32,6 +32,8 @@ class HealthController extends Controller
                 'operations:scheduler-heartbeat',
                 (bool) config('operations.require_scheduler_heartbeat'),
             ),
+            'persistentStorage' => $this->checkPersistentStorage(),
+            'reverb' => $this->checkReverb(),
         ];
 
         $ready = collect($checks)->every(fn (array $check): bool => $check['ok']);
@@ -96,5 +98,52 @@ class HealthController extends Controller
         return $heartbeat
             ? ['ok' => true, 'lastHeartbeatAt' => $heartbeat]
             : ['ok' => false, 'error' => 'heartbeat_missing'];
+    }
+
+    private function checkPersistentStorage(): array
+    {
+        if (! (bool) config('operations.require_persistent_storage')) {
+            return ['ok' => true, 'skipped' => true];
+        }
+
+        $path = rtrim((string) config('operations.persistent_storage_path'), '/\\');
+        $public = $path.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'public';
+        $private = $path.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'private';
+        $ok = (bool) config('operations.app_service_storage_enabled')
+            && is_dir($public)
+            && is_readable($public)
+            && is_writable($public)
+            && is_dir($private)
+            && is_readable($private)
+            && is_writable($private);
+
+        return $ok
+            ? ['ok' => true]
+            : ['ok' => false, 'error' => 'persistent_storage_unavailable'];
+    }
+
+    private function checkReverb(): array
+    {
+        if (! (bool) config('operations.require_reverb_health')) {
+            return ['ok' => true, 'skipped' => true];
+        }
+
+        $host = (string) config('reverb.apps.apps.0.options.host');
+        $port = (int) config('reverb.apps.apps.0.options.port');
+        if ($host === '' || $port <= 0) {
+            return ['ok' => false, 'error' => 'reverb_configuration_incomplete'];
+        }
+
+        try {
+            $socket = @fsockopen($host, $port, $errorCode, $errorMessage, 1.0);
+            if (! is_resource($socket)) {
+                return ['ok' => false, 'error' => 'reverb_unavailable'];
+            }
+            fclose($socket);
+
+            return ['ok' => true];
+        } catch (Throwable) {
+            return ['ok' => false, 'error' => 'reverb_unavailable'];
+        }
     }
 }

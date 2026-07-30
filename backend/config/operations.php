@@ -11,4 +11,14 @@ return [
     'queue_heartbeat_ttl_seconds' => (int) env('YAZOO_QUEUE_HEARTBEAT_TTL_SECONDS', 180),
     'scheduler_heartbeat_ttl_seconds' => (int) env('YAZOO_SCHEDULER_HEARTBEAT_TTL_SECONDS', 180),
     'migration_lock_seconds' => (int) env('YAZOO_MIGRATION_LOCK_SECONDS', 1800),
+    'app_service_storage_enabled' => filter_var(
+        env('WEBSITES_ENABLE_APP_SERVICE_STORAGE', false),
+        FILTER_VALIDATE_BOOL,
+    ),
+    'persistent_storage_path' => env('YAZOO_PERSISTENT_STORAGE_PATH', '/home/site/yazoo-storage'),
+    'require_persistent_storage' => filter_var(
+        env('YAZOO_REQUIRE_PERSISTENT_STORAGE', env('APP_ENV') === 'production'),
+        FILTER_VALIDATE_BOOL,
+    ),
+    'require_reverb_health' => filter_var(env('YAZOO_REQUIRE_REVERB_HEALTH', false), FILTER_VALIDATE_BOOL),
 ];

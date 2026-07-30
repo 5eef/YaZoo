@@ -119,6 +119,9 @@ jobs:
           DB_PASSWORD: ci-placeholder-password
           DB_ROOT_PASSWORD: ci-placeholder-root-password
           REDIS_PASSWORD: ci-placeholder-redis-password
+          REVERB_APP_ID: ci-local
+          REVERB_APP_KEY: ci-local-key
+          REVERB_APP_SECRET: ci-local-secret
           SONAR_DB_NAME: sonar_ci
           SONAR_DB_USERNAME: sonar_ci
           SONAR_DB_PASSWORD: ci-placeholder-sonar-password

@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\User;
+use App\Support\Sms\SmsSender;
 use Illuminate\Console\Command;
 
 class ProductionPreflight extends Command
@@ -16,11 +17,21 @@ class ProductionPreflight extends Command
         $failures = [];
 
         $this->requireValue($failures, 'APP_KEY', config('app.key'));
+        $this->requireValue($failures, 'LEGAL_ENTITY_NAME', config('legal.entity_name'));
         $this->requireValue($failures, 'LEGAL_STATUS', config('legal.legal_status'));
         $this->requireValue($failures, 'LEGAL_ADDRESS', config('legal.address'));
         $this->requireValue($failures, 'LEGAL_ICE', config('legal.ice'));
         $this->requireValue($failures, 'PRIVACY_CONTACT_EMAIL', config('legal.privacy_contact_email'));
+        $this->requireValue($failures, 'DATA_CONTROLLER_NAME', config('legal.data_controller_name'));
         $this->requireValue($failures, 'CONTACT_RECIPIENT', config('services.contact.recipient'));
+
+        if ((int) config('legal.data_retention_days') <= 0) {
+            $failures[] = 'DATA_RETENTION_DAYS must be a positive integer.';
+        }
+
+        if ((int) config('legal.data_request_response_days') <= 0) {
+            $failures[] = 'DATA_REQUEST_RESPONSE_DAYS must be a positive integer.';
+        }
 
         if ((bool) config('auth.admin_bootstrap.enabled')) {
             $failures[] = 'ADMIN_BOOTSTRAP_ENABLED must be false in production.';
@@ -40,7 +51,7 @@ class ProductionPreflight extends Command
             $failures[] = 'SMS_DRIVER=log is forbidden in production.';
         } elseif (
             $smsDriver !== 'disabled'
-            && ! app(\App\Support\Sms\SmsSender::class)->isAvailable()
+            && ! app(SmsSender::class)->isAvailable()
         ) {
             $failures[] = 'SMS_DRIVER is enabled without complete provider configuration.';
         }
@@ -54,6 +65,14 @@ class ProductionPreflight extends Command
 
         if (! (bool) config('operations.run_scheduler')) {
             $failures[] = 'YAZOO_RUN_SCHEDULER=true is required for retention and heartbeat tasks.';
+        }
+
+        if (! (bool) config('operations.app_service_storage_enabled')) {
+            $failures[] = 'WEBSITES_ENABLE_APP_SERVICE_STORAGE=true is required for persistent App Service media.';
+        }
+
+        if ((string) config('operations.persistent_storage_path') !== '/home/site/yazoo-storage') {
+            $failures[] = 'YAZOO_PERSISTENT_STORAGE_PATH must be /home/site/yazoo-storage.';
         }
 
         if (
@@ -75,6 +94,20 @@ class ProductionPreflight extends Command
                 ->exists()
         ) {
             $failures[] = 'At least one active administrator is required.';
+        }
+
+        if (
+            (bool) config('auth.admin_mfa.enforced')
+            && ! User::query()
+                ->where('is_admin', true)
+                ->whereNotNull('admin_mfa_confirmed_at')
+                ->whereNotNull('admin_mfa_recovery_codes')
+                ->whereNull('banned_at')
+                ->where('is_suspended', false)
+                ->get()
+                ->contains(fn (User $admin): bool => count($admin->admin_mfa_recovery_codes ?? []) > 0)
+        ) {
+            $failures[] = 'ADMIN_MFA_ENFORCED requires an active administrator with confirmed TOTP and recovery codes.';
         }
 
         foreach ($failures as $failure) {

@@ -79,6 +79,19 @@ jobs:
             fi
           done
 
+      - name: Require persistent App Service media storage
+        run: |
+          set -euo pipefail
+          storage_enabled="$(az webapp config appsettings list \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$BACKEND_WEBAPP" \
+            --query "[?name=='WEBSITES_ENABLE_APP_SERVICE_STORAGE'].value | [0]" \
+            --output tsv)"
+          if [ "${storage_enabled,,}" != "true" ]; then
+            echo "::error::WEBSITES_ENABLE_APP_SERVICE_STORAGE=true is required before deployment."
+            exit 1
+          fi
+
       - name: Validate MySQL backup and restore readiness
         run: |
           set -euo pipefail

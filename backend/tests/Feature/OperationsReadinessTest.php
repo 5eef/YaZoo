@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
 use App\Jobs\QueueHeartbeat;
+use App\Models\User;
 use App\Support\OperationsSchedule;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Console\Scheduling\Schedule;
@@ -146,6 +146,8 @@ class OperationsReadinessTest extends TestCase
             'queue.default' => 'redis',
             'operations.run_queue_worker' => true,
             'operations.run_scheduler' => true,
+            'operations.app_service_storage_enabled' => true,
+            'operations.persistent_storage_path' => '/home/site/yazoo-storage',
             'payments.providers.cmi.enabled' => false,
             'auth.admin_bootstrap.enabled' => false,
         ]);
@@ -173,6 +175,8 @@ class OperationsReadinessTest extends TestCase
             'queue.default' => 'redis',
             'operations.run_queue_worker' => true,
             'operations.run_scheduler' => true,
+            'operations.app_service_storage_enabled' => true,
+            'operations.persistent_storage_path' => '/home/site/yazoo-storage',
             'payments.providers.cmi.enabled' => false,
             'auth.admin_bootstrap.enabled' => false,
         ]);
