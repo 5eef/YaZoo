@@ -5,12 +5,13 @@ import Button from './Button'
 import { useI18n } from '../../hooks/useI18n'
 
 const STORAGE_KEY = 'yazoo-onboarding-v1'
-const USER_TYPES = ['individual', 'seller', 'veterinarian', 'association', 'professional']
+const USER_TYPES = ['individual', 'professional', 'veterinarian']
+const CHECKLIST_ITEMS = ['profile', 'trust', 'firstAction']
 
 function OnboardingPrompt({ userId }) {
   const { isRtl, t } = useI18n()
   const [isVisible, setIsVisible] = useState(() => !hasCompletedOnboarding(buildStorageKey(userId)))
-  const [selectedType, setSelectedType] = useState('')
+  const [selectedType, setSelectedType] = useState('individual')
 
   const close = () => {
     if (typeof globalThis.localStorage !== 'undefined') {
@@ -42,11 +43,6 @@ function OnboardingPrompt({ userId }) {
           <h2 id="yazoo-onboarding-title" className="mt-3 text-lg font-semibold text-stone-950 dark:text-violet-50">
             {t('onboarding.title')}
           </h2>
-          <div className="mt-3 grid gap-2 text-sm text-stone-600 dark:text-violet-100/72 sm:grid-cols-3">
-            <OnboardingStep index="1" text={t('onboarding.steps.animals')} />
-            <OnboardingStep index="2" text={t('onboarding.steps.products')} />
-            <OnboardingStep index="3" text={t('onboarding.steps.trust')} />
-          </div>
           <div className="mt-4 flex max-w-full gap-2 overflow-x-auto pb-1">
             {USER_TYPES.map((type) => (
               <button
@@ -62,6 +58,15 @@ function OnboardingPrompt({ userId }) {
               >
                 {t(`onboarding.userTypes.${type}`)}
               </button>
+            ))}
+          </div>
+          <div className="mt-3 grid gap-2 text-sm text-stone-600 dark:text-violet-100/72 sm:grid-cols-3">
+            {CHECKLIST_ITEMS.map((item, index) => (
+              <OnboardingStep
+                key={`${selectedType}-${item}`}
+                index={String(index + 1)}
+                text={t(`onboarding.checklists.${selectedType}.${item}`)}
+              />
             ))}
           </div>
         </div>

@@ -28,7 +28,7 @@ function DesktopSidebar({
       >
         <span className="flex h-12 w-12 shrink-0 items-center justify-center">
           <img
-            src="/yazoo-logo.svg"
+            src="/yazoo-logo.webp"
             alt=""
             className="h-11 w-11 object-contain"
           />

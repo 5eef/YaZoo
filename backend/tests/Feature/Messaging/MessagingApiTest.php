@@ -26,7 +26,7 @@ class MessagingApiTest extends TestCase
 
         Sanctum::actingAs($sender, ['*']);
 
-        $response = $this->postJson('/api/conversations', [
+        $response = $this->postJson('/api/conversations/direct', [
             'recipient_email' => $recipient->email,
             'body' => 'Bonjour, je veux parler de votre annonce.',
         ]);

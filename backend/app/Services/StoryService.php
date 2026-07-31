@@ -7,6 +7,8 @@ use App\Models\User;
 use App\Repositories\StoryRepository;
 use App\Support\MediaStorage;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
+use Throwable;
 use Illuminate\Support\Collection;
 
 class StoryService
@@ -79,13 +81,19 @@ class StoryService
     {
         $mediaPath = MediaStorage::storeUploadedFile($mediaFile, 'feed/stories');
 
-        $story = $user->stories()->create([
-            'content' => $validated['content'] ?? null,
-            'location' => $validated['location'] ?? null,
-            'media_path' => $mediaPath,
-            'media_kind' => MediaStorage::detectMediaKind($mediaFile),
-            'expires_at' => now()->addDay(),
-        ]);
+        try {
+            $story = DB::transaction(fn (): Story => $user->stories()->create([
+                'content' => $validated['content'] ?? null,
+                'location' => $validated['location'] ?? null,
+                'media_path' => $mediaPath,
+                'media_kind' => MediaStorage::detectMediaKind($mediaFile),
+                'expires_at' => now()->addDay(),
+            ]));
+        } catch (Throwable $exception) {
+            MediaStorage::deleteStoredFiles([$mediaPath]);
+
+            throw $exception;
+        }
 
         return $this->stories->loadStoryForResponse($story);
     }
@@ -104,8 +112,9 @@ class StoryService
 
     public function delete(Story $story): void
     {
-        MediaStorage::deleteStoredFiles([$story->media_path]);
-        $story->delete();
+        $mediaPath = $story->media_path;
+        DB::transaction(fn () => $story->delete());
+        MediaStorage::deleteStoredFiles([$mediaPath]);
     }
 
     protected function storyGroupSorter(): callable

@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use Illuminate\Http\Request;
+use Throwable;
 
 class MarketplaceMedia
 {
@@ -18,6 +19,7 @@ class MarketplaceMedia
         string $mainField,
         string $mainFileField,
         string $directory,
+        array &$uploadedPaths = [],
     ): array {
         $existingMain = self::normalizePath($validated[$mainField] ?? null);
         $existingGallery = collect($validated['gallery_urls'] ?? [])
@@ -25,14 +27,31 @@ class MarketplaceMedia
             ->filter()
             ->values();
 
-        $uploadedMain = $request->hasFile($mainFileField)
-            ? MediaStorage::storeUploadedFile($request->file($mainFileField), $directory)
-            : null;
+        $storedPaths = [];
 
-        $uploadedGallery = collect($request->file('gallery_files', []))
-            ->filter()
-            ->map(fn ($file) => MediaStorage::storeUploadedFile($file, $directory))
-            ->values();
+        try {
+            $uploadedMain = $request->hasFile($mainFileField)
+                ? MediaStorage::storeUploadedFile($request->file($mainFileField), $directory)
+                : null;
+
+            if ($uploadedMain) {
+                $storedPaths[] = $uploadedMain;
+            }
+
+            $uploadedGallery = collect($request->file('gallery_files', []))
+                ->filter()
+                ->map(function ($file) use ($directory, &$storedPaths): string {
+                    $path = MediaStorage::storeUploadedFile($file, $directory);
+                    $storedPaths[] = $path;
+
+                    return $path;
+                })
+                ->values();
+        } catch (Throwable $exception) {
+            MediaStorage::deleteStoredFiles($storedPaths);
+
+            throw $exception;
+        }
 
         $gallery = collect();
 
@@ -52,6 +71,18 @@ class MarketplaceMedia
 
         $validated[$mainField] = $uploadedMain ?: $existingMain ?: $gallery->first();
         $validated['gallery_urls'] = $gallery->all();
+
+        $referencedPaths = collect([$validated[$mainField], ...$validated['gallery_urls']])
+            ->filter()
+            ->unique();
+        $uploadedPaths = collect($storedPaths)
+            ->filter(fn (string $path): bool => $referencedPaths->contains($path))
+            ->values()
+            ->all();
+
+        MediaStorage::deleteStoredFiles(
+            collect($storedPaths)->diff($uploadedPaths)->values()->all(),
+        );
 
         return $validated;
     }

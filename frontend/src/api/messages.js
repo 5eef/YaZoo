@@ -8,10 +8,6 @@ export function getUnreadMessagesCountRequest() {
   return api.get('/messages/unread-count')
 }
 
-export function createConversationRequest(payload) {
-  return api.post('/conversations', payload)
-}
-
 export function createDirectConversationRequest(payload) {
   return api.post('/conversations/direct', payload)
 }

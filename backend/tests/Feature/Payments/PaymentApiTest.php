@@ -42,7 +42,7 @@ class PaymentApiTest extends TestCase
         $this->assertSame('awaiting_verification', $reservation->refresh()->payment_status);
     }
 
-    public function test_legacy_bank_transfer_reservation_remains_readable_and_finalizable(): void
+    public function test_legacy_bank_transfer_reservation_remains_readable_but_requires_confirmed_payment_to_finalize(): void
     {
         Notification::fake();
 
@@ -60,11 +60,11 @@ class PaymentApiTest extends TestCase
         Sanctum::actingAs($reservation->seller, ['*']);
 
         $this->postJson("/api/reservations/{$reservation->id}/complete")
-            ->assertOk()
-            ->assertJsonPath('data.reservationStatus', 'completed')
-            ->assertJsonPath('data.paymentMethod', 'bank_transfer')
-            ->assertJsonPath('data.paymentStatus', 'pending')
-            ->assertJsonPath('data.invoiceNumber', fn ($value) => is_string($value) && str_starts_with($value, 'YAZ-'));
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'Le paiement doit etre confirme avant de finaliser la reservation.');
+
+        $this->assertSame('approved', $reservation->refresh()->reservation_status);
+        $this->assertNull($reservation->invoice_number);
     }
 
     public function test_legacy_bank_transfer_provider_is_normalized_for_new_payments(): void
@@ -345,7 +345,11 @@ class PaymentApiTest extends TestCase
 
         $this->getJson('/api/payments/config')
             ->assertOk()
-            ->assertJsonPath('providers.cmi.enabled', false);
+            ->assertJsonPath('providers.cmi.enabled', false)
+            ->assertJsonPath('providers.cmi.status', 'preparation')
+            ->assertJsonPath('providers.cmi.requirements.contractApproved', false)
+            ->assertJsonPath('providers.cmi.requirements.sandboxValidated', false)
+            ->assertJsonPath('providers.cmi.requirements.homologationApproved', false);
     }
 
     public function test_cmi_callback_with_invalid_signature_is_refused(): void
@@ -548,7 +552,7 @@ class PaymentApiTest extends TestCase
 
         $payment = Payment::query()->firstOrFail();
 
-        $this->patchJson("/api/reservations/{$reservation->id}/cancel")
+        $this->postJson("/api/reservations/{$reservation->id}/cancel")
             ->assertOk();
 
         $this->assertSame('cancelled', $reservation->refresh()->reservation_status);

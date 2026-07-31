@@ -9,6 +9,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Throwable;
 
 class AnimalMarketplaceService
 {
@@ -87,16 +88,26 @@ class AnimalMarketplaceService
      */
     public function create(User $user, Request $request, array $validated): Animal
     {
+        $uploadedPaths = [];
         $payload = MarketplaceMedia::prepareUploadedMedia(
             $request,
             $validated,
             'photo_url',
             'photo',
             'marketplace/animals',
+            $uploadedPaths,
         );
         $payload['legal_status'] = Animal::LEGAL_STATUS_PENDING_REVIEW;
 
-        $animal = $user->animals()->create($payload);
+        try {
+            $animal = DB::transaction(
+                fn (): Animal => $user->animals()->create($payload),
+            );
+        } catch (Throwable $exception) {
+            MarketplaceMedia::deleteStoredFiles($uploadedPaths);
+
+            throw $exception;
+        }
 
         return $this->loadForResponse($animal);
     }
@@ -106,12 +117,18 @@ class AnimalMarketplaceService
      */
     public function update(Animal $animal, Request $request, array $validated): Animal
     {
+        $previousPaths = collect([$animal->photo_url, ...($animal->gallery_urls ?? [])])
+            ->filter()
+            ->unique()
+            ->values();
+        $uploadedPaths = [];
         $payload = MarketplaceMedia::prepareUploadedMedia(
             $request,
             $validated,
             'photo_url',
             'photo',
             'marketplace/animals',
+            $uploadedPaths,
         );
 
         if (! request()->user()?->is_admin) {
@@ -121,20 +138,37 @@ class AnimalMarketplaceService
             $payload['moderated_at'] = null;
         }
 
-        $animal->update($payload);
+        try {
+            DB::transaction(fn () => $animal->update($payload));
+        } catch (Throwable $exception) {
+            MarketplaceMedia::deleteStoredFiles($uploadedPaths);
+
+            throw $exception;
+        }
+
+        $currentPaths = collect([$animal->photo_url, ...($animal->gallery_urls ?? [])])
+            ->filter()
+            ->unique();
+        MarketplaceMedia::deleteStoredFiles(
+            $previousPaths->diff($currentPaths)->values()->all(),
+        );
 
         return $this->loadForResponse($animal);
     }
 
     public function delete(Animal $animal): void
     {
-        MarketplaceMedia::deleteStoredFiles([
+        $storedPaths = [
             $animal->photo_url,
             ...($animal->gallery_urls ?? []),
-        ]);
+        ];
 
-        $animal->reservations()->delete();
-        $animal->delete();
+        DB::transaction(function () use ($animal): void {
+            $animal->reservations()->delete();
+            $animal->delete();
+        });
+
+        MarketplaceMedia::deleteStoredFiles($storedPaths);
     }
 
     public function loadForResponse(Animal $animal): Animal

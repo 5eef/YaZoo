@@ -162,7 +162,7 @@ class AccountSecurityTest extends TestCase
         $this->postJson('/api/auth/email/verification-notification')->assertOk();
 
         $mail = null;
-        Mail::assertSent(VerifyEmailMail::class, function (VerifyEmailMail $sent) use (&$mail): bool {
+        Mail::assertQueued(VerifyEmailMail::class, function (VerifyEmailMail $sent) use (&$mail): bool {
             $mail = $sent;
 
             return $sent->hasTo('verify@example.test');

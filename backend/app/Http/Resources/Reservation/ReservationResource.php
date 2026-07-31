@@ -176,6 +176,14 @@ class ReservationResource extends JsonResource
             return false;
         }
 
+        $hasConfirmedPayment = $this->relationLoaded('payments')
+            ? $this->payments->contains(fn ($payment): bool => $payment->status === 'paid')
+            : $this->payments()->where('status', 'paid')->exists();
+
+        if (! $hasConfirmedPayment) {
+            return false;
+        }
+
         if ($this->reservable instanceof ServiceListing || in_array($this->category, ['pet_sitting', 'training'], true)) {
             return true;
         }

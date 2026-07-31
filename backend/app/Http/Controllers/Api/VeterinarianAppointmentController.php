@@ -46,18 +46,28 @@ class VeterinarianAppointmentController extends Controller
         $startsAt = Carbon::parse($data['starts_at']);
         $endsAt = Carbon::parse($data['ends_at']);
 
-        $overlaps = $veterinarian->availabilitySlots()
-            ->where('starts_at', '<', $endsAt)
-            ->where('ends_at', '>', $startsAt)
-            ->exists();
-        if ($overlaps) {
-            throw ValidationException::withMessages(['starts_at' => __('messages.appointments.slot_overlap')]);
-        }
+        $slot = DB::transaction(function () use ($veterinarian, $startsAt, $endsAt): VeterinarianAvailabilitySlot {
+            // The veterinarian row is the mutex: concurrent slot creations for
+            // the same calendar are serialized before the overlap check.
+            $lockedVeterinarian = Veterinarian::query()
+                ->whereKey($veterinarian->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        $slot = $veterinarian->availabilitySlots()->create([
-            'starts_at' => $startsAt,
-            'ends_at' => $endsAt,
-        ]);
+            $overlaps = $lockedVeterinarian->availabilitySlots()
+                ->where('starts_at', '<', $endsAt)
+                ->where('ends_at', '>', $startsAt)
+                ->exists();
+
+            if ($overlaps) {
+                throw ValidationException::withMessages(['starts_at' => __('messages.appointments.slot_overlap')]);
+            }
+
+            return $lockedVeterinarian->availabilitySlots()->create([
+                'starts_at' => $startsAt,
+                'ends_at' => $endsAt,
+            ]);
+        }, 3);
 
         return response()->json(['data' => [
             'id' => $slot->id,

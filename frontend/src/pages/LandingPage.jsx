@@ -84,7 +84,7 @@ function LandingPage() {
           <div className="flex items-center justify-between gap-4">
             <a href="#top" className="flex min-w-0 items-center gap-3">
               <img
-                src="/yazoo-logo.svg"
+                src="/yazoo-logo.webp"
                 alt={t('landing.logoAlt')}
                 className="h-12 w-12 object-contain sm:h-14 sm:w-14"
               />

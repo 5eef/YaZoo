@@ -30,8 +30,8 @@ function VeterinarianCard({ veterinarian }) {
         </div>
 
         <div className="min-w-0 flex-1 text-start">
-          <p className="inline-flex max-w-full rounded-full bg-[linear-gradient(135deg,#7c3aed,#a855f7)] px-3 py-1 text-xs font-semibold text-white">
-            {t('veterinarians.cardBadge')}
+          <p className="inline-flex max-w-full rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-800 dark:border-violet-300/18 dark:bg-white/10 dark:text-violet-50">
+            {t('marketplaceBadges.veterinarianCategory')}
           </p>
           <h3 className="mt-2 truncate text-lg font-semibold text-stone-950 dark:text-white">
             {veterinarian.name}

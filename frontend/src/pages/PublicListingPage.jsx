@@ -70,14 +70,20 @@ function PublicListingPage() {
       return
     }
 
-    const description =
-      listing.description || t(definition.descriptionKey)
-    const title = `${listing.title} | YaZoo`
+    const description = String(listing.description || t(definition.descriptionKey))
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 160)
+    const locationSuffix = listing.location ? ` · ${listing.location}` : ''
+    const title = `${listing.title}${locationSuffix} | YaZoo`
+    const canonicalUrl = `https://yazoo.azurewebsites.net/discover/${section}/${listingId}`
 
     document.title = title
     setMetaContent('meta[name="description"]', description)
     setMetaContent('meta[property="og:title"]', title)
     setMetaContent('meta[property="og:description"]', description)
+    setMetaContent('meta[property="og:type"]', section === 'products' ? 'product' : 'article')
+    setMetaContent('meta[property="og:url"]', canonicalUrl)
     setMetaContent('meta[name="twitter:title"]', title)
     setMetaContent('meta[name="twitter:description"]', description)
     setMetaContent(
@@ -87,8 +93,13 @@ function PublicListingPage() {
 
     if (listing.imageUrl) {
       setMetaContent('meta[property="og:image"]', listing.imageUrl)
+      setMetaContent('meta[property="og:image:alt"]', listing.title)
       setMetaContent('meta[name="twitter:image"]', listing.imageUrl)
+      setMetaContent('meta[name="twitter:image:alt"]', listing.title)
+      setMetaContent('meta[name="twitter:card"]', 'summary_large_image')
     }
+
+    document.head.querySelector('link[rel="canonical"]')?.setAttribute('href', canonicalUrl)
 
     const structuredData = document.createElement('script')
     structuredData.id = 'yazoo-listing-structured-data'
@@ -98,13 +109,8 @@ function PublicListingPage() {
       '@type': 'ItemPage',
       name: listing.title,
       description,
-      url: `https://yazoo.azurewebsites.net/discover/${section}/${listingId}`,
-      mainEntity: {
-        '@type': 'Thing',
-        name: listing.title,
-        description,
-        ...(listing.imageUrl ? { image: listing.imageUrl } : {}),
-      },
+      url: canonicalUrl,
+      mainEntity: buildListingStructuredEntity(section, listing, description, canonicalUrl),
     })
     document.getElementById('yazoo-listing-structured-data')?.remove()
     document.head.append(structuredData)
@@ -273,6 +279,35 @@ function PublicListingPage() {
 
 function setMetaContent(selector, content) {
   document.head.querySelector(selector)?.setAttribute('content', content)
+}
+
+function buildListingStructuredEntity(section, listing, description, canonicalUrl) {
+  const common = {
+    '@type': section === 'services' || section === 'veterinarians' ? 'Service' : 'Product',
+    name: listing.title,
+    description,
+    url: canonicalUrl,
+    ...(listing.imageUrl ? { image: listing.imageUrl } : {}),
+  }
+
+  if (listing.author?.name) {
+    common.provider = {
+      '@type': 'Person',
+      name: listing.author.name,
+    }
+  }
+
+  if (listing.price !== null && listing.price !== undefined) {
+    common.offers = {
+      '@type': 'Offer',
+      price: Number(listing.price),
+      priceCurrency: 'MAD',
+      availability: 'https://schema.org/InStock',
+      url: canonicalUrl,
+    }
+  }
+
+  return common
 }
 
 function DetailBadge({ children, className }) {

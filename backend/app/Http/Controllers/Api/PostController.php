@@ -167,12 +167,13 @@ class PostController extends Controller
     {
         $this->authorize('delete', $post);
 
-        MediaStorage::deleteStoredFiles([
+        $storedPaths = [
             $post->media_path,
             $post->image_path,
-        ]);
+        ];
 
-        $post->delete();
+        DB::transaction(fn () => $post->delete());
+        MediaStorage::deleteStoredFiles($storedPaths);
 
         return response()->json([
             'message' => __('messages.posts.deleted'),

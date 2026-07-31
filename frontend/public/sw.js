@@ -1,5 +1,5 @@
-const CACHE_NAME = 'yazoo-public-assets-v1'
-const PUBLIC_ASSETS = ['/yazoo-logo.svg', '/icons.svg']
+const CACHE_NAME = 'yazoo-public-assets-v2'
+const PUBLIC_ASSETS = ['/yazoo-logo.webp', '/icon-192.png', '/icon-512.png', '/icon-maskable-512.png', '/apple-touch-icon.png', '/icons.svg']
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

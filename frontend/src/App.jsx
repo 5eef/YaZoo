@@ -5,6 +5,7 @@ import { useAuth } from './hooks/useAuth'
 import { useI18n } from './hooks/useI18n'
 import CookieConsentBanner from './components/privacy/CookieConsentBanner'
 import SeoManager from './components/seo/SeoManager'
+import AdminRoute from './components/auth/AdminRoute'
 
 const AdminModerationPage = lazy(() => import('./pages/AdminModerationPage'))
 const AdminAnimalReviewPage = lazy(() => import('./pages/AdminAnimalReviewPage'))
@@ -89,14 +90,16 @@ function App() {
           <Route path="/feed" element={<FeedPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/profile/:userId" element={<ProfilePage />} />
-          <Route path="/admin/moderation" element={<AdminModerationPage />} />
-          <Route path="/admin/moderation-actions" element={<AdminModerationActionsPage />} />
-          <Route path="/admin/animals/review" element={<AdminAnimalReviewPage />} />
-          <Route path="/admin/professional-verifications" element={<AdminProfessionalVerificationsPage />} />
-          <Route path="/admin/users" element={<AdminUsersPage />} />
-          <Route path="/admin/orders" element={<AdminOrdersDashboardPage />} />
-          <Route path="/admin/stats" element={<AdminStatsPage />} />
-          <Route path="/admin/security" element={<AdminSecurityPage />} />
+          <Route element={<AdminRoute />}>
+            <Route path="/admin/moderation" element={<AdminModerationPage />} />
+            <Route path="/admin/moderation-actions" element={<AdminModerationActionsPage />} />
+            <Route path="/admin/animals/review" element={<AdminAnimalReviewPage />} />
+            <Route path="/admin/professional-verifications" element={<AdminProfessionalVerificationsPage />} />
+            <Route path="/admin/users" element={<AdminUsersPage />} />
+            <Route path="/admin/orders" element={<AdminOrdersDashboardPage />} />
+            <Route path="/admin/stats" element={<AdminStatsPage />} />
+            <Route path="/admin/security" element={<AdminSecurityPage />} />
+          </Route>
           <Route path="/reservations" element={<ReservationsPage />} />
           <Route path="/orders/history" element={<OrderHistoryPage />} />
           <Route path="/reservations/:reservationId/invoice" element={<InvoicePage />} />
@@ -150,7 +153,7 @@ function RouteLoader() {
     <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top_left,_rgba(168,85,247,0.18),_transparent_24%),linear-gradient(180deg,_#fffaff_0%,_#f7f1ff_100%)] px-4">
       <div className="rounded-[32px] border border-white/80 bg-white/92 px-6 py-5 text-center shadow-[0_20px_48px_rgba(124,58,237,0.08)]">
         <img
-          src="/yazoo-logo.svg"
+          src="/yazoo-logo.webp"
           alt={t('layout.logoLabel')}
           className="mx-auto h-14 w-14 object-contain"
         />

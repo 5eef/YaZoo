@@ -20,7 +20,7 @@ function PublicMarketplaceShell({ children }) {
         <header className="rounded-[26px] border border-white/70 bg-white/82 px-4 py-3 shadow-[0_18px_42px_rgba(124,58,237,0.08)] backdrop-blur-xl dark:border-violet-300/14 dark:bg-white/8 lg:px-5 lg:py-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <Link to="/" className="flex items-center gap-3">
-              <img src="/yazoo-logo.svg" alt="" className="h-11 w-11 object-contain" />
+              <img src="/yazoo-logo.webp" alt="" className="h-11 w-11 object-contain" />
               <span className="yz-wordmark text-base">YaZoo</span>
             </Link>
             <div className="flex items-center gap-2">

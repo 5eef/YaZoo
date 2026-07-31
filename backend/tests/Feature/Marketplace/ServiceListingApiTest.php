@@ -56,7 +56,7 @@ class ServiceListingApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.viewsCount', 1);
 
-        $this->putJson("/api/services/{$serviceId}", [
+        $this->patchJson("/api/services/{$serviceId}", [
             'type' => 'training',
             'title' => 'Education canine positive',
             'description' => 'Seances mises a jour',

@@ -18,7 +18,6 @@ use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Api\ConversationController;
 use App\Http\Controllers\Api\DataDeletionRequestController;
 use App\Http\Controllers\Api\FavoriteController;
-use App\Http\Controllers\Api\HistoryController;
 use App\Http\Controllers\Api\MediaController;
 use App\Http\Controllers\Api\MessageController;
 use App\Http\Controllers\Api\MonitoringController;
@@ -122,8 +121,6 @@ Route::middleware([ForceJsonResponse::class, SetApiLocale::class, 'throttle:api'
         });
     });
 
-    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
-
     Route::middleware(['cookie_csrf', UseSanctumTokenFromCookie::class, 'auth:sanctum', 'active_mutation'])->group(function (): void {
         Route::get('/posts', [PostController::class, 'index']);
         Route::middleware(['throttle:feed-write', 'not_suspended'])->group(function (): void {
@@ -186,11 +183,9 @@ Route::middleware([ForceJsonResponse::class, SetApiLocale::class, 'throttle:api'
             Route::put('/products/{product}', [ProductController::class, 'update']);
             Route::delete('/products/{product}', [ProductController::class, 'destroy']);
             Route::post('/services', [ServiceListingController::class, 'store']);
-            Route::put('/services/{service}', [ServiceListingController::class, 'update']);
             Route::patch('/services/{service}', [ServiceListingController::class, 'update']);
             Route::delete('/services/{service}', [ServiceListingController::class, 'destroy']);
             Route::post('/veterinarians', [VeterinarianController::class, 'store']);
-            Route::put('/veterinarians/{veterinarian}', [VeterinarianController::class, 'update']);
             Route::patch('/veterinarians/{veterinarian}', [VeterinarianController::class, 'update']);
             Route::delete('/veterinarians/{veterinarian}', [VeterinarianController::class, 'destroy']);
         });
@@ -204,22 +199,16 @@ Route::middleware([ForceJsonResponse::class, SetApiLocale::class, 'throttle:api'
         Route::patch('/payments/{payment}/manual-confirm', [PaymentController::class, 'confirmManual'])
             ->middleware('throttle:10,1');
         Route::get('/orders/history', [ReservationController::class, 'history']);
-        Route::get('/history', [HistoryController::class, 'index']);
-        Route::get('/history/me', [HistoryController::class, 'index']);
         Route::get('/reservations/{reservation}/invoice', [ReservationController::class, 'invoice']);
         Route::middleware('throttle:reservations-write')->group(function (): void {
             Route::post('/reservations', [ReservationController::class, 'store']);
             Route::post('/animals/{animal}/reservations', [ReservationController::class, 'storeAnimal']);
             Route::post('/products/{product}/reservations', [ReservationController::class, 'storeProduct']);
             Route::post('/reservations/{reservation}/approve', [ReservationController::class, 'approve']);
-            Route::patch('/reservations/{reservation}/approve', [ReservationController::class, 'approve']);
             Route::post('/reservations/{reservation}/reject', [ReservationController::class, 'reject']);
-            Route::patch('/reservations/{reservation}/reject', [ReservationController::class, 'reject']);
             Route::patch('/reservations/{reservation}/delivery-status', [ReservationController::class, 'updateDeliveryStatus']);
             Route::post('/reservations/{reservation}/cancel', [ReservationController::class, 'cancel']);
-            Route::patch('/reservations/{reservation}/cancel', [ReservationController::class, 'cancel']);
             Route::post('/reservations/{reservation}/complete', [ReservationController::class, 'complete']);
-            Route::patch('/reservations/{reservation}/complete', [ReservationController::class, 'complete']);
             Route::post('/reservations/{reservation}/reviews', [ReservationReviewController::class, 'store']);
         });
 
@@ -239,7 +228,6 @@ Route::middleware([ForceJsonResponse::class, SetApiLocale::class, 'throttle:api'
         Route::get('/conversations/{conversation}', [ConversationController::class, 'show']);
         Route::patch('/conversations/{conversation}/read', [ConversationController::class, 'read']);
         Route::middleware(['throttle:messages-write', 'not_suspended'])->group(function (): void {
-            Route::post('/conversations', [ConversationController::class, 'store']);
             Route::post('/conversations/direct', [ConversationController::class, 'direct']);
             Route::post('/conversations/{conversation}/messages', [MessageController::class, 'store']);
         });

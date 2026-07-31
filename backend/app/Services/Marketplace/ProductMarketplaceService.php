@@ -9,6 +9,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Throwable;
 
 class ProductMarketplaceService
 {
@@ -78,19 +79,29 @@ class ProductMarketplaceService
      */
     public function create(User $user, Request $request, array $validated): Product
     {
+        $uploadedPaths = [];
         $payload = MarketplaceMedia::prepareUploadedMedia(
             $request,
             $validated,
             'image_url',
             'image',
             'marketplace/products',
+            $uploadedPaths,
         );
         $payload['moderation_status'] = Product::MODERATION_STATUS_PENDING_REVIEW;
         $payload['moderation_note'] = null;
         $payload['moderated_by'] = null;
         $payload['moderated_at'] = null;
 
-        $product = $user->products()->create($payload);
+        try {
+            $product = DB::transaction(
+                fn (): Product => $user->products()->create($payload),
+            );
+        } catch (Throwable $exception) {
+            MarketplaceMedia::deleteStoredFiles($uploadedPaths);
+
+            throw $exception;
+        }
 
         return $this->loadForResponse($product);
     }
@@ -100,12 +111,18 @@ class ProductMarketplaceService
      */
     public function update(Product $product, Request $request, array $validated): Product
     {
+        $previousPaths = collect([$product->image_url, ...($product->gallery_urls ?? [])])
+            ->filter()
+            ->unique()
+            ->values();
+        $uploadedPaths = [];
         $payload = MarketplaceMedia::prepareUploadedMedia(
             $request,
             $validated,
             'image_url',
             'image',
             'marketplace/products',
+            $uploadedPaths,
         );
 
         if (! request()->user()?->is_admin) {
@@ -115,20 +132,37 @@ class ProductMarketplaceService
             $payload['moderated_at'] = null;
         }
 
-        $product->update($payload);
+        try {
+            DB::transaction(fn () => $product->update($payload));
+        } catch (Throwable $exception) {
+            MarketplaceMedia::deleteStoredFiles($uploadedPaths);
+
+            throw $exception;
+        }
+
+        $currentPaths = collect([$product->image_url, ...($product->gallery_urls ?? [])])
+            ->filter()
+            ->unique();
+        MarketplaceMedia::deleteStoredFiles(
+            $previousPaths->diff($currentPaths)->values()->all(),
+        );
 
         return $this->loadForResponse($product);
     }
 
     public function delete(Product $product): void
     {
-        MarketplaceMedia::deleteStoredFiles([
+        $storedPaths = [
             $product->image_url,
             ...($product->gallery_urls ?? []),
-        ]);
+        ];
 
-        $product->reservations()->delete();
-        $product->delete();
+        DB::transaction(function () use ($product): void {
+            $product->reservations()->delete();
+            $product->delete();
+        });
+
+        MarketplaceMedia::deleteStoredFiles($storedPaths);
     }
 
     public function loadForResponse(Product $product): Product

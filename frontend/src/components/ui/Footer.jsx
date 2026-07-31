@@ -46,7 +46,7 @@ function Footer({ className = '' }) {
         </Link>
         <div className="flex flex-wrap items-center justify-center gap-2 text-xs leading-6 text-stone-500 dark:text-violet-100/70">
           <img
-            src="/yazoo-logo.svg"
+            src="/yazoo-logo.webp"
             alt=""
             className="h-6 w-6 object-contain"
             aria-hidden="true"

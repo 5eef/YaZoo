@@ -142,7 +142,7 @@ class AccountSecurityService
             ],
         );
 
-        Mail::to($user->email)->send(new VerifyEmailMail(
+        Mail::to($user->email)->queue(new VerifyEmailMail(
             $user,
             $verificationUrl,
             $expiresInMinutes,

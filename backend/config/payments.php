@@ -16,7 +16,13 @@ return [
             'manual' => true,
         ],
         'cmi' => [
-            'enabled' => env('CMI_ENABLED', false),
+            'enabled' => env('CMI_ENABLED', false)
+                && env('CMI_CONTRACT_APPROVED', false)
+                && env('CMI_SANDBOX_VALIDATED', false)
+                && env('CMI_HOMOLOGATION_APPROVED', false),
+            'contract_approved' => env('CMI_CONTRACT_APPROVED', false),
+            'sandbox_validated' => env('CMI_SANDBOX_VALIDATED', false),
+            'homologation_approved' => env('CMI_HOMOLOGATION_APPROVED', false),
             'mode' => env('CMI_MODE', 'sandbox'),
             'gateway_url' => env('CMI_GATEWAY_URL'),
             'client_id' => env('CMI_CLIENT_ID'),

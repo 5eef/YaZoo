@@ -116,7 +116,7 @@ function LoginPage() {
           </div>
         </section>
 
-        <section className="rounded-[30px] border border-white/80 bg-white/94 p-5 shadow-[0_28px_70px_rgba(124,58,237,0.1)] sm:rounded-[34px] sm:p-6 lg:p-7 dark:border-violet-300/12 dark:bg-[linear-gradient(180deg,_rgba(30,16,49,0.96),_rgba(17,6,31,0.98))]">
+        <section className="yz-form-surface rounded-[30px] border p-5 sm:rounded-[34px] sm:p-6 lg:p-7">
           <p className="text-xs uppercase tracking-[0.24em] text-violet-700 dark:text-violet-300">
             {t('auth.login.title')}
           </p>

@@ -33,7 +33,7 @@ function ForgotPasswordPage() {
   return (
     <main id="main-content" className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(168,85,247,0.2),_transparent_28%),linear-gradient(180deg,_#fffaff_0%,_#f7f1ff_100%)] px-4 py-8 dark:bg-[linear-gradient(180deg,_#090011_0%,_#160827_100%)]">
       <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-2xl flex-col">
-        <section className="my-auto rounded-[30px] border border-white/80 bg-white/94 p-5 shadow-[0_28px_70px_rgba(124,58,237,0.12)] dark:border-violet-300/14 dark:bg-white/8 sm:p-7">
+        <section className="yz-form-surface my-auto rounded-[30px] border p-5 sm:p-7">
           <h1 className="text-3xl font-semibold text-stone-950 dark:text-violet-50">{t('auth.forgot.title')}</h1>
           <p className="mt-3 text-sm leading-6 text-stone-600 dark:text-violet-100/76">{t('auth.forgot.subtitle')}</p>
 

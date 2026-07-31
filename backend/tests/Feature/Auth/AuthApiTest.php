@@ -2,11 +2,14 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Mail\VerifyEmailMail;
 use App\Models\ProfessionalVerification;
 use App\Models\User;
+use App\Services\AccountSecurityService;
 use App\Services\AuthService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Testing\TestResponse;
 use Illuminate\Validation\ValidationException;
 use Laravel\Socialite\Contracts\User as SocialiteUser;
@@ -25,6 +28,8 @@ class AuthApiTest extends TestCase
 
     public function test_user_can_register_and_receive_secure_cookie_only_token(): void
     {
+        Mail::fake();
+
         $response = $this->postJson('/api/auth/register', [
             'name' => 'YaZoo Tester',
             'email' => 'tester@yazoo.app',
@@ -53,6 +58,30 @@ class AuthApiTest extends TestCase
             'is_admin' => false,
         ]);
         $response->assertJsonPath('user.isAdmin', false);
+        Mail::assertQueued(VerifyEmailMail::class);
+    }
+
+    public function test_registration_succeeds_when_verification_email_cannot_be_enqueued(): void
+    {
+        $this->mock(AccountSecurityService::class)
+            ->shouldReceive('sendEmailVerification')
+            ->once()
+            ->andThrow(new \RuntimeException('Queue unavailable'));
+
+        $this->postJson('/api/auth/register', [
+            'name' => 'Queue Safe User',
+            'email' => 'queue-safe@yazoo.app',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'phone' => '+212600000009',
+            'country' => 'Maroc',
+            'city' => 'Rabat',
+            'device_name' => 'phpunit',
+        ])->assertCreated();
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'queue-safe@yazoo.app',
+        ]);
     }
 
     public function test_user_can_login_me_and_logout_with_bearer_token_from_secure_cookie(): void
@@ -106,25 +135,13 @@ class AuthApiTest extends TestCase
         $this->assertDatabaseCount('personal_access_tokens', 0);
     }
 
-    public function test_legacy_login_route_uses_cookie_only_auth_response(): void
+    public function test_legacy_login_route_is_removed(): void
     {
-        $user = User::factory()->create([
-            'email' => 'legacy-login@yazoo.app',
-            'password' => 'password123',
-        ]);
-
-        $response = $this->postJson('/api/login', [
+        $this->postJson('/api/login', [
             'email' => 'legacy-login@yazoo.app',
             'password' => 'password123',
             'device_name' => 'legacy-api-client',
-        ]);
-
-        $response
-            ->assertOk()
-            ->assertCookie('yazoo_api_token')
-            ->assertJsonPath('user.email', $user->email);
-
-        $this->assertArrayNotHasKey('token', $response->json());
+        ])->assertNotFound();
     }
 
     public function test_user_can_authenticate_with_the_http_only_cookie_flow(): void

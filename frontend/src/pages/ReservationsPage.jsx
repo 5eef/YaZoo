@@ -379,6 +379,7 @@ function ReservationCard({ reservation, processingId, onAction, paymentConfig })
           <Info label={t('ordersUi.common.deliveryFee')} value={formatPrice(reservation.deliveryFee)} />
         </div>
 
+        <ReservationNextAction reservation={reservation} />
         <ReservationTimeline reservation={reservation} paymentConfig={paymentConfig} />
 
         <div className="rounded-[22px] bg-white/90 px-4 py-4 shadow-sm dark:bg-white/10">
@@ -628,6 +629,24 @@ function ReservationTimeline({ reservation, paymentConfig }) {
   )
 }
 
+function ReservationNextAction({ reservation }) {
+  const { t } = useI18n()
+  const next = buildReservationNextAction(reservation, t)
+
+  return (
+    <div className="rounded-[22px] border border-violet-200 bg-violet-50/90 px-4 py-4 dark:border-violet-300/18 dark:bg-violet-400/10">
+      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-violet-700 dark:text-violet-100 sm:tracking-[0.16em]">
+        {t('ordersUi.timeline.nextActionTitle')}
+      </p>
+      <p className="mt-2 text-sm font-semibold text-stone-950 dark:text-violet-50">{next.action}</p>
+      <div className="mt-3 grid gap-2 text-xs text-stone-600 dark:text-violet-100/72 sm:grid-cols-2">
+        <p><span className="font-semibold">{t('ordersUi.timeline.responsible')} :</span> {next.responsible}</p>
+        <p><span className="font-semibold">{t('ordersUi.timeline.indicativeDeadline')} :</span> {next.deadline}</p>
+      </div>
+    </div>
+  )
+}
+
 function buildConfirmMessage(action, reservation, t) {
   const title = reservation.listing.title
 
@@ -757,6 +776,71 @@ function buildReservationTimeline(reservation, paymentConfig, t) {
       state: reservation.buyerReview || reservation.sellerReview ? 'done' : isCompleted ? 'current' : 'upcoming',
     },
   ]
+}
+
+function buildReservationNextAction(reservation, t) {
+  const status = reservation.reservationStatus
+  const paymentStatus = reservation.payment?.status ?? reservation.paymentStatus
+  const delivered = ['delivered', 'picked_up'].includes(reservation.deliveryStatus)
+  const role = (key) => t(`ordersUi.timeline.roles.${key}`)
+  const deadlineFrom = (value, hours) => {
+    const date = value ? new Date(value) : new Date()
+    date.setHours(date.getHours() + hours)
+    return formatDate(date.toISOString())
+  }
+
+  if (['cancelled', 'rejected'].includes(status)) {
+    return {
+      action: t('ordersUi.timeline.actions.closed'),
+      responsible: role('none'),
+      deadline: t('ordersUi.timeline.noDeadline'),
+    }
+  }
+
+  if (status === 'pending') {
+    return {
+      action: t('ordersUi.timeline.actions.reviewRequest'),
+      responsible: role(reservation.isSeller ? 'you' : 'seller'),
+      deadline: deadlineFrom(reservation.createdAt, 48),
+    }
+  }
+
+  if (status === 'completed') {
+    return {
+      action: t('ordersUi.timeline.actions.leaveReview'),
+      responsible: role('both'),
+      deadline: t('ordersUi.timeline.noDeadline'),
+    }
+  }
+
+  if (paymentStatus !== 'paid') {
+    const waitingForConfirmation = Boolean(reservation.payment)
+    const confirmationRole = ['bank_transfer', 'manual_bank_transfer'].includes(reservation.paymentMethod)
+      ? 'admin'
+      : 'seller'
+
+    return {
+      action: t(`ordersUi.timeline.actions.${waitingForConfirmation ? 'confirmPayment' : 'startPayment'}`),
+      responsible: role(waitingForConfirmation ? confirmationRole : (reservation.isBuyer ? 'you' : 'buyer')),
+      deadline: deadlineFrom(reservation.approvedAt ?? reservation.createdAt, 24),
+    }
+  }
+
+  if (!delivered) {
+    return {
+      action: t('ordersUi.timeline.actions.progressDelivery'),
+      responsible: role(reservation.isSeller ? 'you' : 'seller'),
+      deadline: reservation.scheduledAt
+        ? formatDate(reservation.scheduledAt)
+        : deadlineFrom(reservation.approvedAt ?? reservation.createdAt, 72),
+    }
+  }
+
+  return {
+    action: t('ordersUi.timeline.actions.finalizeReservation'),
+    responsible: role(reservation.isSeller ? 'you' : 'seller'),
+    deadline: deadlineFrom(new Date().toISOString(), 24),
+  }
 }
 
 function formatPrice(value) {

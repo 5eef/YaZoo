@@ -4,10 +4,11 @@ namespace App\Mail;
 
 use App\Models\User;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 
-class VerifyEmailMail extends Mailable
+class VerifyEmailMail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
@@ -15,7 +16,9 @@ class VerifyEmailMail extends Mailable
         public readonly User $recipient,
         public readonly string $verificationUrl,
         public readonly int $expiresInMinutes,
-    ) {}
+    ) {
+        $this->afterCommit();
+    }
 
     public function build(): self
     {

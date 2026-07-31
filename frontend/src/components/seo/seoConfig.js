@@ -1,6 +1,6 @@
 export const SITE_NAME = 'YaZoo'
 export const SITE_URL = 'https://yazoo.azurewebsites.net'
-export const SOCIAL_IMAGE_URL = `${SITE_URL}/yazoo-logo.svg`
+export const SOCIAL_IMAGE_URL = `${SITE_URL}/icon-512.png`
 export const INDEX_ROBOTS =
   'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1'
 export const NOINDEX_ROBOTS = 'noindex, nofollow'

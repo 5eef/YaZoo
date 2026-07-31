@@ -13,7 +13,9 @@ use App\Support\MediaStorage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Throwable;
 
 class ProfileController extends Controller
 {
@@ -43,47 +45,56 @@ class ProfileController extends Controller
                 'remove_cover_photo',
             ])
             ->all();
+        $previousMedia = collect([$user->avatar, $user->cover_photo])->filter()->unique();
+        $uploadedPaths = [];
 
         if ($request->boolean('remove_avatar') && ! $request->hasFile('avatar_file')) {
-            MediaStorage::deleteStoredFiles([$user->avatar]);
             $updates['avatar'] = null;
         }
 
         if ($request->boolean('remove_cover_photo') && ! $request->hasFile('cover_photo_file')) {
-            MediaStorage::deleteStoredFiles([$user->cover_photo]);
             $updates['cover_photo'] = null;
         }
 
-        if ($request->hasFile('avatar_file')) {
-            $avatarPath = MediaStorage::storeUploadedFile(
-                $request->file('avatar_file'),
-                'profiles/avatars',
-            );
-            MediaStorage::deleteStoredFiles([$user->avatar]);
-            $updates['avatar'] = $avatarPath;
+        try {
+            if ($request->hasFile('avatar_file')) {
+                $updates['avatar'] = MediaStorage::storeUploadedFile(
+                    $request->file('avatar_file'),
+                    'profiles/avatars',
+                );
+                $uploadedPaths[] = $updates['avatar'];
+            }
+
+            if ($request->hasFile('cover_photo_file')) {
+                $updates['cover_photo'] = MediaStorage::storeUploadedFile(
+                    $request->file('cover_photo_file'),
+                    'profiles/covers',
+                );
+                $uploadedPaths[] = $updates['cover_photo'];
+            }
+
+            $emailChanged = isset($updates['email'])
+                && strcasecmp((string) $updates['email'], (string) $user->email) !== 0;
+
+            if ($emailChanged) {
+                $updates['email_verified_at'] = null;
+            }
+
+            DB::transaction(function () use ($user, $updates, $emailChanged): void {
+                $user->forceFill($updates)->save();
+
+                if ($emailChanged) {
+                    $user->tokens()->delete();
+                }
+            });
+        } catch (Throwable $exception) {
+            MediaStorage::deleteStoredFiles($uploadedPaths);
+
+            throw $exception;
         }
 
-        if ($request->hasFile('cover_photo_file')) {
-            $coverPath = MediaStorage::storeUploadedFile(
-                $request->file('cover_photo_file'),
-                'profiles/covers',
-            );
-            MediaStorage::deleteStoredFiles([$user->cover_photo]);
-            $updates['cover_photo'] = $coverPath;
-        }
-
-        $emailChanged = isset($updates['email'])
-            && strcasecmp((string) $updates['email'], (string) $user->email) !== 0;
-
-        if ($emailChanged) {
-            $updates['email_verified_at'] = null;
-        }
-
-        $user->forceFill($updates)->save();
-
-        if ($emailChanged) {
-            $user->tokens()->delete();
-        }
+        $currentMedia = collect([$user->avatar, $user->cover_photo])->filter()->unique();
+        MediaStorage::deleteStoredFiles($previousMedia->diff($currentMedia)->values()->all());
 
         $this->loadProfileAggregates($user);
 

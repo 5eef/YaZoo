@@ -405,11 +405,21 @@ class ReservationService
                 'La livraison doit etre terminee avant de finaliser la commande.',
             );
 
+            $hasConfirmedPayment = Payment::query()
+                ->where('reservation_id', $lockedReservation->id)
+                ->where('status', Payment::STATUS_PAID)
+                ->lockForUpdate()
+                ->exists();
+
+            abort_unless(
+                $hasConfirmedPayment,
+                422,
+                'Le paiement doit etre confirme avant de finaliser la reservation.',
+            );
+
             $lockedReservation->update([
                 'reservation_status' => 'completed',
-                'payment_status' => $lockedReservation->payments()->where('status', 'paid')->exists()
-                    ? 'paid'
-                    : $lockedReservation->payment_status,
+                'payment_status' => 'paid',
                 'invoice_number' => $lockedReservation->invoice_number ?: $this->generateInvoiceNumber($lockedReservation),
                 'invoice_issued_at' => CarbonImmutable::now(),
                 'completed_at' => CarbonImmutable::now(),

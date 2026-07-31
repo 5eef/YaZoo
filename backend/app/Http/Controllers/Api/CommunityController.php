@@ -19,6 +19,8 @@ use App\Support\MediaStorage;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Throwable;
 
 class CommunityController extends Controller
 {
@@ -64,16 +66,25 @@ class CommunityController extends Controller
     public function store(StoreCommunityRequest $request): JsonResponse
     {
         $this->authorize('create', Community::class);
+        $uploadedPaths = [];
 
-        $community = $request->user()->createdCommunities()->create(
-            $this->validatedCommunityData($request)
-        );
+        try {
+            $data = $this->validatedCommunityData($request, $uploadedPaths);
+            $community = DB::transaction(function () use ($request, $data): Community {
+                $community = $request->user()->createdCommunities()->create($data);
+                $community->memberships()->create([
+                    'user_id' => $request->user()->id,
+                    'role' => 'admin',
+                    'status' => 'approved',
+                ]);
 
-        $community->memberships()->create([
-            'user_id' => $request->user()->id,
-            'role' => 'admin',
-            'status' => 'approved',
-        ]);
+                return $community;
+            });
+        } catch (Throwable $exception) {
+            MediaStorage::deleteStoredFiles($uploadedPaths);
+
+            throw $exception;
+        }
 
         $this->loadCommunityState($community, $request->user()->id);
 
@@ -89,11 +100,20 @@ class CommunityController extends Controller
     {
         $this->authorize('update', $community);
         $oldImageUrl = $community->image_url;
-        $community->update($this->validatedCommunityData($request));
+        $uploadedPaths = [];
 
-        if ($request->hasFile('image_file')) {
-            MediaStorage::deleteStoredFiles([$oldImageUrl]);
+        try {
+            $data = $this->validatedCommunityData($request, $uploadedPaths);
+            DB::transaction(fn () => $community->update($data));
+        } catch (Throwable $exception) {
+            MediaStorage::deleteStoredFiles($uploadedPaths);
+
+            throw $exception;
         }
+
+        MediaStorage::deleteStoredFiles(
+            collect([$oldImageUrl])->filter()->diff([$community->image_url])->values()->all(),
+        );
 
         $this->loadCommunityState($community, $request->user()->id);
 
@@ -161,8 +181,9 @@ class CommunityController extends Controller
     {
         $this->authorize('delete', $community);
 
-        MediaStorage::deleteStoredFiles([$community->image_url]);
-        $community->delete();
+        $imageUrl = $community->image_url;
+        DB::transaction(fn () => $community->delete());
+        MediaStorage::deleteStoredFiles([$imageUrl]);
 
         return response()->json([
             'message' => __('messages.communities.deleted'),
@@ -292,7 +313,10 @@ class CommunityController extends Controller
     /**
      * Extract validated community fields and store an uploaded local media file when present.
      */
-    protected function validatedCommunityData(StoreCommunityRequest|UpdateCommunityRequest $request): array
+    protected function validatedCommunityData(
+        StoreCommunityRequest|UpdateCommunityRequest $request,
+        array &$uploadedPaths = [],
+    ): array
     {
         $data = $request->validated();
         unset($data['image_file']);
@@ -302,6 +326,7 @@ class CommunityController extends Controller
                 $request->file('image_file'),
                 'communities'
             );
+            $uploadedPaths[] = $data['image_url'];
         }
 
         return $data;

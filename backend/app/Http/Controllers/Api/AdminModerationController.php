@@ -19,6 +19,7 @@ use App\Support\MediaStorage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -302,13 +303,18 @@ class AdminModerationController extends Controller
             'operation' => 'delete_post',
         ]);
 
-        MarketplaceMedia::deleteStoredFiles([$post->image_path]);
-        Comment::query()->where('post_id', $post->id)->delete();
-        Like::query()
-            ->where('likeable_type', Post::class)
-            ->where('likeable_id', $post->id)
-            ->delete();
-        $post->delete();
+        $storedPaths = [$post->media_path, $post->image_path];
+
+        DB::transaction(function () use ($post): void {
+            Comment::query()->where('post_id', $post->id)->delete();
+            Like::query()
+                ->where('likeable_type', Post::class)
+                ->where('likeable_id', $post->id)
+                ->delete();
+            $post->delete();
+        });
+
+        MarketplaceMedia::deleteStoredFiles($storedPaths);
 
         return response()->json([
             'message' => __('messages.admin.post_deleted'),
@@ -325,13 +331,17 @@ class AdminModerationController extends Controller
             'operation' => 'delete_animal',
         ]);
 
-        MarketplaceMedia::deleteStoredFiles([
+        $storedPaths = [
             $animal->photo_url,
             ...($animal->gallery_urls ?? []),
-        ]);
+        ];
 
-        $animal->reservations()->delete();
-        $animal->delete();
+        DB::transaction(function () use ($animal): void {
+            $animal->reservations()->delete();
+            $animal->delete();
+        });
+
+        MarketplaceMedia::deleteStoredFiles($storedPaths);
 
         return response()->json([
             'message' => __('messages.admin.animal_deleted'),
@@ -348,13 +358,17 @@ class AdminModerationController extends Controller
             'operation' => 'delete_product',
         ]);
 
-        MarketplaceMedia::deleteStoredFiles([
+        $storedPaths = [
             $product->image_url,
             ...($product->gallery_urls ?? []),
-        ]);
+        ];
 
-        $product->reservations()->delete();
-        $product->delete();
+        DB::transaction(function () use ($product): void {
+            $product->reservations()->delete();
+            $product->delete();
+        });
+
+        MarketplaceMedia::deleteStoredFiles($storedPaths);
 
         return response()->json([
             'message' => __('messages.admin.product_deleted'),

@@ -4,6 +4,21 @@
 
 :root {
   color-scheme: light;
+  --yz-color-brand-strong: #6d28d9;
+  --yz-color-brand: #7c3aed;
+  --yz-color-brand-soft: #a855f7;
+  --yz-color-accent: #d8b4fe;
+  --yz-color-success: #059669;
+  --yz-color-warning: #d97706;
+  --yz-color-danger: #e11d48;
+  --yz-surface-page: #faf7ff;
+  --yz-surface-elevated: #ffffff;
+  --yz-surface-form: #ffffff;
+  --yz-surface-muted: #f5f0ff;
+  --yz-border-subtle: #e9d5ff;
+  --yz-text-primary: #2f1b45;
+  --yz-text-secondary: #6b5b7b;
+  --yz-shadow-elevated: 0 20px 48px rgba(124, 58, 237, 0.1);
   --yz-brand-700: #7c3aed;
   --yz-brand-500: #a855f7;
   --yz-accent-500: #d8b4fe;
@@ -15,6 +30,21 @@
   color-scheme: dark;
   --yz-surface: #10091a;
   --yz-ink: #f7efff;
+  --yz-surface-page: #10091a;
+  --yz-surface-elevated: #160d24;
+  --yz-surface-form: #120a1d;
+  --yz-surface-muted: #211134;
+  --yz-border-subtle: rgba(196, 181, 253, 0.2);
+  --yz-text-primary: #f7efff;
+  --yz-text-secondary: rgba(235, 226, 255, 0.76);
+  --yz-shadow-elevated: 0 24px 64px rgba(0, 0, 0, 0.34);
+}
+
+.yz-form-surface {
+  border-color: var(--yz-border-subtle) !important;
+  background: var(--yz-surface-form) !important;
+  box-shadow: var(--yz-shadow-elevated);
+  backdrop-filter: none !important;
 }
 
 html {

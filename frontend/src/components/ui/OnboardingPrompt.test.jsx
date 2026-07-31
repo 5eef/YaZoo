@@ -37,4 +37,15 @@ describe('OnboardingPrompt', () => {
 
     expect(screen.queryByRole('heading', { name: 'Commencez tranquillement sur YaZoo' })).not.toBeInTheDocument()
   })
+
+  it('affiche une checklist specifique au veterinaire', async () => {
+    const user = userEvent.setup()
+    localStorage.removeItem('yazoo-onboarding-v1:9')
+
+    renderPrompt(9)
+    await user.click(screen.getByRole('button', { name: 'Veterinaire' }))
+
+    expect(screen.getByText(/licence vétérinaire/i)).toBeInTheDocument()
+    expect(screen.getByText(/créneaux sans chevauchement/i)).toBeInTheDocument()
+  })
 })

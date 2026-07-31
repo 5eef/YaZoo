@@ -29,6 +29,14 @@ class PaymentController extends Controller
                 'cmi' => [
                     'enabled' => (bool) config('payments.providers.cmi.enabled', false) && $this->cmiConfigIsComplete(),
                     'mode' => config('payments.providers.cmi.mode', 'sandbox'),
+                    'status' => (bool) config('payments.providers.cmi.enabled', false) && $this->cmiConfigIsComplete()
+                        ? 'active'
+                        : 'preparation',
+                    'requirements' => [
+                        'contractApproved' => (bool) config('payments.providers.cmi.contract_approved', false),
+                        'sandboxValidated' => (bool) config('payments.providers.cmi.sandbox_validated', false),
+                        'homologationApproved' => (bool) config('payments.providers.cmi.homologation_approved', false),
+                    ],
                 ],
             ],
         ]);

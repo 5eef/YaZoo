@@ -118,6 +118,10 @@ describe('ReservationsPage', () => {
     await user.click(await screen.findByRole('button', { name: /Mes ventes \(1\)/ }))
 
     expect(screen.getByText('Suivi')).toBeInTheDocument()
+    expect(screen.getByText('Prochaine action')).toBeInTheDocument()
+    expect(screen.getByText('Examiner puis accepter ou refuser la demande.')).toBeInTheDocument()
+    expect(screen.getByText(/Responsable/)).toBeInTheDocument()
+    expect(screen.getByText(/Délai indicatif/)).toBeInTheDocument()
     expect(screen.getByText('Demande envoyee')).toBeInTheDocument()
     expect(screen.getByText('Paiement a la remise: a regler lors de la livraison ou du retrait.')).toBeInTheDocument()
 

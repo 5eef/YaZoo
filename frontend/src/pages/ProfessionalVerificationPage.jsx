@@ -131,7 +131,7 @@ function ProfessionalVerificationPage() {
       {successMessage ? <StateMessage tone="success">{successMessage}</StateMessage> : null}
 
       <section className="grid gap-5 xl:grid-cols-[1fr_0.85fr]">
-        <form onSubmit={handleSubmit} className="rounded-[28px] border border-white/80 bg-white/92 p-5 shadow-[0_20px_48px_rgba(124,58,237,0.08)] dark:border-violet-300/14 dark:bg-white/8">
+        <form onSubmit={handleSubmit} className="yz-form-surface rounded-[28px] border p-5">
           <div className="grid gap-4 md:grid-cols-2">
             <label className="block">
               <span className="mb-2 block text-sm font-medium text-stone-700 dark:text-violet-100">{t('professionalVerification.businessType')}</span>

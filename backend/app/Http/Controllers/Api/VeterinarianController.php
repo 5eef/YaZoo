@@ -12,6 +12,8 @@ use App\Support\MarketplaceMedia;
 use App\Support\MediaStorage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Throwable;
 
 class VeterinarianController extends Controller
 {
@@ -78,17 +80,24 @@ class VeterinarianController extends Controller
     {
         $this->authorize('create', Veterinarian::class);
 
-        $validated = $this->prepareMedia($request, $request->validated());
+        $uploadedPaths = [];
 
-        $veterinarian = Veterinarian::query()->create([
-            ...$validated,
-            'user_id' => $request->user()->id,
-            'is_active' => true,
-            'moderation_status' => Veterinarian::MODERATION_STATUS_PENDING_REVIEW,
-            'moderation_note' => null,
-            'moderated_by' => null,
-            'moderated_at' => null,
-        ]);
+        try {
+            $validated = $this->prepareMedia($request, $request->validated(), $uploadedPaths);
+            $veterinarian = DB::transaction(fn (): Veterinarian => Veterinarian::query()->create([
+                ...$validated,
+                'user_id' => $request->user()->id,
+                'is_active' => true,
+                'moderation_status' => Veterinarian::MODERATION_STATUS_PENDING_REVIEW,
+                'moderation_note' => null,
+                'moderated_by' => null,
+                'moderated_at' => null,
+            ]));
+        } catch (Throwable $exception) {
+            MarketplaceMedia::deleteStoredFiles($uploadedPaths);
+
+            throw $exception;
+        }
 
         return VeterinarianResource::make($this->loadSocialSignals($veterinarian))
             ->response()
@@ -111,16 +120,29 @@ class VeterinarianController extends Controller
     {
         $this->authorize('update', $veterinarian);
 
-        $validated = $this->prepareMedia($request, $request->validated(), $veterinarian);
+        $oldImagePath = $veterinarian->image_path;
+        $uploadedPaths = [];
 
-        if (! $request->user()->is_admin) {
-            $validated['moderation_status'] = Veterinarian::MODERATION_STATUS_PENDING_REVIEW;
-            $validated['moderation_note'] = null;
-            $validated['moderated_by'] = null;
-            $validated['moderated_at'] = null;
+        try {
+            $validated = $this->prepareMedia($request, $request->validated(), $uploadedPaths);
+
+            if (! $request->user()->is_admin) {
+                $validated['moderation_status'] = Veterinarian::MODERATION_STATUS_PENDING_REVIEW;
+                $validated['moderation_note'] = null;
+                $validated['moderated_by'] = null;
+                $validated['moderated_at'] = null;
+            }
+
+            DB::transaction(fn () => $veterinarian->update($validated));
+        } catch (Throwable $exception) {
+            MarketplaceMedia::deleteStoredFiles($uploadedPaths);
+
+            throw $exception;
         }
 
-        $veterinarian->update($validated);
+        MarketplaceMedia::deleteStoredFiles(
+            collect([$oldImagePath])->filter()->diff([$veterinarian->image_path])->values()->all(),
+        );
 
         return VeterinarianResource::make($this->loadSocialSignals($veterinarian));
     }
@@ -129,7 +151,9 @@ class VeterinarianController extends Controller
     {
         $this->authorize('delete', $veterinarian);
 
-        $veterinarian->delete();
+        $imagePath = $veterinarian->image_path;
+        DB::transaction(fn () => $veterinarian->delete());
+        MarketplaceMedia::deleteStoredFiles([$imagePath]);
 
         return response()->json([
             'message' => __('messages.marketplace.veterinarian_deleted'),
@@ -140,16 +164,12 @@ class VeterinarianController extends Controller
      * @param  array<string, mixed>  $validated
      * @return array<string, mixed>
      */
-    protected function prepareMedia(Request $request, array $validated, ?Veterinarian $veterinarian = null): array
+    protected function prepareMedia(Request $request, array $validated, array &$uploadedPaths = []): array
     {
         if ($request->hasFile('image')) {
             $uploaded = MediaStorage::storeUploadedFile($request->file('image'), 'marketplace/veterinarians');
-
-            if ($veterinarian?->image_path) {
-                MarketplaceMedia::deleteStoredFiles([$veterinarian->image_path]);
-            }
-
             $validated['image_path'] = $uploaded;
+            $uploadedPaths[] = $uploaded;
         }
 
         return $validated;

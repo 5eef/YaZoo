@@ -7107,6 +7107,7 @@ messages.en = deepMerge(messages.en, {
 
 messages.fr = deepMerge(messages.fr, {
   marketplaceBadges: {
+    veterinarianCategory: 'Catégorie : vétérinaire',
     professionalVerified: 'Documents verifies par YaZoo',
     professional: 'Professionnel',
     association: 'Association',
@@ -7141,10 +7142,41 @@ messages.fr = deepMerge(messages.fr, {
       association: 'Association',
       professional: 'Professionnel',
     },
+    checklists: {
+      individual: {
+        profile: 'Complétez votre profil et vérifiez votre téléphone.',
+        trust: 'Ajoutez vos favoris et contrôlez les badges de confiance.',
+        firstAction: 'Découvrez une annonce puis contactez ou réservez.',
+      },
+      professional: {
+        profile: 'Renseignez votre activité et déposez les justificatifs.',
+        trust: 'Attendez la validation avant toute publication professionnelle.',
+        firstAction: 'Publiez une offre claire avec prix, disponibilité et contact.',
+      },
+      veterinarian: {
+        profile: 'Déposez votre licence vétérinaire et sa date de validité.',
+        trust: 'Attendez le badge « Vétérinaire vérifié » délivré après contrôle.',
+        firstAction: 'Créez des créneaux sans chevauchement puis gérez les demandes.',
+      },
+    },
   },
   ordersUi: {
     timeline: {
       title: 'Suivi',
+      nextActionTitle: 'Prochaine action',
+      responsible: 'Responsable',
+      indicativeDeadline: 'Délai indicatif',
+      noDeadline: 'Sans échéance',
+      roles: { you: 'Vous', buyer: 'Acheteur', seller: 'Vendeur ou prestataire', admin: 'Équipe YaZoo', both: 'Les deux parties', none: 'Aucune action' },
+      actions: {
+        closed: 'Ce parcours est clos.',
+        reviewRequest: 'Examiner puis accepter ou refuser la demande.',
+        startPayment: 'Créer le paiement correspondant au mode choisi.',
+        confirmPayment: 'Contrôler puis confirmer la réception du paiement.',
+        progressDelivery: 'Faire avancer la livraison, le retrait ou la prestation.',
+        finalizeReservation: 'Finaliser la réservation et générer la facture.',
+        leaveReview: 'Partager un avis après la finalisation.',
+      },
       requested: 'Demande envoyee',
       requestedHelp: 'La reservation est creee et visible dans votre espace.',
       accepted: 'Acceptee par le vendeur',
@@ -7180,6 +7212,7 @@ messages.fr = deepMerge(messages.fr, {
 
 messages.ar = deepMerge(messages.ar, {
   marketplaceBadges: {
+    veterinarianCategory: 'الفئة: طبيب بيطري',
     professionalVerified: 'وثائق راجعها YaZoo',
     professional: 'مهني',
     association: 'جمعية',
@@ -7214,10 +7247,41 @@ messages.ar = deepMerge(messages.ar, {
       association: 'جمعية',
       professional: 'مهني',
     },
+    checklists: {
+      individual: {
+        profile: 'أكمل ملفك الشخصي ووثق رقم هاتفك.',
+        trust: 'أضف المفضلة وتحقق من شارات الثقة.',
+        firstAction: 'اكتشف إعلاناً ثم تواصل أو احجز.',
+      },
+      professional: {
+        profile: 'أدخل معلومات نشاطك وأرسل المستندات.',
+        trust: 'انتظر الموافقة قبل أي نشر مهني.',
+        firstAction: 'انشر عرضاً واضحاً بالسعر والتوفر ووسيلة التواصل.',
+      },
+      veterinarian: {
+        profile: 'أرسل رخصة الطبيب البيطري وتاريخ صلاحيتها.',
+        trust: 'انتظر شارة الطبيب البيطري الموثق بعد المراجعة.',
+        firstAction: 'أنشئ مواعيد غير متداخلة ثم أدر الطلبات.',
+      },
+    },
   },
   ordersUi: {
     timeline: {
       title: 'المتابعة',
+      nextActionTitle: 'الإجراء التالي',
+      responsible: 'المسؤول',
+      indicativeDeadline: 'المهلة الإرشادية',
+      noDeadline: 'بدون موعد نهائي',
+      roles: { you: 'أنت', buyer: 'المشتري', seller: 'البائع أو مقدم الخدمة', admin: 'فريق YaZoo', both: 'الطرفان', none: 'لا يوجد إجراء' },
+      actions: {
+        closed: 'تم إغلاق هذا المسار.',
+        reviewRequest: 'راجع الطلب ثم اقبله أو ارفضه.',
+        startPayment: 'أنشئ عملية الدفع حسب الطريقة المختارة.',
+        confirmPayment: 'تحقق من استلام الدفع ثم أكده.',
+        progressDelivery: 'تابع التسليم أو الاستلام أو الخدمة.',
+        finalizeReservation: 'أكمل الحجز وأنشئ الفاتورة.',
+        leaveReview: 'شارك تقييماً بعد الإكمال.',
+      },
       requested: 'تم إرسال الطلب',
       requestedHelp: 'تم إنشاء الحجز ويظهر في مساحتك.',
       accepted: 'قبله البائع',
@@ -7253,6 +7317,7 @@ messages.ar = deepMerge(messages.ar, {
 
 messages.en = deepMerge(messages.en, {
   marketplaceBadges: {
+    veterinarianCategory: 'Category: veterinarian',
     professionalVerified: 'Documents reviewed by YaZoo',
     professional: 'Professional',
     association: 'Association',
@@ -7287,10 +7352,41 @@ messages.en = deepMerge(messages.en, {
       association: 'Association',
       professional: 'Professional',
     },
+    checklists: {
+      individual: {
+        profile: 'Complete your profile and verify your phone.',
+        trust: 'Save favorites and check trust badges.',
+        firstAction: 'Explore a listing, then contact or book.',
+      },
+      professional: {
+        profile: 'Describe your business and submit supporting documents.',
+        trust: 'Wait for approval before publishing professionally.',
+        firstAction: 'Publish a clear offer with price, availability, and contact.',
+      },
+      veterinarian: {
+        profile: 'Submit your veterinary license and its expiry date.',
+        trust: 'Wait for the verified veterinarian badge after review.',
+        firstAction: 'Create non-overlapping slots, then manage requests.',
+      },
+    },
   },
   ordersUi: {
     timeline: {
       title: 'Timeline',
+      nextActionTitle: 'Next action',
+      responsible: 'Responsible',
+      indicativeDeadline: 'Indicative deadline',
+      noDeadline: 'No deadline',
+      roles: { you: 'You', buyer: 'Buyer', seller: 'Seller or provider', admin: 'YaZoo team', both: 'Both parties', none: 'No action' },
+      actions: {
+        closed: 'This workflow is closed.',
+        reviewRequest: 'Review, then accept or reject the request.',
+        startPayment: 'Create the payment for the selected method.',
+        confirmPayment: 'Check and confirm receipt of payment.',
+        progressDelivery: 'Progress delivery, pickup, or service.',
+        finalizeReservation: 'Finalize the reservation and generate the invoice.',
+        leaveReview: 'Share a review after completion.',
+      },
       requested: 'Request sent',
       requestedHelp: 'The reservation is created and visible in your space.',
       accepted: 'Accepted by seller',

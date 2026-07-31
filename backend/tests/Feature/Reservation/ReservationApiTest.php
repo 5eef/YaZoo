@@ -3,6 +3,7 @@
 namespace Tests\Feature\Reservation;
 
 use App\Models\Animal;
+use App\Models\Payment;
 use App\Models\Product;
 use App\Models\Reservation;
 use App\Models\ServiceListing;
@@ -105,10 +106,24 @@ class ReservationApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.deliveryStatus', 'picked_up');
 
+        Payment::query()->create([
+            'reservation_id' => $reservation->id,
+            'buyer_id' => $buyer->id,
+            'seller_id' => $seller->id,
+            'provider' => Payment::PROVIDER_MANUAL_BANK_TRANSFER,
+            'status' => Payment::STATUS_PAID,
+            'amount' => 1200,
+            'currency' => 'MAD',
+            'commission_amount' => 0,
+            'net_amount' => 1200,
+            'internal_reference' => 'test-animal-paid-'.$reservation->id,
+            'paid_at' => now(),
+        ]);
+
         $this->postJson("/api/reservations/{$reservation->id}/complete")
             ->assertOk()
             ->assertJsonPath('data.reservationStatus', 'completed')
-            ->assertJsonPath('data.paymentStatus', 'pending')
+            ->assertJsonPath('data.paymentStatus', 'paid')
             ->assertJsonPath('data.invoiceNumber', fn ($value) => is_string($value) && str_starts_with($value, 'YAZ-'));
 
         $this->assertSame('sold', $animal->refresh()->listing_status);
@@ -174,10 +189,25 @@ class ReservationApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.deliveryStatus', 'delivered');
 
+        $reservation = Reservation::query()->findOrFail($reservationId);
+        Payment::query()->create([
+            'reservation_id' => $reservation->id,
+            'buyer_id' => $buyer->id,
+            'seller_id' => $seller->id,
+            'provider' => Payment::PROVIDER_CASH_ON_PICKUP,
+            'status' => Payment::STATUS_PAID,
+            'amount' => 635,
+            'currency' => 'MAD',
+            'commission_amount' => 0,
+            'net_amount' => 635,
+            'internal_reference' => 'test-product-paid-'.$reservation->id,
+            'paid_at' => now(),
+        ]);
+
         $this->postJson("/api/reservations/{$reservationId}/complete")
             ->assertOk()
             ->assertJsonPath('data.reservationStatus', 'completed')
-            ->assertJsonPath('data.paymentStatus', 'pending')
+            ->assertJsonPath('data.paymentStatus', 'paid')
             ->assertJsonPath('data.invoiceNumber', fn ($value) => is_string($value) && str_starts_with($value, 'YAZ-'));
 
         $product->refresh();
@@ -427,17 +457,31 @@ class ReservationApiTest extends TestCase
 
         Sanctum::actingAs($other, ['*']);
 
-        $this->patchJson("/api/reservations/{$reservationId}/approve")
+        $this->postJson("/api/reservations/{$reservationId}/approve")
             ->assertForbidden();
 
         Sanctum::actingAs($provider, ['*']);
 
-        $this->patchJson("/api/reservations/{$reservationId}/approve")
+        $this->postJson("/api/reservations/{$reservationId}/approve")
             ->assertOk()
             ->assertJsonPath('data.status', 'approved')
-            ->assertJsonPath('data.canComplete', true);
+            ->assertJsonPath('data.canComplete', false);
 
-        $this->patchJson("/api/reservations/{$reservationId}/complete")
+        Payment::query()->create([
+            'reservation_id' => $reservationId,
+            'buyer_id' => $buyer->id,
+            'seller_id' => $provider->id,
+            'provider' => Payment::PROVIDER_CASH_ON_PICKUP,
+            'status' => Payment::STATUS_PAID,
+            'amount' => 300,
+            'currency' => 'MAD',
+            'commission_amount' => 0,
+            'net_amount' => 300,
+            'internal_reference' => 'test-service-paid-'.$reservationId,
+            'paid_at' => now(),
+        ]);
+
+        $this->postJson("/api/reservations/{$reservationId}/complete")
             ->assertOk()
             ->assertJsonPath('data.status', 'completed')
             ->assertJsonPath('data.invoiceNumber', fn ($value) => is_string($value) && str_starts_with($value, 'YAZ-'));
@@ -473,18 +517,18 @@ class ReservationApiTest extends TestCase
             ->assertCreated()
             ->json('data.id');
 
-        $this->patchJson("/api/reservations/{$reservationId}/cancel")
+        $this->postJson("/api/reservations/{$reservationId}/cancel")
             ->assertOk()
             ->assertJsonPath('data.status', 'cancelled');
 
         Notification::assertSentTo($provider, ReservationCancelledNotification::class);
 
-        $this->patchJson("/api/reservations/{$reservationId}/approve")
+        $this->postJson("/api/reservations/{$reservationId}/approve")
             ->assertForbidden();
 
         Sanctum::actingAs($provider, ['*']);
 
-        $this->patchJson("/api/reservations/{$reservationId}/approve")
+        $this->postJson("/api/reservations/{$reservationId}/approve")
             ->assertUnprocessable();
     }
 }

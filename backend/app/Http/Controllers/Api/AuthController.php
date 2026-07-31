@@ -16,6 +16,7 @@ use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Laravel\Socialite\Facades\Socialite;
 use Throwable;
 
@@ -46,7 +47,14 @@ class AuthController extends Controller
             ], 503);
         }
 
-        $this->accountSecurity->sendEmailVerification($result->user);
+        try {
+            $this->accountSecurity->sendEmailVerification($result->user);
+        } catch (Throwable $exception) {
+            Log::warning('account.email_verification_enqueue_failed', [
+                'user_id' => $result->user->id,
+                'exception' => $exception::class,
+            ]);
+        }
 
         return $this->authResponse(
             $result,

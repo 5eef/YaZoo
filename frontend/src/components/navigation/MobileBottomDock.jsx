@@ -1,24 +1,19 @@
 import PropTypes from 'prop-types'
-import { NavLink } from 'react-router'
+import { Link, NavLink } from 'react-router'
 
 import { useI18n } from '../../hooks/useI18n'
+import { getMarketplacePublishRoute } from '../../utils/marketplacePublishing'
 import { formatBadgeCount } from '../../utils/formatBadgeCount'
 import AppIcon from '../ui/AppIcon'
 import Avatar from '../ui/Avatar'
 import UnreadBadge from './UnreadBadge'
 
-function MobileBottomDock({ user, onCreateStory, t, messagesCount, notificationsCount }) {
+function MobileBottomDock({ user, marketplacePublishing, t, messagesCount }) {
   return (
     <nav className="fixed bottom-3 left-1/2 z-30 flex w-[calc(100%-1rem)] max-w-md -translate-x-1/2 items-center justify-between rounded-[24px] border border-white/55 bg-[linear-gradient(135deg,_rgba(255,255,255,0.46),_rgba(248,240,255,0.32),_rgba(255,255,255,0.18))] px-1.5 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] shadow-[0_20px_44px_rgba(124,58,237,0.14)] backdrop-blur-2xl dark:border-violet-300/16 dark:bg-[linear-gradient(135deg,_rgba(24,16,38,0.84),_rgba(49,24,83,0.58),_rgba(12,8,20,0.72))] lg:hidden">
       <MobileDockLink to="/feed" label={t('common.feed')} icon="home" />
-      <MobileDockLink
-        to="/notifications"
-        label={t('common.notificationsShort')}
-        icon="bell"
-        badgeCount={notificationsCount}
-        badgeLabel={t('notifications.unreadAria', { count: notificationsCount })}
-      />
-      <MobileDockStoryButton onClick={onCreateStory} label={t('common.story')} />
+      <MobileDockLink to="/marketplace" label={t('common.marketplace')} icon="marketplace" />
+      <MobileDockPublishLink capability={marketplacePublishing} t={t} />
       <MobileDockLink
         to="/messages"
         label={t('common.messagesShort')}
@@ -74,26 +69,26 @@ function MobileDockProfileLink({ user, label }) {
   )
 }
 
-function MobileDockStoryButton({ onClick, label }) {
+function MobileDockPublishLink({ capability, t }) {
+  const target = getMarketplacePublishRoute(capability)
+
   return (
-    <button
-      type="button"
-      onClick={onClick}
+    <Link
+      to={target}
       className="flex min-w-[64px] flex-col items-center gap-1 rounded-[20px] bg-[linear-gradient(135deg,#7c3aed,#a855f7)] px-3 py-2 text-[11px] font-semibold text-white transition hover:brightness-105"
-      aria-label={label}
+      aria-label={t('marketplace.publishShortcut')}
     >
-      <AppIcon name="story" className="h-5 w-5" />
-      <span className="max-w-[4.25rem] truncate whitespace-nowrap">{label}</span>
-    </button>
+      <AppIcon name="edit" className="h-5 w-5" />
+      <span className="max-w-[4.25rem] truncate whitespace-nowrap">{t('marketplace.publishShortcut')}</span>
+    </Link>
   )
 }
 
 MobileBottomDock.propTypes = {
   user: PropTypes.object,
-  onCreateStory: PropTypes.func,
+  marketplacePublishing: PropTypes.object,
   t: PropTypes.func,
   messagesCount: PropTypes.number,
-  notificationsCount: PropTypes.number,
 }
 
 MobileDockLink.propTypes = {
@@ -109,9 +104,9 @@ MobileDockProfileLink.propTypes = {
   label: PropTypes.string,
 }
 
-MobileDockStoryButton.propTypes = {
-  onClick: PropTypes.func,
-  label: PropTypes.string,
+MobileDockPublishLink.propTypes = {
+  capability: PropTypes.object,
+  t: PropTypes.func.isRequired,
 }
 
 export default MobileBottomDock

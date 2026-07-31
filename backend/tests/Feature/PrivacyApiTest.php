@@ -3,6 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\DataDeletionRequest;
+use App\Models\Comment;
+use App\Models\Conversation;
+use App\Models\Post;
 use App\Models\Product;
 use App\Models\ProfessionalVerification;
 use App\Models\Reservation;
@@ -50,6 +53,30 @@ class PrivacyApiTest extends TestCase
             'email' => 'privacy@example.com',
             'phone' => '+212600000000',
         ]);
+        $otherUser = User::factory()->create();
+        $post = Post::factory()->create(['user_id' => $user->id]);
+        $post->comments()->create([
+            'user_id' => $user->id,
+            'body' => 'Mon commentaire exportable',
+        ]);
+        $conversation = Conversation::query()->create([
+            'participant_one_id' => $user->id,
+            'participant_two_id' => $otherUser->id,
+        ]);
+        $conversation->messages()->create([
+            'user_id' => $user->id,
+            'body' => 'Message écrit par la personne concernée',
+        ]);
+        $conversation->messages()->create([
+            'user_id' => $otherUser->id,
+            'body' => 'Message tiers à ne pas exporter',
+        ]);
+        ProfessionalVerification::query()->create([
+            'user_id' => $user->id,
+            'business_type' => 'seller',
+            'legal_name' => 'Privacy Commerce',
+            'status' => 'pending',
+        ]);
 
         Sanctum::actingAs($user, ['*']);
 
@@ -70,7 +97,11 @@ class PrivacyApiTest extends TestCase
             ->assertJsonPath('profile.phone', '+212600000000')
             ->assertJsonMissingPath('profile.password')
             ->assertJsonPath('privacyConsents.0.type', 'sms_otp')
-            ->assertJsonPath('excluded.privateMessages', __('messages.privacy.export_private_messages_excluded'));
+            ->assertJsonPath('comments.0.body', 'Mon commentaire exportable')
+            ->assertJsonPath('sentMessages.0.body', 'Message écrit par la personne concernée')
+            ->assertJsonPath('professionalVerifications.0.legal_name', 'Privacy Commerce')
+            ->assertJsonMissing(['Message tiers à ne pas exporter'])
+            ->assertJsonPath('excluded.messagesAuthoredByOthers', 'Only messages authored by this account are included.');
     }
 
     public function test_user_can_create_only_one_pending_deletion_request(): void
