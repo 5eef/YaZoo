@@ -38,7 +38,12 @@ return new class extends Migration
 
         Schema::create('veterinarian_appointment_reviews', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('veterinarian_appointment_id')->unique()->constrained()->cascadeOnDelete();
+            $table->foreignId('veterinarian_appointment_id');
+            $table->unique('veterinarian_appointment_id', 'vet_appt_reviews_appointment_unique');
+            $table->foreign('veterinarian_appointment_id', 'vet_appt_reviews_appointment_fk')
+                ->references('id')
+                ->on('veterinarian_appointments')
+                ->cascadeOnDelete();
             $table->foreignId('client_id')->constrained('users')->cascadeOnDelete();
             $table->unsignedTinyInteger('rating');
             $table->string('comment', 1000)->nullable();
