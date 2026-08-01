@@ -4,6 +4,7 @@ return [
     'auth' => [
         'account_created' => 'Account created successfully.',
         'login_success' => 'Signed in successfully.',
+        'login_throttled' => 'Too many attempts for this account. Try again in one minute.',
         'logout_success' => 'Signed out successfully.',
         'invalid_credentials' => 'The provided credentials are incorrect.',
         'register_temporarily_unavailable' => 'Registration is temporarily unavailable. Try again in a few seconds.',

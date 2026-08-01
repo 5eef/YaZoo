@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Str;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -37,6 +38,29 @@ class AppServiceProvider extends ServiceProvider
 
         RateLimiter::for('api', function (Request $request) {
             return Limit::perMinute(120)->by($request->user()?->id ?: $request->ip());
+        });
+
+        RateLimiter::for('login', function (Request $request) {
+            $email = Str::lower(trim((string) $request->input('email')));
+            $phone = PhoneNumber::normalize($request->input('phone'));
+            $identifier = $email !== '' ? 'email:'.$email : 'phone:'.($phone ?? 'invalid');
+            $identifierKey = hash_hmac(
+                'sha256',
+                $identifier,
+                (string) config('app.key'),
+            );
+            $response = fn (Request $request, array $headers) => response()->json([
+                'message' => __('messages.auth.login_throttled'),
+            ], 429, $headers);
+
+            return [
+                Limit::perMinute($this->app->environment(['local', 'testing']) ? 120 : 20)
+                    ->by('login-ip:'.$request->ip())
+                    ->response($response),
+                Limit::perMinute(5)
+                    ->by('login-identity:'.$request->ip().':'.$identifierKey)
+                    ->response($response),
+            ];
         });
 
         RateLimiter::for('otp-request', function (Request $request) {

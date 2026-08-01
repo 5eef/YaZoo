@@ -319,6 +319,44 @@ class AuthApiTest extends TestCase
             ->assertJsonValidationErrors(['email']);
     }
 
+    public function test_login_rate_limit_does_not_mix_distinct_accounts_on_the_same_ip(): void
+    {
+        foreach (range(1, 14) as $index) {
+            $this->postJson('/api/auth/login', [
+                'email' => "manual-test-{$index}@yazoo.app",
+                'password' => 'bad-password',
+                'device_name' => 'phpunit',
+            ])
+                ->assertUnprocessable()
+                ->assertJsonValidationErrors(['email']);
+        }
+    }
+
+    public function test_login_rate_limit_blocks_repeated_attempts_for_the_same_account(): void
+    {
+        User::factory()->create([
+            'email' => 'rate-limited@yazoo.app',
+            'password' => 'password123',
+        ]);
+
+        foreach (range(1, 5) as $attempt) {
+            $this->postJson('/api/auth/login', [
+                'email' => 'rate-limited@yazoo.app',
+                'password' => 'bad-password',
+                'device_name' => 'phpunit',
+            ])->assertUnprocessable();
+        }
+
+        $this->postJson('/api/auth/login', [
+            'email' => 'rate-limited@yazoo.app',
+            'password' => 'bad-password',
+            'device_name' => 'phpunit',
+        ])
+            ->assertTooManyRequests()
+            ->assertHeader('Retry-After')
+            ->assertJsonPath('message', __('messages.auth.login_throttled'));
+    }
+
     public function test_banned_user_cannot_login_with_password(): void
     {
         User::factory()->create([

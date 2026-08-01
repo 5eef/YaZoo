@@ -24,6 +24,7 @@ import FollowButton from '../components/ui/FollowButton'
 import VerifiedPhoneBadge from '../components/ui/VerifiedPhoneBadge'
 import { useAuth } from '../hooks/useAuth'
 import { useI18n } from '../hooks/useI18n'
+import { openMessageDock } from '../lib/messageDock'
 import { asArray, extractDataArray, extractDataObject } from '../utils/apiData'
 import { getErrorMessage } from '../utils/getErrorMessage'
 import { normalizeAuthUserMedia, normalizeProfileMediaPayload } from '../utils/media'
@@ -353,7 +354,13 @@ function ProfilePage() {
         throw new Error('Conversation introuvable.')
       }
 
-      navigate(`/messages?conversation=${conversation.id}`)
+      const canShowDesktopDock = globalThis.matchMedia?.('(min-width: 1280px)').matches
+
+      if (canShowDesktopDock) {
+        openMessageDock(conversation)
+      } else {
+        navigate(`/messages?conversation=${conversation.id}`)
+      }
     } catch (error) {
       setErrorMessage(
         getErrorMessage(error, t('profile.startConversationError')),

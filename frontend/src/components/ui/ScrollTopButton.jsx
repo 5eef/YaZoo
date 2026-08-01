@@ -37,11 +37,11 @@ function ScrollTopButton() {
     <button
       type="button"
       onClick={handleScrollTop}
-      className={`fixed bottom-[calc(7rem+env(safe-area-inset-bottom))] right-3 z-40 inline-flex min-h-11 min-w-11 items-center justify-center gap-2 overflow-hidden rounded-full border border-white/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(237,233,254,0.96),rgba(221,214,254,0.98))] px-3.5 text-violet-950 shadow-[0_22px_42px_rgba(124,58,237,0.18)] transition-[opacity,transform,box-shadow] duration-300 hover:shadow-[0_28px_48px_rgba(124,58,237,0.22)] motion-reduce:transition-none ${
+      className={`fixed bottom-[calc(7rem+env(safe-area-inset-bottom))] right-3 z-40 inline-flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border border-violet-200/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(237,233,254,0.98))] text-violet-950 shadow-[0_22px_42px_rgba(124,58,237,0.24)] transition-[opacity,transform,box-shadow] duration-300 hover:-translate-y-0.5 hover:shadow-[0_28px_48px_rgba(124,58,237,0.3)] motion-reduce:transition-none dark:border-violet-300/30 dark:bg-[linear-gradient(135deg,rgba(124,58,237,0.98),rgba(76,29,149,0.98))] dark:text-white dark:shadow-[0_22px_46px_rgba(0,0,0,0.48)] dark:hover:shadow-[0_28px_54px_rgba(124,58,237,0.32)] ${
         isVisible
           ? 'pointer-events-auto opacity-100'
           : 'pointer-events-none translate-y-4 opacity-0'
-      } lg:bottom-8 lg:right-8 lg:min-h-12 lg:px-4 xl:bottom-6 xl:left-[6.5rem] xl:right-auto`}
+      } lg:bottom-8 lg:right-8 xl:bottom-6 xl:left-[6.5rem] xl:right-auto`}
       aria-label={t('common.scrollTop')}
       title={t('common.scrollTop')}
     >
@@ -59,10 +59,6 @@ function ScrollTopButton() {
           strokeLinejoin="round"
         />
       </svg>
-      <span className="h-2 w-2 rounded-full bg-violet-500/70" />
-      <span className="hidden text-xs font-semibold uppercase tracking-[0.18em] text-violet-900 sm:inline">
-        {t('common.top')}
-      </span>
     </button>
   )
 }

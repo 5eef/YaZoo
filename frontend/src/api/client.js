@@ -11,6 +11,7 @@ export const AUTH_SESSION_EXPIRED_EVENT = 'yazoo:auth-session-expired'
 const api = axios.create({
   baseURL: getApiBaseUrl(),
   withCredentials: true,
+  withXSRFToken: true,
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',

@@ -4,6 +4,7 @@ return [
     'auth' => [
         'account_created' => 'Compte cree avec succes.',
         'login_success' => 'Connexion reussie.',
+        'login_throttled' => 'Trop de tentatives pour ce compte. Reessayez dans une minute.',
         'logout_success' => 'Deconnexion reussie.',
         'invalid_credentials' => 'Les identifiants fournis sont incorrects.',
         'register_temporarily_unavailable' => 'Inscription temporairement indisponible. Reessayez dans quelques secondes.',

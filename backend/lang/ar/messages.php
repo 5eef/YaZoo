@@ -11,6 +11,7 @@ return [
         'invalid_password' => 'كلمة المرور غير صالحة.',
         'account_created' => 'تم إنشاء الحساب بنجاح.',
         'login_success' => 'تم تسجيل الدخول بنجاح.',
+        'login_throttled' => 'محاولات كثيرة جدا لهذا الحساب. حاول مرة أخرى خلال دقيقة.',
         'logout_success' => 'تم تسجيل الخروج بنجاح.',
         'invalid_credentials' => 'بيانات الدخول غير صحيحة.',
         'register_temporarily_unavailable' => 'التسجيل غير متاح مؤقتا. حاول مرة أخرى بعد قليل.',

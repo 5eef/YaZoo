@@ -100,7 +100,7 @@ Route::middleware([ForceJsonResponse::class, SetApiLocale::class, 'throttle:api'
     Route::prefix('auth')->group(function (): void {
         Route::post('/otp/request', [AuthController::class, 'requestOtp'])->middleware('throttle:otp-request');
         Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:10,1');
-        Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
+        Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
         Route::post('/password/forgot', [AuthController::class, 'requestPasswordReset'])
             ->middleware('throttle:5,1');
         Route::post('/password/reset', [AuthController::class, 'resetPassword'])

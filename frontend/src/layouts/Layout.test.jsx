@@ -5,8 +5,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import Layout from './Layout'
 import { I18nProvider } from '../contexts/I18nContext'
-import { getConversationsRequest, getUnreadMessagesCountRequest } from '../api/messages'
+import {
+  createMessageRequest,
+  getConversationRequest,
+  getConversationsRequest,
+  getUnreadMessagesCountRequest,
+} from '../api/messages'
 import { getNotificationsRequest, markNotificationReadRequest } from '../api/notifications'
+import { OPEN_MESSAGE_DOCK_EVENT } from '../lib/messageDock'
 
 vi.mock('../hooks/useAuth', () => ({
   useAuth: () => ({
@@ -26,6 +32,8 @@ vi.mock('../hooks/useNotifications', () => ({
 }))
 
 vi.mock('../api/messages', () => ({
+  createMessageRequest: vi.fn(),
+  getConversationRequest: vi.fn(),
   getConversationsRequest: vi.fn(),
   getUnreadMessagesCountRequest: vi.fn(),
 }))
@@ -63,6 +71,36 @@ describe('Layout', () => {
     vi.clearAllMocks()
     getUnreadMessagesCountRequest.mockResolvedValue({ data: { data: { unreadCount: 2 } } })
     getConversationsRequest.mockResolvedValue({ data: { data: [] } })
+    getConversationRequest.mockResolvedValue({
+      data: {
+        data: {
+          id: 12,
+          participant: { id: 2, name: 'Amine EL IDRISSI', avatar: null },
+          messages: [
+            {
+              id: 31,
+              body: 'Bonjour depuis YaZoo',
+              isOwn: false,
+              createdAt: '2026-08-01T18:00:00.000Z',
+            },
+          ],
+        },
+      },
+    })
+    createMessageRequest.mockResolvedValue({
+      data: {
+        data: {
+          id: 32,
+          body: 'Bonjour Amine',
+          isOwn: true,
+          createdAt: '2026-08-01T18:01:00.000Z',
+        },
+        conversation: {
+          id: 12,
+          participant: { id: 2, name: 'Amine EL IDRISSI', avatar: null },
+        },
+      },
+    })
     getNotificationsRequest.mockResolvedValue({
       data: {
         data: [
@@ -140,6 +178,36 @@ describe('Layout', () => {
 
     await user.click(within(dialog).getByRole('button', { name: 'Fermer le menu' }))
     expect(within(dock).queryByRole('dialog', { name: 'Messages' })).not.toBeInTheDocument()
+  })
+
+  it('ouvre une conversation dans le dock et envoie le message sans changer de page', async () => {
+    const user = userEvent.setup()
+
+    renderLayout()
+
+    globalThis.dispatchEvent(new CustomEvent(OPEN_MESSAGE_DOCK_EVENT, {
+      detail: {
+        conversation: {
+          id: 12,
+          participant: { id: 2, name: 'Amine EL IDRISSI', avatar: null },
+          messages: [],
+        },
+      },
+    }))
+
+    const dock = screen.getByTestId('desktop-messages-dock')
+
+    await waitFor(() => {
+      expect(getConversationRequest).toHaveBeenCalledWith(12)
+    })
+
+    expect(await within(dock).findByText('Bonjour depuis YaZoo')).toBeInTheDocument()
+    await user.type(within(dock).getByPlaceholderText('Ecrivez votre message...'), 'Bonjour Amine')
+    await user.click(within(dock).getByRole('button', { name: 'Envoyer' }))
+
+    expect(createMessageRequest).toHaveBeenCalledWith(12, { body: 'Bonjour Amine' })
+    expect(await within(dock).findByText('Bonjour Amine')).toBeInTheDocument()
+    expect(screen.getByText('Feed content')).toBeInTheDocument()
   })
 
   it('aligne les actions flottantes desktop et utilise le fallback professionnel', () => {

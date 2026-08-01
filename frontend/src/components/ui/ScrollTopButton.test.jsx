@@ -41,6 +41,8 @@ describe('ScrollTopButton', () => {
     const button = screen.getByRole('button', { name: /haut/i })
 
     expect(button).toHaveClass('pointer-events-none', 'opacity-0', 'xl:left-[6.5rem]')
+    expect(button).toHaveClass('dark:bg-[linear-gradient(135deg,rgba(124,58,237,0.98),rgba(76,29,149,0.98))]', 'dark:text-white')
+    expect(button).not.toHaveTextContent(/haut/i)
 
     globalThis.scrollY = 240
     fireEvent.scroll(globalThis)

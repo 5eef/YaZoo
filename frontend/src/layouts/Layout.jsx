@@ -2,7 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router'
 import PropTypes from 'prop-types'
 
-import { getConversationsRequest, getUnreadMessagesCountRequest } from '../api/messages'
+import {
+  createMessageRequest,
+  getConversationRequest,
+  getConversationsRequest,
+  getUnreadMessagesCountRequest,
+} from '../api/messages'
 import {
   getNotificationsRequest,
   markAllNotificationsReadRequest,
@@ -25,7 +30,9 @@ import { useNotifications } from '../hooks/useNotifications'
 import { asArray, extractDataArray, extractDataObject } from '../utils/apiData'
 import { formatDate } from '../utils/formatDate'
 import { formatBadgeCount } from '../utils/formatBadgeCount'
+import { getErrorMessage } from '../utils/getErrorMessage'
 import { sortMessageConversations } from '../utils/messages'
+import { OPEN_MESSAGE_DOCK_EVENT } from '../lib/messageDock'
 
 function Layout() {
   const navigate = useNavigate()
@@ -37,6 +44,9 @@ function Layout() {
   const [messagePreview, setMessagePreview] = useState([])
   const [isMessagesOpen, setIsMessagesOpen] = useState(false)
   const [isMessagesLoading, setIsMessagesLoading] = useState(false)
+  const [activeDockConversation, setActiveDockConversation] = useState(null)
+  const [dockConversationError, setDockConversationError] = useState('')
+  const [isDockConversationLoading, setIsDockConversationLoading] = useState(false)
   const desktopMessagesDockRef = useRef(null)
   const [notificationPreview, setNotificationPreview] = useState([])
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false)
@@ -241,6 +251,85 @@ function Layout() {
     }
   }, [isAuthenticated])
 
+  const openDockConversation = useCallback(async (conversationOrId) => {
+    const conversationId = conversationOrId?.id ?? conversationOrId
+
+    if (!conversationId) {
+      return
+    }
+
+    if (conversationOrId?.id) {
+      setActiveDockConversation(conversationOrId)
+    }
+
+    setIsMessagesOpen(true)
+    setIsNotificationsOpen(false)
+    setIsDockConversationLoading(true)
+    setDockConversationError('')
+
+    try {
+      const response = await getConversationRequest(conversationId)
+      const conversation = extractDataObject(response, null)
+
+      if (!conversation?.id) {
+        throw new Error(t('messages.loadConversationError'))
+      }
+
+      setActiveDockConversation(conversation)
+      setMessagePreview((current) => upsertConversationPreview(current, conversation))
+      await Promise.allSettled([refreshUnreadMessagesCount(), refreshUnreadCount()])
+    } catch (error) {
+      setDockConversationError(getErrorMessage(error, t('messages.loadConversationError')))
+    } finally {
+      setIsDockConversationLoading(false)
+    }
+  }, [refreshUnreadCount, refreshUnreadMessagesCount, t])
+
+  const handleSendDockMessage = useCallback(async (conversationId, body) => {
+    const response = await createMessageRequest(conversationId, { body })
+    const message = response.data?.data
+    const conversationSummary = response.data?.conversation
+
+    if (!message?.id) {
+      throw new Error(t('messages.sendError'))
+    }
+
+    setActiveDockConversation((current) => ({
+      ...(current ?? {}),
+      ...(conversationSummary ?? {}),
+      messages: appendUniqueDockMessage(current?.messages, message),
+      latestMessage: message,
+      latest_message: message,
+    }))
+    setMessagePreview((current) => upsertConversationPreview(current, {
+      ...(conversationSummary ?? {}),
+      id: conversationId,
+      latestMessage: message,
+      latest_message: message,
+    }))
+    await Promise.allSettled([refreshUnreadMessagesCount(), refreshUnreadCount()])
+
+    return message
+  }, [refreshUnreadCount, refreshUnreadMessagesCount, t])
+
+  const handleBackFromConversation = useCallback(() => {
+    setActiveDockConversation(null)
+    setDockConversationError('')
+    void loadMessagePreview()
+  }, [loadMessagePreview])
+
+  useEffect(() => {
+    const handleOpenMessageDock = (event) => {
+      void openDockConversation(event.detail?.conversation)
+    }
+
+    globalThis.addEventListener(OPEN_MESSAGE_DOCK_EVENT, handleOpenMessageDock)
+
+    return () => {
+      globalThis.removeEventListener(OPEN_MESSAGE_DOCK_EVENT, handleOpenMessageDock)
+    }
+  }, [openDockConversation])
+
   const handleToggleMessages = async () => {
     const nextOpen = !isMessagesOpen
 
@@ -248,6 +337,8 @@ function Layout() {
     setIsNotificationsOpen(false)
 
     if (nextOpen) {
+      setActiveDockConversation(null)
+      setDockConversationError('')
       await loadMessagePreview()
     }
   }
@@ -484,11 +575,17 @@ function Layout() {
       />
       {!location.pathname.startsWith('/messages') ? (
         <DesktopFloatingActions
+          activeConversation={activeDockConversation}
           conversations={messagePreview}
+          conversationError={dockConversationError}
+          isConversationLoading={isDockConversationLoading}
           isLoading={isMessagesLoading}
           isMessagesOpen={isMessagesOpen}
           isRtl={isRtl}
           marketplacePublishing={user?.marketplacePublishing}
+          onBackFromConversation={handleBackFromConversation}
+          onOpenConversation={openDockConversation}
+          onSendMessage={handleSendDockMessage}
           onToggleMessages={handleToggleMessages}
           refObject={desktopMessagesDockRef}
           t={t}
@@ -844,6 +941,28 @@ function upsertNotificationPreview(currentNotifications, nextNotification) {
   )
 
   return [nextNotification, ...remainingNotifications].slice(0, 8)
+}
+
+function upsertConversationPreview(currentConversations, nextConversation) {
+  if (!nextConversation?.id) {
+    return asArray(currentConversations)
+  }
+
+  const remainingConversations = asArray(currentConversations).filter(
+    (conversation) => conversation.id !== nextConversation.id,
+  )
+
+  return sortMessageConversations([nextConversation, ...remainingConversations]).slice(0, 6)
+}
+
+function appendUniqueDockMessage(messages, nextMessage) {
+  const safeMessages = asArray(messages)
+
+  if (!nextMessage?.id || safeMessages.some((message) => message.id === nextMessage.id)) {
+    return safeMessages
+  }
+
+  return [...safeMessages, nextMessage]
 }
 
 function InlinePill({ children, tone = 'stone' }) {
