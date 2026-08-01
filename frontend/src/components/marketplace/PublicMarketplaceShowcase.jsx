@@ -62,7 +62,7 @@ function PublicMarketplaceShowcase() {
       id="marketplace-preview"
       aria-labelledby="marketplace-preview-title"
       aria-busy={isLoading}
-      className="mt-8 min-w-0 max-w-full overflow-hidden rounded-[30px] border border-white/80 bg-white/90 p-5 shadow-[0_20px_60px_rgba(124,58,237,0.08)] backdrop-blur dark:border-violet-300/16 dark:bg-[linear-gradient(135deg,_rgba(5,3,10,0.98),_rgba(30,15,52,0.92))] sm:rounded-[34px] sm:p-7 lg:p-8"
+      className="mb-8 mt-8 min-w-0 max-w-full overflow-hidden rounded-[30px] border border-white/80 bg-white/90 p-5 shadow-[0_20px_60px_rgba(124,58,237,0.08)] backdrop-blur dark:border-violet-300/16 dark:bg-[linear-gradient(135deg,_rgba(5,3,10,0.98),_rgba(30,15,52,0.92))] sm:rounded-[34px] sm:p-7 lg:p-8"
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
