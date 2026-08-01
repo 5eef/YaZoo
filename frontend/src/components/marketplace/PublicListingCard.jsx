@@ -49,12 +49,12 @@ function PublicListingCard({ listing, locale, section, t }) {
           </div>
           <div className="flex shrink-0 flex-col items-end gap-1.5">
             {professionalBadgeKey ? (
-              <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-400/18 dark:text-emerald-100">
+              <Badge className="border border-emerald-200 bg-emerald-100 text-emerald-900 dark:border-emerald-300/30 dark:bg-emerald-950/80 dark:text-emerald-100">
                 {t(professionalBadgeKey)}
               </Badge>
             ) : null}
             {badgeKey ? (
-              <Badge className="bg-violet-100 text-violet-800 dark:bg-violet-400/18 dark:text-violet-100">
+              <Badge className="border border-violet-200 bg-violet-100 text-violet-900 dark:border-violet-300/30 dark:bg-violet-950/80 dark:text-violet-100">
                 {t(badgeKey)}
               </Badge>
             ) : null}
@@ -99,7 +99,7 @@ function PublicListingCard({ listing, locale, section, t }) {
 
 function Badge({ children, className }) {
   return (
-    <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${className}`}>
+    <span className={`inline-flex max-w-full items-center whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold leading-none ${className}`}>
       {children}
     </span>
   )

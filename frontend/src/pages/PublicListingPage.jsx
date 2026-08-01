@@ -202,12 +202,12 @@ function PublicListingPage() {
 
               <div className="mt-4 flex flex-wrap gap-2">
                 {professionalBadgeKey ? (
-                  <DetailBadge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-400/18 dark:text-emerald-100">
+                  <DetailBadge className="border border-emerald-200 bg-emerald-100 text-emerald-900 dark:border-emerald-300/30 dark:bg-emerald-950/80 dark:text-emerald-100">
                     {t(professionalBadgeKey)}
                   </DetailBadge>
                 ) : null}
                 {badgeKey ? (
-                  <DetailBadge className="bg-violet-100 text-violet-800 dark:bg-violet-400/18 dark:text-violet-100">
+                  <DetailBadge className="border border-violet-200 bg-violet-100 text-violet-900 dark:border-violet-300/30 dark:bg-violet-950/80 dark:text-violet-100">
                     {t(badgeKey)}
                   </DetailBadge>
                 ) : null}
@@ -312,7 +312,7 @@ function buildListingStructuredEntity(section, listing, description, canonicalUr
 
 function DetailBadge({ children, className }) {
   return (
-    <span className={`rounded-full px-3 py-1.5 text-xs font-semibold ${className}`}>
+    <span className={`inline-flex max-w-full items-center whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold leading-none ${className}`}>
       {children}
     </span>
   )
