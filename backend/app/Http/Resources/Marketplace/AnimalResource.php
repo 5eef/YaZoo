@@ -22,6 +22,8 @@ class AnimalResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $canManage = ($request->user()?->is_admin ?? false) || ($request->user()?->is($this->user) ?? false);
+        $assets = $this->relationLoaded('mediaAssets') ? $this->mediaAssets : collect();
         $professionalBadge = $this->user
             ? app(MarketplacePublishingResolver::class)->badgeFor($this->user, 'animals')
             : null;
@@ -36,9 +38,12 @@ class AnimalResource extends JsonResource
             'sex' => $this->sex,
             'location' => $this->location,
             ...MarketplaceContact::payload($this->resource, $request, $this->isPubliclyVisible()),
-            'photoPath' => $this->photo_url,
+            'photoAssetId' => $this->when($canManage, $assets->firstWhere('role', 'photo_url')?->id),
             'photoUrl' => MarketplaceMedia::resolveUrl($this->photo_url),
-            'galleryPaths' => $this->gallery_urls ?? [],
+            'galleryAssetIds' => $this->when(
+                $canManage,
+                $assets->where('role', 'gallery')->pluck('id')->values()->all(),
+            ),
             'galleryUrls' => MarketplaceMedia::resolveUrls($this->gallery_urls),
             'price' => $this->price !== null ? (float) $this->price : null,
             'isForAdoption' => (bool) $this->is_for_adoption,
@@ -47,14 +52,14 @@ class AnimalResource extends JsonResource
             'acceptsAnimalRules' => (bool) $this->accepts_animal_rules,
             'sellerType' => $this->seller_type ?? 'individual',
             'origin' => $this->origin,
-            'identificationNumber' => $this->identification_number,
-            'healthCertificatePath' => $this->health_certificate_path,
-            'vaccinationBookPath' => $this->vaccination_book_path,
-            'onssaAuthorizationNumber' => $this->onssa_authorization_number,
+            'identificationNumber' => $this->when($canManage, $this->identification_number),
+            'healthCertificateAvailable' => filled($this->health_certificate_path),
+            'vaccinationBookAvailable' => filled($this->vaccination_book_path),
+            'onssaAuthorizationNumber' => $this->when($canManage, $this->onssa_authorization_number),
             'legalStatus' => $this->legal_status ?? Animal::LEGAL_STATUS_PENDING_REVIEW,
             'documentaryStatus' => $this->documentaryStatus(),
             'moderationNote' => $this->when(
-                ($request->user()?->is_admin ?? false) || ($request->user()?->is($this->user) ?? false),
+                $canManage,
                 $this->moderation_note,
             ),
             'moderatedAt' => $this->moderated_at?->toISOString(),

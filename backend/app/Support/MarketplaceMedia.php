@@ -2,8 +2,12 @@
 
 namespace App\Support;
 
+use App\Models\MediaAsset;
+use App\Models\User;
+use App\Services\MediaAssetService;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
-use Throwable;
+use Illuminate\Support\Collection;
 
 class MarketplaceMedia
 {
@@ -13,78 +17,82 @@ class MarketplaceMedia
      * @param  array<string, mixed>  $validated
      * @return array<string, mixed>
      */
-    public static function prepareUploadedMedia(
+    public static function prepareOwnedMedia(
         Request $request,
         array $validated,
+        User $owner,
+        ?Model $current,
         string $mainField,
         string $mainFileField,
+        string $mainAssetField,
         string $directory,
-        array &$uploadedPaths = [],
     ): array {
-        $existingMain = self::normalizePath($validated[$mainField] ?? null);
-        $existingGallery = collect($validated['gallery_urls'] ?? [])
-            ->map(fn ($value) => self::normalizePath($value))
-            ->filter()
-            ->values();
+        $assets = app(MediaAssetService::class);
+        $controlsReferences = $request->has($mainAssetField)
+            || $request->has('gallery_asset_ids')
+            || $request->has($mainField)
+            || $request->has('gallery_urls');
+        $externalMain = isset($validated[$mainField]) ? trim((string) $validated[$mainField]) : null;
+        $externalGallery = collect($validated['gallery_urls'] ?? [])->filter();
+        $currentAssets = $current?->relationLoaded('mediaAssets')
+            ? $current->getRelation('mediaAssets')
+            : ($current?->mediaAssets()->get() ?? collect());
 
-        $storedPaths = [];
+        $mainAsset = $request->filled($mainAssetField)
+            ? $assets->ownedReference($owner, $request->string($mainAssetField)->toString(), $current)
+            : ($controlsReferences ? null : $currentAssets->firstWhere('role', $mainField));
+        $galleryAssets = $controlsReferences
+            ? $assets->ownedReferences($owner, $request->input('gallery_asset_ids', []), $current)
+            : $currentAssets->where('role', 'gallery')->values();
+        $createdAssets = collect();
 
-        try {
-            $uploadedMain = $request->hasFile($mainFileField)
-                ? MediaStorage::storeUploadedFile($request->file($mainFileField), $directory)
-                : null;
-
-            if ($uploadedMain) {
-                $storedPaths[] = $uploadedMain;
-            }
-
-            $uploadedGallery = collect($request->file('gallery_files', []))
-                ->filter()
-                ->map(function ($file) use ($directory, &$storedPaths): string {
-                    $path = MediaStorage::storeUploadedFile($file, $directory);
-                    $storedPaths[] = $path;
-
-                    return $path;
-                })
-                ->values();
-        } catch (Throwable $exception) {
-            MediaStorage::deleteStoredFiles($storedPaths);
-
-            throw $exception;
+        if ($request->hasFile($mainFileField)) {
+            $mainAsset = $assets->registerUpload($owner, $request->file($mainFileField), $directory, 'image');
+            $createdAssets->push($mainAsset);
         }
 
-        $gallery = collect();
-
-        if ($uploadedMain) {
-            $gallery->push($uploadedMain);
-        } elseif ($existingMain) {
-            $gallery->push($existingMain);
+        foreach ($request->file('gallery_files', []) as $file) {
+            $asset = $assets->registerUpload($owner, $file, $directory, 'image');
+            $galleryAssets->push($asset);
+            $createdAssets->push($asset);
         }
 
-        $gallery = $gallery
-            ->merge($existingGallery)
-            ->merge($uploadedGallery)
+        /** @var Collection<int, MediaAsset> $desiredAssets */
+        $desiredAssets = collect([$mainAsset])
+            ->merge($galleryAssets)
             ->filter()
-            ->unique()
+            ->unique('id')
             ->take(6)
             ->values();
 
-        $validated[$mainField] = $uploadedMain ?: $existingMain ?: $gallery->first();
-        $validated['gallery_urls'] = $gallery->all();
-
-        $referencedPaths = collect([$validated[$mainField], ...$validated['gallery_urls']])
-            ->filter()
-            ->unique();
-        $uploadedPaths = collect($storedPaths)
-            ->filter(fn (string $path): bool => $referencedPaths->contains($path))
-            ->values()
-            ->all();
-
-        MediaStorage::deleteStoredFiles(
-            collect($storedPaths)->diff($uploadedPaths)->values()->all(),
+        unset(
+            $validated[$mainAssetField],
+            $validated['gallery_asset_ids'],
+            $validated[$mainFileField],
+            $validated['gallery_files'],
+            $validated[$mainField],
+            $validated['gallery_urls'],
         );
 
-        return $validated;
+        $legacyMain = $current?->getAttribute($mainField);
+        $legacyGallery = collect($current?->getAttribute('gallery_urls') ?? []);
+        $mainPath = $mainAsset?->path ?? $externalMain ?? ($controlsReferences ? null : $legacyMain);
+        $galleryPaths = $desiredAssets->pluck('path')->merge($externalGallery);
+
+        if (! $controlsReferences) {
+            $galleryPaths = collect([$mainPath])
+                ->merge($legacyGallery)
+                ->merge($galleryPaths);
+        }
+
+        $validated[$mainField] = $mainPath ?: $galleryPaths->filter()->first();
+        $validated['gallery_urls'] = $galleryPaths->filter()->unique()->take(6)->values()->all();
+
+        return [
+            'payload' => $validated,
+            'assets' => $desiredAssets,
+            'created_assets' => $createdAssets,
+        ];
     }
 
     /**
@@ -118,19 +126,5 @@ class MarketplaceMedia
     public static function deleteStoredFiles(array $paths): void
     {
         MediaStorage::deleteStoredFiles($paths);
-    }
-
-    /**
-     * Normalize an incoming media path.
-     */
-    protected static function normalizePath(mixed $value): ?string
-    {
-        if (! is_string($value)) {
-            return null;
-        }
-
-        $trimmed = trim($value);
-
-        return $trimmed !== '' ? $trimmed : null;
     }
 }

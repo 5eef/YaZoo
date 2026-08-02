@@ -44,7 +44,7 @@ class CommentController extends Controller
             );
         }
 
-        $comment->load('user:id,name,avatar,city,country', 'replies.user:id,name,avatar,city,country');
+        $this->loadCommentState($comment);
 
         return CommentResource::make($comment)
             ->response()
@@ -56,6 +56,9 @@ class CommentController extends Controller
      */
     public function react(Request $request, Comment $comment): JsonResponse
     {
+        $comment->loadMissing('post');
+        $this->authorize('interact', $comment->post);
+
         abort_unless(
             $request->user()->is($comment->user) || (bool) $request->user()->is_admin,
             403,
@@ -69,8 +72,19 @@ class CommentController extends Controller
             'reaction' => $validated['reaction'] ?? null,
         ]);
 
-        $comment->load('user:id,name,avatar,city,country', 'replies.user:id,name,avatar,city,country');
+        $this->loadCommentState($comment);
 
         return CommentResource::make($comment)->response();
+    }
+
+    private function loadCommentState(Comment $comment): void
+    {
+        $comment->load([
+            'user:id,name,avatar,city,country',
+            'replies' => fn ($query) => $query
+                ->oldest()
+                ->limit(3)
+                ->with('user:id,name,avatar,city,country'),
+        ])->loadCount('replies');
     }
 }

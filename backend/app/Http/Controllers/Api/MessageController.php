@@ -83,9 +83,16 @@ class MessageController extends Controller
      */
     protected function loadConversationSummary(Conversation $conversation, int $userId): void
     {
+        $participant = fn ($query) => $query
+            ->select('id', 'name', 'email', 'phone', 'phone_verified_at', 'avatar', 'city', 'country')
+            ->withExists([
+                'followers as is_followed_by_viewer' => fn ($followers) => $followers
+                    ->where('follower_user_id', $userId),
+            ]);
+
         $conversation->load([
-            'participantOne:id,name,email,phone,avatar,city,country',
-            'participantTwo:id,name,email,phone,avatar,city,country',
+            'participantOne' => $participant,
+            'participantTwo' => $participant,
             'latestMessage.sender:id,name,avatar',
         ])->loadCount([
             'messages as unread_messages_count' => fn ($query) => $query

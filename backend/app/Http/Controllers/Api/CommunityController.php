@@ -32,6 +32,7 @@ class CommunityController extends Controller
         $pagination = PaginationData::fromRequest($request, 12, 50);
 
         $communities = Community::query()
+            ->visibleTo($request->user())
             ->with([
                 'user:id,name,avatar',
                 'memberships' => fn ($query) => $query->where('user_id', $request->user()->id),
@@ -316,8 +317,7 @@ class CommunityController extends Controller
     protected function validatedCommunityData(
         StoreCommunityRequest|UpdateCommunityRequest $request,
         array &$uploadedPaths = [],
-    ): array
-    {
+    ): array {
         $data = $request->validated();
         unset($data['image_file']);
 

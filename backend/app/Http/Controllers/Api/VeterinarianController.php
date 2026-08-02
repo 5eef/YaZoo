@@ -8,8 +8,7 @@ use App\Http\Requests\Marketplace\StoreVeterinarianRequest;
 use App\Http\Requests\Marketplace\UpdateVeterinarianRequest;
 use App\Http\Resources\Marketplace\VeterinarianResource;
 use App\Models\Veterinarian;
-use App\Support\MarketplaceMedia;
-use App\Support\MediaStorage;
+use App\Services\MediaAssetService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -17,6 +16,10 @@ use Throwable;
 
 class VeterinarianController extends Controller
 {
+    public function __construct(
+        private readonly MediaAssetService $mediaAssets,
+    ) {}
+
     public function index(Request $request)
     {
         $pagination = PaginationData::fromRequest($request, 12, 50);
@@ -25,8 +28,13 @@ class VeterinarianController extends Controller
             ->with([
                 'user:id,name,email,phone,phone_verified_at,avatar,city,country',
                 'user.latestProfessionalVerification.reviewer:id,is_admin',
+                'mediaAssets',
             ])
-            ->withCount(['favorites as favorites_count'])
+            ->withCount([
+                'favorites as favorites_count',
+                'appointmentReviews as reviews_count',
+            ])
+            ->withAvg('appointmentReviews as average_rating', 'rating')
             ->when($request->user(), function ($query, $user): void {
                 $query->withExists([
                     'favorites as is_favorited' => fn ($favoriteQuery) => $favoriteQuery->where('user_id', $user->id),
@@ -80,21 +88,31 @@ class VeterinarianController extends Controller
     {
         $this->authorize('create', Veterinarian::class);
 
-        $uploadedPaths = [];
+        $mediaAsset = null;
 
         try {
-            $validated = $this->prepareMedia($request, $request->validated(), $uploadedPaths);
-            $veterinarian = DB::transaction(fn (): Veterinarian => Veterinarian::query()->create([
-                ...$validated,
-                'user_id' => $request->user()->id,
-                'is_active' => true,
-                'moderation_status' => Veterinarian::MODERATION_STATUS_PENDING_REVIEW,
-                'moderation_note' => null,
-                'moderated_by' => null,
-                'moderated_at' => null,
-            ]));
+            [$validated, $mediaAsset] = $this->prepareMedia($request, $request->validated());
+            $veterinarian = DB::transaction(function () use ($request, $validated, $mediaAsset): Veterinarian {
+                $veterinarian = Veterinarian::query()->create([
+                    ...$validated,
+                    'user_id' => $request->user()->id,
+                    'is_active' => true,
+                    'moderation_status' => Veterinarian::MODERATION_STATUS_PENDING_REVIEW,
+                    'moderation_note' => null,
+                    'moderated_by' => null,
+                    'moderated_at' => null,
+                ]);
+
+                if ($mediaAsset) {
+                    $this->mediaAssets->attach($mediaAsset, $veterinarian, 'image_path');
+                }
+
+                return $veterinarian;
+            });
         } catch (Throwable $exception) {
-            MarketplaceMedia::deleteStoredFiles($uploadedPaths);
+            if ($mediaAsset) {
+                $this->mediaAssets->discardUnattached($mediaAsset, $request->user());
+            }
 
             throw $exception;
         }
@@ -120,11 +138,15 @@ class VeterinarianController extends Controller
     {
         $this->authorize('update', $veterinarian);
 
-        $oldImagePath = $veterinarian->image_path;
-        $uploadedPaths = [];
+        $veterinarian->loadMissing('user', 'mediaAssets');
+        $owner = $veterinarian->user;
+        $mediaAsset = null;
+        $changesMedia = $request->hasFile('image')
+            || $request->has('image_asset_id')
+            || $request->has('image_path');
 
         try {
-            $validated = $this->prepareMedia($request, $request->validated(), $uploadedPaths);
+            [$validated, $mediaAsset] = $this->prepareMedia($request, $request->validated(), $veterinarian);
 
             if (! $request->user()->is_admin) {
                 $validated['moderation_status'] = Veterinarian::MODERATION_STATUS_PENDING_REVIEW;
@@ -134,15 +156,17 @@ class VeterinarianController extends Controller
             }
 
             DB::transaction(fn () => $veterinarian->update($validated));
+
+            if ($changesMedia) {
+                $this->mediaAssets->replaceRole($veterinarian, $owner, 'image_path', $mediaAsset);
+            }
         } catch (Throwable $exception) {
-            MarketplaceMedia::deleteStoredFiles($uploadedPaths);
+            if ($mediaAsset) {
+                $this->mediaAssets->discardUnattached($mediaAsset, $owner);
+            }
 
             throw $exception;
         }
-
-        MarketplaceMedia::deleteStoredFiles(
-            collect([$oldImagePath])->filter()->diff([$veterinarian->image_path])->values()->all(),
-        );
 
         return VeterinarianResource::make($this->loadSocialSignals($veterinarian));
     }
@@ -151,9 +175,10 @@ class VeterinarianController extends Controller
     {
         $this->authorize('delete', $veterinarian);
 
-        $imagePath = $veterinarian->image_path;
+        $veterinarian->loadMissing('user');
+        $owner = $veterinarian->user;
         DB::transaction(fn () => $veterinarian->delete());
-        MarketplaceMedia::deleteStoredFiles([$imagePath]);
+        $this->mediaAssets->deleteAttached($veterinarian, $owner);
 
         return response()->json([
             'message' => __('messages.marketplace.veterinarian_deleted'),
@@ -164,15 +189,33 @@ class VeterinarianController extends Controller
      * @param  array<string, mixed>  $validated
      * @return array<string, mixed>
      */
-    protected function prepareMedia(Request $request, array $validated, array &$uploadedPaths = []): array
+    protected function prepareMedia(Request $request, array $validated, ?Veterinarian $current = null): array
     {
+        $owner = $current?->user ?? $request->user();
+        $asset = null;
+
+        unset($validated['image'], $validated['image_asset_id']);
+
         if ($request->hasFile('image')) {
-            $uploaded = MediaStorage::storeUploadedFile($request->file('image'), 'marketplace/veterinarians');
-            $validated['image_path'] = $uploaded;
-            $uploadedPaths[] = $uploaded;
+            $asset = $this->mediaAssets->registerUpload(
+                $owner,
+                $request->file('image'),
+                'marketplace/veterinarians',
+                'image',
+            );
+            $validated['image_path'] = $asset->path;
+        } elseif ($request->filled('image_asset_id')) {
+            $asset = $this->mediaAssets->ownedReference(
+                $owner,
+                $request->string('image_asset_id')->toString(),
+                $current,
+            );
+            $validated['image_path'] = $asset->path;
+        } elseif (! $request->has('image_path')) {
+            unset($validated['image_path']);
         }
 
-        return $validated;
+        return [$validated, $asset];
     }
 
     private function loadSocialSignals(Veterinarian $veterinarian): Veterinarian
@@ -180,8 +223,13 @@ class VeterinarianController extends Controller
         $veterinarian->load([
             'user:id,name,email,phone,phone_verified_at,avatar,city,country',
             'user.latestProfessionalVerification.reviewer:id,is_admin',
+            'mediaAssets',
         ])
-            ->loadCount(['favorites as favorites_count']);
+            ->loadCount([
+                'favorites as favorites_count',
+                'appointmentReviews as reviews_count',
+            ])
+            ->loadAvg('appointmentReviews as average_rating', 'rating');
 
         if ($user = request()->user()) {
             $veterinarian->loadExists([

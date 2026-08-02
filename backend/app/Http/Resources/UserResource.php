@@ -39,9 +39,7 @@ class UserResource extends JsonResource
             'suspendedReason' => $canViewPrivateDetails ? $this->suspended_reason : null,
             'bannedReason' => $canViewPrivateDetails ? $this->banned_reason : null,
             'isPhoneVerified' => $this->hasVerifiedPhone(),
-            'isFollowing' => $request->user()
-                ? $this->followers()->where('follower_user_id', $request->user()->id)->exists()
-                : false,
+            'isFollowing' => (bool) ($this->is_followed_by_viewer ?? false),
             'followersCount' => $this->followers_count ?? 0,
             'followingCount' => $this->following_count ?? 0,
             'profileUrl' => "/profile/{$this->id}",

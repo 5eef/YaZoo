@@ -23,7 +23,7 @@ class UserController extends Controller
 
         $pagination = PaginationData::fromRequest($request, 15, 50);
 
-        return UserResource::collection($this->users->paginate($pagination->perPage));
+        return UserResource::collection($this->users->paginate($pagination->perPage, $request->user()->id));
     }
 
     public function store(StoreUserRequest $request)
@@ -41,6 +41,10 @@ class UserController extends Controller
         $users = User::query()
             ->whereKeyNot($viewer->id)
             ->withCount(['followers', 'following'])
+            ->withExists([
+                'followers as is_followed_by_viewer' => fn ($followers) => $followers
+                    ->where('follower_user_id', $viewer->id),
+            ])
             ->latest()
             ->limit($limit)
             ->get();

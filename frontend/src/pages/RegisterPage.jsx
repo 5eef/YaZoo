@@ -239,7 +239,7 @@ function RegisterPage() {
 
           <div className="my-5 flex items-center gap-3">
             <div className="h-px flex-1 bg-violet-100 dark:bg-violet-300/14" />
-            <span className="text-xs uppercase tracking-[0.16em] text-stone-400 dark:text-violet-100/50">
+            <span className="text-xs uppercase tracking-[0.16em] text-stone-600 dark:text-violet-100/75">
               {t('common.or')}
             </span>
             <div className="h-px flex-1 bg-violet-100 dark:bg-violet-300/14" />

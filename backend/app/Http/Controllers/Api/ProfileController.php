@@ -9,7 +9,7 @@ use App\Http\Resources\Profile\UserProfileResource;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Notifications\UserFollowedNotification;
-use App\Support\MediaStorage;
+use App\Services\MediaAssetService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -19,6 +19,10 @@ use Throwable;
 
 class ProfileController extends Controller
 {
+    public function __construct(
+        private readonly MediaAssetService $mediaAssets,
+    ) {}
+
     /**
      * Display the given user's public profile.
      */
@@ -45,8 +49,8 @@ class ProfileController extends Controller
                 'remove_cover_photo',
             ])
             ->all();
-        $previousMedia = collect([$user->avatar, $user->cover_photo])->filter()->unique();
-        $uploadedPaths = [];
+        $newAvatarAsset = null;
+        $newCoverAsset = null;
 
         if ($request->boolean('remove_avatar') && ! $request->hasFile('avatar_file')) {
             $updates['avatar'] = null;
@@ -58,19 +62,23 @@ class ProfileController extends Controller
 
         try {
             if ($request->hasFile('avatar_file')) {
-                $updates['avatar'] = MediaStorage::storeUploadedFile(
+                $newAvatarAsset = $this->mediaAssets->registerUpload(
+                    $user,
                     $request->file('avatar_file'),
                     'profiles/avatars',
+                    'image',
                 );
-                $uploadedPaths[] = $updates['avatar'];
+                $updates['avatar'] = $newAvatarAsset->path;
             }
 
             if ($request->hasFile('cover_photo_file')) {
-                $updates['cover_photo'] = MediaStorage::storeUploadedFile(
+                $newCoverAsset = $this->mediaAssets->registerUpload(
+                    $user,
                     $request->file('cover_photo_file'),
                     'profiles/covers',
+                    'image',
                 );
-                $uploadedPaths[] = $updates['cover_photo'];
+                $updates['cover_photo'] = $newCoverAsset->path;
             }
 
             $emailChanged = isset($updates['email'])
@@ -87,14 +95,24 @@ class ProfileController extends Controller
                     $user->tokens()->delete();
                 }
             });
+
+            if (array_key_exists('avatar', $updates)) {
+                $this->mediaAssets->replaceRole($user, $user, 'avatar', $newAvatarAsset);
+            }
+
+            if (array_key_exists('cover_photo', $updates)) {
+                $this->mediaAssets->replaceRole($user, $user, 'cover_photo', $newCoverAsset);
+            }
         } catch (Throwable $exception) {
-            MediaStorage::deleteStoredFiles($uploadedPaths);
+            if ($newAvatarAsset) {
+                $this->mediaAssets->discardUnattached($newAvatarAsset, $user);
+            }
+            if ($newCoverAsset) {
+                $this->mediaAssets->discardUnattached($newCoverAsset, $user);
+            }
 
             throw $exception;
         }
-
-        $currentMedia = collect([$user->avatar, $user->cover_photo])->filter()->unique();
-        MediaStorage::deleteStoredFiles($previousMedia->diff($currentMedia)->values()->all());
 
         $this->loadProfileAggregates($user);
 
@@ -146,6 +164,10 @@ class ProfileController extends Controller
 
         $followers = $user->followers()
             ->withCount(['followers', 'following'])
+            ->withExists([
+                'followers as is_followed_by_viewer' => fn ($followers) => $followers
+                    ->where('follower_user_id', $request->user()->id),
+            ])
             ->orderBy('users.name')
             ->paginate($pagination->perPage);
 
@@ -159,6 +181,10 @@ class ProfileController extends Controller
 
         $following = $user->following()
             ->withCount(['followers', 'following'])
+            ->withExists([
+                'followers as is_followed_by_viewer' => fn ($followers) => $followers
+                    ->where('follower_user_id', $request->user()->id),
+            ])
             ->orderBy('users.name')
             ->paginate($pagination->perPage);
 
@@ -181,6 +207,13 @@ class ProfileController extends Controller
 
         if (Schema::hasTable('professional_verifications')) {
             $user->load('latestProfessionalVerification');
+        }
+
+        if ($viewer = request()->user()) {
+            $user->loadExists([
+                'followers as is_followed_by_viewer' => fn ($followers) => $followers
+                    ->where('follower_user_id', $viewer->id),
+            ]);
         }
     }
 

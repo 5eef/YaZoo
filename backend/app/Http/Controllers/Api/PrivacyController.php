@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Animal;
 use App\Models\ActivityLog;
+use App\Models\Animal;
 use App\Models\Comment;
 use App\Models\DataDeletionRequest;
 use App\Models\Favorite;
@@ -24,17 +24,17 @@ use App\Models\StoryView;
 use App\Models\Veterinarian;
 use App\Models\VeterinarianAppointment;
 use App\Models\VeterinarianAppointmentReview;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpFoundation\StreamedJsonResponse;
 
 class PrivacyController extends Controller
 {
-    public function export(Request $request): JsonResponse
+    public function export(Request $request): StreamedJsonResponse
     {
         $user = $request->user();
 
-        return response()->json([
+        return new StreamedJsonResponse([
             'message' => __('messages.privacy.export_ready'),
             'exportedAt' => now()->toISOString(),
             'profile' => [
@@ -82,6 +82,9 @@ class PrivacyController extends Controller
                 'messagesAuthoredByOthers' => 'Only messages authored by this account are included.',
                 'paymentSecrets' => 'Checkout URLs, idempotency keys and provider payloads are excluded.',
             ],
+        ], 200, [
+            'Cache-Control' => 'no-store, private',
+            'X-Accel-Buffering' => 'no',
         ]);
     }
 
@@ -90,49 +93,50 @@ class PrivacyController extends Controller
         return Post::query()
             ->where('user_id', $userId)
             ->latest()
-            ->get(['id', 'content', 'location', 'tags', 'visibility', 'created_at', 'updated_at']);
+            ->select(['id', 'content', 'location', 'tags', 'visibility', 'created_at', 'updated_at'])
+            ->cursor();
     }
 
     private function comments(int $userId)
     {
         return Comment::query()->where('user_id', $userId)->latest()
-            ->get(['id', 'post_id', 'body', 'created_at', 'updated_at']);
+            ->select(['id', 'post_id', 'body', 'created_at', 'updated_at'])->cursor();
     }
 
     private function likes(int $userId)
     {
         return Like::query()->where('user_id', $userId)->latest()
-            ->get(['id', 'likeable_type', 'likeable_id', 'created_at', 'updated_at']);
+            ->select(['id', 'likeable_type', 'likeable_id', 'created_at', 'updated_at'])->cursor();
     }
 
     private function favorites(int $userId)
     {
         return Favorite::query()->where('user_id', $userId)->latest()
-            ->get(['id', 'favoritable_type', 'favoritable_id', 'created_at', 'updated_at']);
+            ->select(['id', 'favoritable_type', 'favoritable_id', 'created_at', 'updated_at'])->cursor();
     }
 
     private function communityMemberships(int $userId)
     {
         return DB::table('community_members')->where('user_id', $userId)->orderByDesc('created_at')
-            ->get(['id', 'community_id', 'role', 'status', 'created_at', 'updated_at']);
+            ->select(['id', 'community_id', 'role', 'status', 'created_at', 'updated_at'])->cursor();
     }
 
     private function stories(int $userId)
     {
         return Story::query()->where('user_id', $userId)->latest()
-            ->get(['id', 'media_path', 'media_kind', 'content', 'location', 'expires_at', 'created_at', 'updated_at']);
+            ->select(['id', 'media_path', 'media_kind', 'content', 'location', 'expires_at', 'created_at', 'updated_at'])->cursor();
     }
 
     private function storyViews(int $userId)
     {
         return StoryView::query()->where('user_id', $userId)->latest('viewed_at')
-            ->get(['id', 'story_id', 'viewed_at', 'created_at', 'updated_at']);
+            ->select(['id', 'story_id', 'viewed_at', 'created_at', 'updated_at'])->cursor();
     }
 
     private function sentMessages(int $userId)
     {
         return Message::query()->where('user_id', $userId)->latest()
-            ->get(['id', 'conversation_id', 'body', 'read_at', 'created_at', 'updated_at']);
+            ->select(['id', 'conversation_id', 'body', 'read_at', 'created_at', 'updated_at'])->cursor();
     }
 
     private function animals(int $userId)
@@ -140,7 +144,7 @@ class PrivacyController extends Controller
         return Animal::query()
             ->where('user_id', $userId)
             ->latest()
-            ->get([
+            ->select([
                 'id',
                 'name',
                 'category',
@@ -157,7 +161,7 @@ class PrivacyController extends Controller
                 'accepts_animal_rules',
                 'created_at',
                 'updated_at',
-            ]);
+            ])->cursor();
     }
 
     private function products(int $userId)
@@ -165,7 +169,7 @@ class PrivacyController extends Controller
         return Product::query()
             ->where('user_id', $userId)
             ->latest()
-            ->get(['id', 'name', 'category', 'description', 'price', 'location', 'stock', 'listing_status', 'condition_status', 'created_at', 'updated_at']);
+            ->select(['id', 'name', 'category', 'description', 'price', 'location', 'stock', 'listing_status', 'condition_status', 'created_at', 'updated_at'])->cursor();
     }
 
     private function services(int $userId)
@@ -173,7 +177,7 @@ class PrivacyController extends Controller
         return ServiceListing::query()
             ->where('user_id', $userId)
             ->latest()
-            ->get(['id', 'type', 'title', 'description', 'animal_types', 'city', 'price', 'price_type', 'availability', 'status', 'created_at', 'updated_at']);
+            ->select(['id', 'type', 'title', 'description', 'animal_types', 'city', 'price', 'price_type', 'availability', 'status', 'created_at', 'updated_at'])->cursor();
     }
 
     private function veterinarians(int $userId)
@@ -181,18 +185,18 @@ class PrivacyController extends Controller
         return Veterinarian::query()
             ->where('user_id', $userId)
             ->latest()
-            ->get(['id', 'name', 'clinic_name', 'description', 'city', 'address', 'phone', 'whatsapp', 'email', 'specialties', 'working_hours', 'is_active', 'created_at', 'updated_at']);
+            ->select(['id', 'name', 'clinic_name', 'description', 'city', 'address', 'phone', 'whatsapp', 'email', 'specialties', 'working_hours', 'is_active', 'created_at', 'updated_at'])->cursor();
     }
 
     private function professionalVerifications(int $userId)
     {
         return ProfessionalVerification::query()->where('user_id', $userId)->latest()
-            ->get([
+            ->select([
                 'id', 'business_type', 'legal_name', 'ice', 'onssa_authorization_number',
                 'professional_license_number', 'document_type', 'document_original_name',
                 'document_mime', 'document_size', 'document_expires_at', 'status',
                 'verified_at', 'review_reason', 'reviewed_at', 'created_at', 'updated_at',
-            ]);
+            ])->cursor();
     }
 
     private function reservations(int $userId)
@@ -203,7 +207,7 @@ class PrivacyController extends Controller
                     ->orWhere('seller_id', $userId);
             })
             ->latest()
-            ->get([
+            ->select([
                 'id',
                 'buyer_id',
                 'seller_id',
@@ -220,13 +224,13 @@ class PrivacyController extends Controller
                 'total_price',
                 'created_at',
                 'updated_at',
-            ]);
+            ])->cursor();
     }
 
     private function reservationReviews(int $userId)
     {
         return ReservationReview::query()->where('reviewer_id', $userId)->latest()
-            ->get(['id', 'reservation_id', 'reviewee_id', 'rating', 'comment', 'created_at', 'updated_at']);
+            ->select(['id', 'reservation_id', 'reviewee_id', 'rating', 'comment', 'created_at', 'updated_at'])->cursor();
     }
 
     private function payments(int $userId)
@@ -234,12 +238,12 @@ class PrivacyController extends Controller
         return Payment::query()
             ->where(fn ($query) => $query->where('buyer_id', $userId)->orWhere('seller_id', $userId))
             ->latest()
-            ->get([
+            ->select([
                 'id', 'reservation_id', 'buyer_id', 'seller_id', 'provider', 'status', 'amount',
                 'currency', 'commission_amount', 'net_amount', 'provider_reference',
                 'internal_reference', 'paid_at', 'failed_at', 'refunded_at', 'cancelled_at',
                 'created_at', 'updated_at',
-            ]);
+            ])->cursor();
     }
 
     private function veterinarianAppointments(int $userId)
@@ -248,17 +252,17 @@ class PrivacyController extends Controller
             ->where('client_id', $userId)
             ->orWhereHas('veterinarian', fn ($query) => $query->where('user_id', $userId))
             ->latest()
-            ->get([
+            ->select([
                 'id', 'veterinarian_id', 'availability_slot_id', 'client_id', 'animal_type',
                 'reason', 'starts_at', 'ends_at', 'status', 'status_note', 'status_changed_at',
                 'created_at', 'updated_at',
-            ]);
+            ])->cursor();
     }
 
     private function veterinarianAppointmentReviews(int $userId)
     {
         return VeterinarianAppointmentReview::query()->where('client_id', $userId)->latest()
-            ->get(['id', 'veterinarian_appointment_id', 'rating', 'comment', 'created_at', 'updated_at']);
+            ->select(['id', 'veterinarian_appointment_id', 'rating', 'comment', 'created_at', 'updated_at'])->cursor();
     }
 
     private function reports(int $userId)
@@ -266,7 +270,7 @@ class PrivacyController extends Controller
         return Report::query()
             ->where('reporter_id', $userId)
             ->latest()
-            ->get(['id', 'reportable_type', 'reportable_id', 'reason', 'details', 'status', 'reviewed_at', 'created_at', 'updated_at']);
+            ->select(['id', 'reportable_type', 'reportable_id', 'reason', 'details', 'status', 'reviewed_at', 'created_at', 'updated_at'])->cursor();
     }
 
     private function notifications(int $userId)
@@ -274,7 +278,7 @@ class PrivacyController extends Controller
         return DB::table('notifications')->where('notifiable_type', 'App\\Models\\User')
             ->where('notifiable_id', $userId)
             ->orderByDesc('created_at')
-            ->get(['id', 'type', 'data', 'read_at', 'created_at', 'updated_at']);
+            ->select(['id', 'type', 'data', 'read_at', 'created_at', 'updated_at'])->cursor();
     }
 
     private function activityLogs(int $userId)
@@ -282,10 +286,10 @@ class PrivacyController extends Controller
         return ActivityLog::query()
             ->where(fn ($query) => $query->where('user_id', $userId)->orWhere('actor_id', $userId))
             ->latest('created_at')
-            ->get([
+            ->select([
                 'id', 'actor_id', 'subject_type', 'subject_id', 'action', 'category',
                 'description', 'metadata', 'ip_address', 'user_agent', 'created_at',
-            ]);
+            ])->cursor();
     }
 
     private function privacyConsents(int $userId)
@@ -293,7 +297,7 @@ class PrivacyController extends Controller
         return PrivacyConsent::query()
             ->where('user_id', $userId)
             ->latest()
-            ->get(['id', 'type', 'accepted', 'locale', 'accepted_at', 'created_at', 'updated_at']);
+            ->select(['id', 'type', 'accepted', 'locale', 'accepted_at', 'created_at', 'updated_at'])->cursor();
     }
 
     private function dataDeletionRequests(int $userId)
@@ -301,6 +305,6 @@ class PrivacyController extends Controller
         return DataDeletionRequest::query()
             ->where('user_id', $userId)
             ->latest()
-            ->get(['id', 'reason', 'status', 'reviewed_at', 'created_at', 'updated_at']);
+            ->select(['id', 'reason', 'status', 'reviewed_at', 'created_at', 'updated_at'])->cursor();
     }
 }

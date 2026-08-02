@@ -33,6 +33,7 @@ class CommentResource extends JsonResource
                 'country' => $this->user?->country,
             ],
             'replies' => CommentResource::collection($this->whenLoaded('replies')),
+            'repliesCount' => (int) ($this->replies_count ?? 0),
         ];
     }
 }

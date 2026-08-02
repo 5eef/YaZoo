@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasMediaAssets;
+use App\Support\ContentVisibility;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Post extends Model
 {
-    use HasFactory;
+    use HasFactory, HasMediaAssets;
 
     public const VISIBILITY_PUBLIC = 'public';
 
@@ -23,6 +26,8 @@ class Post extends Model
         self::VISIBILITY_FOLLOWERS,
         self::VISIBILITY_PRIVATE,
     ];
+
+    public const REACTIONS = ['like', 'love', 'happy', 'wow'];
 
     /**
      * The attributes that are mass assignable.
@@ -87,5 +92,19 @@ class Post extends Model
     public function likes(): MorphMany
     {
         return $this->morphMany(Like::class, 'likeable');
+    }
+
+    /**
+     * @param  Builder<Post>  $query
+     * @return Builder<Post>
+     */
+    public function scopeVisibleTo(Builder $query, ?User $viewer): Builder
+    {
+        return ContentVisibility::posts($query, $viewer);
+    }
+
+    public function isVisibleTo(?User $viewer): bool
+    {
+        return ContentVisibility::canViewPost($viewer, $this);
     }
 }

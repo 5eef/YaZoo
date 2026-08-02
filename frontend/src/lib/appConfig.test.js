@@ -22,4 +22,13 @@ describe('appConfig', () => {
 
     expect(getApiBaseUrl()).toBe('https://api.yazoo.test/api')
   })
+
+  it('accepte le chemin same-origin utilise par le proxy CSRF', async () => {
+    vi.stubEnv('VITE_API_URL', '/api')
+
+    const { getApiBaseUrl, getBackendBaseUrl } = await import('./appConfig')
+
+    expect(getApiBaseUrl()).toBe('/api')
+    expect(getBackendBaseUrl()).toBe('')
+  })
 })

@@ -37,12 +37,15 @@ class StoreAnimalRequest extends FormRequest
             'contact_phone' => ['nullable', 'string', 'max:50', 'required_if:contact_visibility,phone,whatsapp'],
             'contact_email' => ['nullable', 'email', 'max:255', 'required_if:contact_visibility,email'],
             'whatsapp_enabled' => ['nullable', 'boolean'],
-            'photo_url' => ['nullable', 'string', 'max:2048'],
-            'photo' => ['nullable', 'image', 'max:5120'],
+            'photo_url' => ['nullable', 'url:http,https', 'max:2048'],
+            'photo_asset_id' => ['nullable', 'uuid'],
+            'photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'dimensions:max_width=6000,max_height=6000', 'max:5120'],
             'gallery_urls' => ['nullable', 'array', 'max:6'],
-            'gallery_urls.*' => ['string', 'max:2048'],
+            'gallery_urls.*' => ['url:http,https', 'max:2048'],
+            'gallery_asset_ids' => ['nullable', 'array', 'max:6'],
+            'gallery_asset_ids.*' => ['uuid'],
             'gallery_files' => ['nullable', 'array', 'max:6'],
-            'gallery_files.*' => ['image', 'max:5120'],
+            'gallery_files.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'dimensions:max_width=6000,max_height=6000', 'max:5120'],
             'price' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
             'is_for_adoption' => ['required', 'boolean'],
             'listing_status' => ['required', Rule::in(Animal::LISTING_STATUSES)],
@@ -51,8 +54,8 @@ class StoreAnimalRequest extends FormRequest
             'seller_type' => ['required', 'string', Rule::in(Animal::SELLER_TYPES)],
             'origin' => ['nullable', 'string', 'max:190'],
             'identification_number' => ['nullable', 'string', 'max:120'],
-            'health_certificate_path' => ['nullable', 'string', 'max:2048'],
-            'vaccination_book_path' => ['nullable', 'string', 'max:2048'],
+            'health_certificate_path' => ['prohibited'],
+            'vaccination_book_path' => ['prohibited'],
             'onssa_authorization_number' => ['nullable', 'string', 'max:100'],
         ];
     }
@@ -77,8 +80,6 @@ class StoreAnimalRequest extends FormRequest
             'seller_type',
             'origin',
             'identification_number',
-            'health_certificate_path',
-            'vaccination_book_path',
             'onssa_authorization_number',
         ];
         $normalized = [];
@@ -88,14 +89,13 @@ class StoreAnimalRequest extends FormRequest
             $normalized[$field] = is_string($value) ? trim($value) : $value;
         }
 
-        $galleryUrls = collect($this->input('gallery_urls', []))
+        $normalized['gallery_urls'] = collect($this->input('gallery_urls', []))
             ->filter(fn ($value) => is_string($value))
             ->map(fn ($value) => trim($value))
             ->filter()
             ->values()
             ->all();
 
-        $normalized['gallery_urls'] = $galleryUrls;
         $normalized['is_for_adoption'] = filter_var(
             $this->input('is_for_adoption'),
             FILTER_VALIDATE_BOOLEAN,
@@ -113,10 +113,6 @@ class StoreAnimalRequest extends FormRequest
         $normalized['seller_type'] = $normalized['seller_type'] ?: 'individual';
         $normalized['contact_visibility'] = $normalized['contact_visibility'] ?: 'messages_only';
         $normalized['whatsapp_enabled'] = $normalized['contact_visibility'] === 'whatsapp';
-
-        if (! $normalized['photo_url'] && ! empty($galleryUrls)) {
-            $normalized['photo_url'] = $galleryUrls[0];
-        }
 
         $this->merge($normalized);
     }

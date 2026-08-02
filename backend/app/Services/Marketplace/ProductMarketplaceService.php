@@ -4,6 +4,7 @@ namespace App\Services\Marketplace;
 
 use App\Models\Product;
 use App\Models\User;
+use App\Services\MediaAssetService;
 use App\Support\MarketplaceMedia;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Request;
@@ -13,6 +14,10 @@ use Throwable;
 
 class ProductMarketplaceService
 {
+    public function __construct(
+        private readonly MediaAssetService $mediaAssets,
+    ) {}
+
     public function paginate(Request $request, int $perPage): LengthAwarePaginator
     {
         if (app()->runningUnitTests()) {
@@ -32,6 +37,7 @@ class ProductMarketplaceService
             ->with([
                 'user:id,name,phone_verified_at,avatar,city,country',
                 'user.latestProfessionalVerification.reviewer:id,is_admin',
+                'mediaAssets',
             ])
             ->withCount([
                 'reviews as reviews_count' => fn ($query) => $query->publiclyVisible(),
@@ -79,26 +85,33 @@ class ProductMarketplaceService
      */
     public function create(User $user, Request $request, array $validated): Product
     {
-        $uploadedPaths = [];
-        $payload = MarketplaceMedia::prepareUploadedMedia(
+        $prepared = MarketplaceMedia::prepareOwnedMedia(
             $request,
             $validated,
+            $user,
+            null,
             'image_url',
             'image',
+            'image_asset_id',
             'marketplace/products',
-            $uploadedPaths,
         );
+        $payload = $prepared['payload'];
         $payload['moderation_status'] = Product::MODERATION_STATUS_PENDING_REVIEW;
         $payload['moderation_note'] = null;
         $payload['moderated_by'] = null;
         $payload['moderated_at'] = null;
 
         try {
-            $product = DB::transaction(
-                fn (): Product => $user->products()->create($payload),
-            );
+            $product = DB::transaction(function () use ($user, $payload, $prepared): Product {
+                $product = $user->products()->create($payload);
+                $this->mediaAssets->sync($product, $user, $prepared['assets'], 'image_url');
+
+                return $product;
+            });
         } catch (Throwable $exception) {
-            MarketplaceMedia::deleteStoredFiles($uploadedPaths);
+            $prepared['created_assets']->each(
+                fn ($asset) => $this->mediaAssets->discardUnattached($asset, $user),
+            );
 
             throw $exception;
         }
@@ -111,19 +124,19 @@ class ProductMarketplaceService
      */
     public function update(Product $product, Request $request, array $validated): Product
     {
-        $previousPaths = collect([$product->image_url, ...($product->gallery_urls ?? [])])
-            ->filter()
-            ->unique()
-            ->values();
-        $uploadedPaths = [];
-        $payload = MarketplaceMedia::prepareUploadedMedia(
+        $product->loadMissing('user', 'mediaAssets');
+        $owner = $product->user;
+        $prepared = MarketplaceMedia::prepareOwnedMedia(
             $request,
             $validated,
+            $owner,
+            $product,
             'image_url',
             'image',
+            'image_asset_id',
             'marketplace/products',
-            $uploadedPaths,
         );
+        $payload = $prepared['payload'];
 
         if (! request()->user()?->is_admin) {
             $payload['moderation_status'] = Product::MODERATION_STATUS_PENDING_REVIEW;
@@ -133,36 +146,24 @@ class ProductMarketplaceService
         }
 
         try {
-            DB::transaction(fn () => $product->update($payload));
+            DB::transaction(function () use ($product, $owner, $payload, $prepared): void {
+                $product->update($payload);
+                $this->mediaAssets->sync($product, $owner, $prepared['assets'], 'image_url');
+            });
         } catch (Throwable $exception) {
-            MarketplaceMedia::deleteStoredFiles($uploadedPaths);
+            $prepared['created_assets']->each(
+                fn ($asset) => $this->mediaAssets->discardUnattached($asset, $owner),
+            );
 
             throw $exception;
         }
-
-        $currentPaths = collect([$product->image_url, ...($product->gallery_urls ?? [])])
-            ->filter()
-            ->unique();
-        MarketplaceMedia::deleteStoredFiles(
-            $previousPaths->diff($currentPaths)->values()->all(),
-        );
 
         return $this->loadForResponse($product);
     }
 
     public function delete(Product $product): void
     {
-        $storedPaths = [
-            $product->image_url,
-            ...($product->gallery_urls ?? []),
-        ];
-
-        DB::transaction(function () use ($product): void {
-            $product->reservations()->delete();
-            $product->delete();
-        });
-
-        MarketplaceMedia::deleteStoredFiles($storedPaths);
+        DB::transaction(fn () => $product->delete());
     }
 
     public function loadForResponse(Product $product): Product
@@ -170,6 +171,7 @@ class ProductMarketplaceService
         $product->load([
             'user:id,name,phone_verified_at,avatar,city,country',
             'user.latestProfessionalVerification.reviewer:id,is_admin',
+            'mediaAssets',
         ])
             ->loadCount([
                 'reviews as reviews_count' => fn ($query) => $query->publiclyVisible(),

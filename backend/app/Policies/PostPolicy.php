@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\Post;
 use App\Models\User;
+use App\Support\ContentVisibility;
 
 class PostPolicy
 {
@@ -20,7 +21,12 @@ class PostPolicy
      */
     public function interact(User $user, Post $post): bool
     {
-        return $user->exists && $post->exists;
+        return $user->exists && ContentVisibility::canInteractWithPost($user, $post);
+    }
+
+    public function view(User $user, Post $post): bool
+    {
+        return ContentVisibility::canViewPost($user, $post);
     }
 
     /**

@@ -148,11 +148,11 @@ class AdminModerationApiTest extends TestCase
             'likeable_type' => Post::class,
             'likeable_id' => $post->id,
         ]);
-        $this->assertDatabaseMissing('animals', ['id' => $animal->id]);
-        $this->assertDatabaseMissing('products', ['id' => $product->id]);
+        $this->assertSoftDeleted('animals', ['id' => $animal->id]);
+        $this->assertSoftDeleted('products', ['id' => $product->id]);
         $this->assertDatabaseMissing('communities', ['id' => $community->id]);
-        Storage::disk('public')->assertMissing('marketplace/animals/admin-delete.png');
-        Storage::disk('public')->assertMissing('marketplace/products/admin-delete.png');
+        Storage::disk('public')->assertExists('marketplace/animals/admin-delete.png');
+        Storage::disk('public')->assertExists('marketplace/products/admin-delete.png');
     }
 
     public function test_marketplace_moderation_is_paginated_bounded_and_filterable(): void

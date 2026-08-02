@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasMediaAssets;
 use App\Support\PhoneNumber;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
@@ -17,7 +18,7 @@ use Laravel\Sanctum\HasApiTokens;
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, HasMediaAssets, Notifiable;
 
     public const SUPPORTED_LOCALES = ['fr', 'ar', 'en'];
 
@@ -35,20 +36,8 @@ class User extends Authenticatable
         'bio',
         'avatar',
         'cover_photo',
-        'google_id',
-        'google_avatar',
-        'is_admin',
-        'is_suspended',
-        'suspended_at',
-        'suspended_reason',
-        'banned_at',
-        'banned_reason',
         'password',
-        'phone_verified_at',
         'preferred_locale',
-        'admin_mfa_secret',
-        'admin_mfa_recovery_codes',
-        'admin_mfa_confirmed_at',
     ];
 
     /**
@@ -203,6 +192,14 @@ class User extends Authenticatable
     public function communityMemberships(): HasMany
     {
         return $this->hasMany(CommunityMember::class);
+    }
+
+    /**
+     * Media records owned by this account, independently of what they are attached to.
+     */
+    public function ownedMediaAssets(): HasMany
+    {
+        return $this->hasMany(MediaAsset::class, 'owner_id');
     }
 
     /**

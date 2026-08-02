@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
 
+import api from '../api/client'
 import Footer from '../components/ui/Footer'
 import { useI18n } from '../hooks/useI18n'
+import { getErrorMessage } from '../utils/getErrorMessage'
 
 function FeedbackPage() {
   const { t } = useI18n()
@@ -12,6 +14,8 @@ function FeedbackPage() {
     message: '',
   })
   const [isSubmitted, setIsSubmitted] = useState(false)
+  const [isSending, setIsSending] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
 
   const handleChange = (field) => (event) => {
     setForm((current) => ({
@@ -20,14 +24,26 @@ function FeedbackPage() {
     }))
   }
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
-    setIsSubmitted(true)
-    setForm({
-      name: '',
-      email: '',
-      message: '',
-    })
+    setIsSubmitted(false)
+    setErrorMessage('')
+    setIsSending(true)
+
+    try {
+      await api.post('/contact', {
+        nom: form.name,
+        email: form.email,
+        objet: t('feedback.title'),
+        message: form.message,
+      })
+      setIsSubmitted(true)
+      setForm({ name: '', email: '', message: '' })
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error, t('contact.error')))
+    } finally {
+      setIsSending(false)
+    }
   }
 
   return (
@@ -81,16 +97,23 @@ function FeedbackPage() {
             </label>
 
             {isSubmitted ? (
-              <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+              <p role="status" aria-live="polite" className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
                 {t('feedback.success')}
+              </p>
+            ) : null}
+
+            {errorMessage ? (
+              <p role="alert" aria-live="assertive" className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                {errorMessage}
               </p>
             ) : null}
 
             <button
               type="submit"
+              disabled={isSending}
               className="inline-flex items-center rounded-full bg-[linear-gradient(135deg,#7c3aed,#a855f7,#c4b5fd)] px-6 py-3 text-sm font-semibold text-white transition hover:brightness-105"
             >
-              {t('feedback.submit')}
+              {isSending ? t('contact.sending') : t('feedback.submit')}
             </button>
           </form>
         </section>

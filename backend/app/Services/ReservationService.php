@@ -104,6 +104,7 @@ class ReservationService
                 'unit_price' => $lockedAnimal->price ?? 0,
                 'total_price' => $lockedAnimal->price ?? 0,
                 'delivery_fee' => $this->computeDeliveryFee(Animal::class, $validated['delivery_method'], 1),
+                'transaction_snapshot' => $this->transactionSnapshot($lockedAnimal, 1, $validated),
             ]);
 
             $lockedAnimal->update([
@@ -163,6 +164,7 @@ class ReservationService
                 'unit_price' => $lockedProduct->price,
                 'total_price' => (float) $lockedProduct->price * $quantity,
                 'delivery_fee' => $this->computeDeliveryFee(Product::class, $validated['delivery_method'], $quantity),
+                'transaction_snapshot' => $this->transactionSnapshot($lockedProduct, $quantity, $validated),
             ]);
 
             $this->syncProductListingStatus($lockedProduct->refresh());
@@ -232,6 +234,7 @@ class ReservationService
                 'unit_price' => $service->price ?? 0,
                 'total_price' => $service->price ?? 0,
                 'delivery_fee' => 0,
+                'transaction_snapshot' => $this->transactionSnapshot($service, 1, $validated),
             ]);
 
             $service->increment('reservations_count');
@@ -610,5 +613,43 @@ class ReservationService
             $reservable instanceof ServiceListing => $reservable->type,
             default => 'listing',
         };
+    }
+
+    /**
+     * Capture the commercial facts that must survive listing edits or deletion.
+     *
+     * @param  array<string, mixed>  $validated
+     * @return array<string, mixed>
+     */
+    protected function transactionSnapshot(Model $reservable, int $quantity, array $validated): array
+    {
+        $reservable->loadMissing('user:id,name');
+
+        return [
+            'version' => 1,
+            'listing' => [
+                'type' => $reservable->getMorphClass(),
+                'id' => $reservable->getKey(),
+                'title' => $reservable->getAttribute('name') ?? $reservable->getAttribute('title'),
+                'description' => $reservable->getAttribute('description'),
+            ],
+            'seller' => [
+                'id' => $reservable->getAttribute('user_id'),
+                'name' => $reservable->getRelation('user')?->name,
+            ],
+            'pricing' => [
+                'unit_price' => (float) ($reservable->getAttribute('price') ?? 0),
+                'quantity' => $quantity,
+                'currency' => (string) config('payments.currency', 'MAD'),
+            ],
+            'conditions' => [
+                'delivery_method' => $validated['delivery_method'] ?? 'pickup',
+                'payment_method' => $validated['payment_method'] ?? 'cash_on_pickup',
+                'scheduled_at' => $validated['scheduled_at'] ?? null,
+                'scheduled_end_at' => $validated['scheduled_end_at'] ?? null,
+                'delivery_city' => $validated['delivery_city'] ?? null,
+            ],
+            'captured_at' => now()->toISOString(),
+        ];
     }
 }

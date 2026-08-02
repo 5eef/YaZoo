@@ -48,11 +48,9 @@ describe('marketplaceUtils', () => {
       seller_type: 'professional',
       origin: 'Rabat',
       identification_number: 'ID-123',
-      health_certificate_path: 'private/health.pdf',
-      vaccination_book_path: 'private/vaccine.pdf',
       onssa_authorization_number: 'ONSSA-123',
-      existing_photo_path: 'old/main.webp',
-      existing_gallery_paths: ['old/gallery.webp'],
+      photo_asset_id: 'asset-animal-main',
+      gallery_asset_ids: ['asset-animal-gallery'],
     }
 
     const payload = buildAnimalFormData(form, image, [gallery])
@@ -64,8 +62,9 @@ describe('marketplaceUtils', () => {
     expect(payload.get('seller_type')).toBe('professional')
     expect(payload.get('origin')).toBe('Rabat')
     expect(payload.get('onssa_authorization_number')).toBe('ONSSA-123')
+    expect(payload.get('photo_asset_id')).toBe('asset-animal-main')
     expect(payload.get('photo')).toBe(image)
-    expect(payload.getAll('gallery_urls[]')).toEqual(['old/gallery.webp'])
+    expect(payload.getAll('gallery_asset_ids[]')).toEqual(['asset-animal-gallery'])
     expect(payload.getAll('gallery_files[]')).toEqual([gallery])
   })
 
@@ -80,16 +79,17 @@ describe('marketplaceUtils', () => {
       stock: 3,
       listing_status: 'available',
       condition_status: 'new',
-      existing_image_path: 'old/product.webp',
-      existing_gallery_paths: ['old/side.webp'],
+      image_asset_id: 'asset-product-main',
+      gallery_asset_ids: ['asset-product-gallery'],
     }
 
     const payload = buildProductFormData(form, image, [])
 
     expect(payload.get('name')).toBe('Panier')
     expect(payload.get('stock')).toBe('3')
+    expect(payload.get('image_asset_id')).toBe('asset-product-main')
     expect(payload.get('image')).toBe(image)
-    expect(payload.getAll('gallery_urls[]')).toEqual(['old/side.webp'])
+    expect(payload.getAll('gallery_asset_ids[]')).toEqual(['asset-product-gallery'])
   })
 
   it('formate les libelles et chemins de contact', () => {

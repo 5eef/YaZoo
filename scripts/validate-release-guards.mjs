@@ -72,6 +72,11 @@ const containerJob = ci.slice(ci.indexOf('container-and-secrets:'))
 const containerCheckout = containerJob.indexOf('uses: actions/checkout@')
 const fullHistoryCheckout = containerJob.indexOf('fetch-depth: 0')
 assert.ok(containerCheckout >= 0 && fullHistoryCheckout > containerCheckout)
+assert.match(
+  containerJob,
+  /pull-requests:\s*read/u,
+  'the Gitleaks pull-request scan requires read access to PR commit metadata',
+)
 assert.match(ci, /npm ci --ignore-scripts/)
 assert.match(ci, /\.\/node_modules\/\.bin\/playwright install --with-deps chromium/)
 assert.doesNotMatch(ci, /\bnpx\s+playwright\b/u)

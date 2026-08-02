@@ -109,7 +109,7 @@ class ProductApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('message', 'Produit supprime avec succes.');
 
-        $this->assertDatabaseMissing('products', ['id' => $productId]);
+        $this->assertSoftDeleted('products', ['id' => $productId]);
     }
 
     public function test_user_cannot_update_or_delete_another_users_product(): void

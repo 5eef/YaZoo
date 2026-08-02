@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router'
 
 import { defaultProductFilters, defaultProductForm } from '../features/marketplace/marketplaceOptions'
@@ -10,14 +10,16 @@ import {
 import * as productService from '../services/marketplace/productsMarketplaceService'
 import { asArray } from '../utils/apiData'
 import { getErrorMessage } from '../utils/getErrorMessage'
+import { useI18n } from './useI18n'
 
 const cloneProductForm = () => ({
   ...defaultProductForm,
-  existing_gallery_paths: [],
+  gallery_asset_ids: [],
   existing_gallery_urls: [],
 })
 
 export function useProductsMarketplace() {
+  const { t } = useI18n()
   const [searchParams, setSearchParams] = useSearchParams()
   const queryFromUrl = searchParams.get('q') ?? ''
   const [products, setProducts] = useState([])
@@ -34,50 +36,26 @@ export function useProductsMarketplace() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isFiltersOpen, setIsFiltersOpen] = useState(false)
+  const latestRequestId = useRef(0)
 
   const loadProducts = useCallback(async (activeFilters = filters) => {
+    const requestId = latestRequestId.current + 1
+    latestRequestId.current = requestId
     try {
       const nextProducts = await productService.fetchProducts(activeFilters)
 
-      setProducts(nextProducts)
-      setErrorMessage('')
-    } catch (error) {
-      setErrorMessage(
-        getErrorMessage(error, 'Impossible de charger les produits du marketplace.'),
-      )
-    } finally {
-      setIsLoading(false)
-    }
-  }, [filters])
-
-  useEffect(() => {
-    let cancelled = false
-
-    const loadInitialProducts = async () => {
-      try {
-        const nextProducts = await productService.fetchProducts()
-
-        if (!cancelled) {
-          setProducts(nextProducts)
-          setErrorMessage('')
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setErrorMessage(
-            getErrorMessage(error, 'Impossible de charger les produits du marketplace.'),
-          )
-        }
-      } finally {
-        if (!cancelled) setIsLoading(false)
+      if (requestId === latestRequestId.current) {
+        setProducts(nextProducts)
+        setErrorMessage('')
       }
+    } catch (error) {
+      if (requestId === latestRequestId.current) {
+        setErrorMessage(getErrorMessage(error, t('errors.generic')))
+      }
+    } finally {
+      if (requestId === latestRequestId.current) setIsLoading(false)
     }
-
-    loadInitialProducts()
-
-    return () => {
-      cancelled = true
-    }
-  }, [])
+  }, [filters, t])
 
   useEffect(() => {
     setFilters((current) => {
@@ -92,6 +70,10 @@ export function useProductsMarketplace() {
     loadProducts({ ...filters, q: queryFromUrl })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryFromUrl])
+
+  useEffect(() => () => {
+    latestRequestId.current += 1
+  }, [])
 
   const handleFilterChange = (field) => (event) => {
     setFilters((current) => ({ ...current, [field]: event.target.value }))
@@ -110,18 +92,25 @@ export function useProductsMarketplace() {
 
   const handleSearch = async (event) => {
     event.preventDefault()
-    if (filters.q.trim()) {
-      setSearchParams({ q: filters.q.trim() })
-    } else {
-      setSearchParams({})
+    const nextQuery = filters.q.trim()
+
+    if (nextQuery !== queryFromUrl) {
+      setSearchParams(nextQuery ? { q: nextQuery } : {})
+      return
     }
+
     setIsLoading(true)
-    await loadProducts(filters)
+    await loadProducts({ ...filters, q: nextQuery })
   }
 
   const handleResetFilters = async () => {
     setFilters(defaultProductFilters)
-    setSearchParams({})
+
+    if (queryFromUrl) {
+      setSearchParams({})
+      return
+    }
+
     setIsLoading(true)
     await loadProducts(defaultProductFilters)
   }
@@ -182,9 +171,9 @@ export function useProductsMarketplace() {
       stock: product.stock ?? 1,
       listing_status: product.listingStatus ?? 'available',
       condition_status: product.conditionStatus ?? 'new',
-      existing_image_path: product.imagePath ?? '',
+      image_asset_id: product.imageAssetId ?? '',
       existing_image_url: product.imageUrl ?? '',
-      existing_gallery_paths: product.galleryPaths ?? [],
+      gallery_asset_ids: product.galleryAssetIds ?? [],
       existing_gallery_urls: product.galleryUrls ?? [],
     })
     setSuccessMessage('')
@@ -192,6 +181,8 @@ export function useProductsMarketplace() {
   }
 
   const handleDelete = async (productId) => {
+    if (!globalThis.confirm(t('admin.moderation.deleteConfirm', { label: `#${productId}` }))) return
+
     setErrorMessage('')
     setSuccessMessage('')
 

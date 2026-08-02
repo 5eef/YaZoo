@@ -633,6 +633,8 @@ function MobileMenuDrawer({
   isRtl,
   t,
 }) {
+  if (!isOpen) return null
+
   const closedTransform = isRtl ? '-translate-x-full' : 'translate-x-full'
   const sideClass = isRtl
     ? 'left-0 border-r'

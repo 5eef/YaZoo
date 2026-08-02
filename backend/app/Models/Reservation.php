@@ -83,6 +83,7 @@ class Reservation extends Model
         'rejected_at',
         'completed_at',
         'cancelled_at',
+        'transaction_snapshot',
     ];
 
     /**
@@ -104,7 +105,20 @@ class Reservation extends Model
             'rejected_at' => 'datetime',
             'completed_at' => 'datetime',
             'cancelled_at' => 'datetime',
+            'transaction_snapshot' => 'array',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::updating(function (Reservation $reservation): void {
+            if (
+                $reservation->isDirty('transaction_snapshot')
+                && $reservation->getOriginal('transaction_snapshot') !== null
+            ) {
+                throw new \LogicException('Reservation transaction snapshots are immutable.');
+            }
+        });
     }
 
     /**
@@ -128,7 +142,7 @@ class Reservation extends Model
      */
     public function reservable(): MorphTo
     {
-        return $this->morphTo();
+        return $this->morphTo()->withTrashed();
     }
 
     /**

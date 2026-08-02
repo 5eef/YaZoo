@@ -85,17 +85,22 @@ class AuthService
                     $this->phoneOtpBroker->consume($phone, 'register', (string) $validated['otp_code']);
                 }
 
-                return User::create([
+                $user = new User;
+                $user->fill([
                     'name' => $validated['name'],
                     'email' => $this->resolveEmail($validated['email'] ?? null, $phone),
                     'password' => $validated['password'] ?? Str::random(32),
                     'phone' => $phone,
-                    'phone_verified_at' => $hasOtp && $phone ? now() : null,
                     'preferred_locale' => $validated['preferred_locale'] ?? app()->getLocale(),
                     'country' => $validated['country'] ?? null,
                     'city' => $validated['city'] ?? null,
-                    'is_admin' => $isFirstAdmin,
                 ]);
+                $user->forceFill([
+                    'phone_verified_at' => $hasOtp && $phone ? now() : null,
+                    'is_admin' => $isFirstAdmin,
+                ])->save();
+
+                return $user;
             }),
         );
 
@@ -188,17 +193,22 @@ class AuthService
             }
 
             if (! $user) {
-                return User::create([
+                $user = new User;
+                $user->fill([
                     'name' => $googleUser->getName() ?: Str::before($email, '@'),
                     'email' => $email,
-                    'email_verified_at' => now(),
                     'password' => Str::random(32),
                     'avatar' => $googleUser->getAvatar(),
+                    'preferred_locale' => app()->getLocale(),
+                ]);
+                $user->forceFill([
+                    'email_verified_at' => now(),
                     'google_id' => $googleId,
                     'google_avatar' => $googleUser->getAvatar(),
-                    'preferred_locale' => app()->getLocale(),
                     'is_admin' => false,
-                ]);
+                ])->save();
+
+                return $user;
             }
 
             $this->ensureCanAuthenticate($user, 'email');

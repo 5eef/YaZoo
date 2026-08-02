@@ -122,6 +122,10 @@ return [
     'appointments' => [
         'slot_overlap' => 'يتداخل هذا الموعد مع فترة متاحة موجودة.',
         'slot_unavailable' => 'هذا الموعد لم يعد متاحاً.',
+        'review_exists' => 'يوجد تقييم لهذا الموعد بالفعل.',
+    ],
+    'uploads' => [
+        'invalid_media' => 'الملف لا يطابق تنسيق وسائط مسموحاً به.',
     ],
     'privacy' => [
         'consent_saved' => 'تم حفظ تفضيل الخصوصية.',

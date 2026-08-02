@@ -55,7 +55,7 @@ class PostResource extends JsonResource
                 'country' => $this->user?->country,
                 'isPhoneVerified' => $this->user?->hasVerifiedPhone() ?? false,
                 'isFollowing' => $viewerId && $this->user_id !== $viewerId
-                    ? $request->user()?->following()->whereKey($this->user_id)->exists()
+                    ? (bool) ($this->user?->is_followed_by_viewer ?? false)
                     : false,
             ],
             'community' => $this->whenLoaded('community', fn () => [
@@ -66,12 +66,12 @@ class PostResource extends JsonResource
             'likes' => $this->likes_count ?? 0,
             'liked' => (bool) ($this->liked_by_user ?? false),
             'userReaction' => $viewerLike?->reaction,
-            'reactions' => $likeCollection
-                ->groupBy(fn ($like) => $like->reaction ?: 'like')
-                ->map(fn ($items, $reaction) => [
+            'reactions' => collect(Post::REACTIONS)
+                ->map(fn (string $reaction): array => [
                     'reaction' => $reaction,
-                    'count' => $items->count(),
+                    'count' => (int) ($this->{"reaction_{$reaction}_count"} ?? 0),
                 ])
+                ->filter(fn (array $reaction): bool => $reaction['count'] > 0)
                 ->values(),
             'commentsCount' => $this->comments_count ?? 0,
             'comments' => CommentResource::collection($this->whenLoaded('comments')),

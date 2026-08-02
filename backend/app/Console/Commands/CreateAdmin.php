@@ -117,14 +117,17 @@ class CreateAdmin extends Command
             return self::FAILURE;
         }
 
-        User::create([
+        $admin = new User;
+        $admin->fill([
             'name' => $name,
             'email' => $email,
             'password' => $password,
-            'email_verified_at' => now(),
             'preferred_locale' => config('app.locale', 'fr'),
-            'is_admin' => true,
         ]);
+        $admin->forceFill([
+            'email_verified_at' => now(),
+            'is_admin' => true,
+        ])->save();
 
         $this->info("Administrateur cree: {$email}");
 

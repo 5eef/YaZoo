@@ -53,7 +53,11 @@ return new class extends Migration
     {
         foreach ($this->tables as $tableName) {
             Schema::table($tableName, function (Blueprint $table) use ($tableName): void {
-                foreach (['moderated_at', 'moderated_by', 'moderation_note', 'moderation_status'] as $column) {
+                if (Schema::hasColumn($tableName, 'moderated_by')) {
+                    $table->dropConstrainedForeignId('moderated_by');
+                }
+
+                foreach (['moderated_at', 'moderation_note', 'moderation_status'] as $column) {
                     if (Schema::hasColumn($tableName, $column)) {
                         $table->dropColumn($column);
                     }
@@ -62,10 +66,12 @@ return new class extends Migration
         }
 
         Schema::table('animals', function (Blueprint $table): void {
-            foreach (['moderated_at', 'moderated_by'] as $column) {
-                if (Schema::hasColumn('animals', $column)) {
-                    $table->dropColumn($column);
-                }
+            if (Schema::hasColumn('animals', 'moderated_by')) {
+                $table->dropConstrainedForeignId('moderated_by');
+            }
+
+            if (Schema::hasColumn('animals', 'moderated_at')) {
+                $table->dropColumn('moderated_at');
             }
         });
     }

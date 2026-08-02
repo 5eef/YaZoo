@@ -43,11 +43,7 @@ function getDefaultApiUrl() {
     return 'http://localhost:8000/api'
   }
 
-  if (globalThis.location.hostname === 'yazoo.azurewebsites.net') {
-    return 'https://yazoo-api.azurewebsites.net/api'
-  }
-
-  return `${globalThis.location.protocol}//${globalThis.location.hostname}:8000/api`
+  return '/api'
 }
 
 export function getApiBaseUrl() {

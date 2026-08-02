@@ -11,7 +11,9 @@ use App\Services\Payments\CmiGateway;
 use App\Services\Payments\PaymentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\Sanctum;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\TestCase;
 
 class PaymentApiTest extends TestCase
@@ -449,6 +451,68 @@ class PaymentApiTest extends TestCase
         $this->assertNotNull($payment->paid_at);
     }
 
+    public function test_duplicate_cmi_callback_is_idempotent(): void
+    {
+        config([
+            'payments.providers.cmi.enabled' => true,
+            'payments.providers.cmi.store_key' => 'test-store-key',
+        ]);
+
+        $payment = $this->paymentForCallback();
+        $payload = [
+            'internal_reference' => $payment->internal_reference,
+            'provider_reference' => 'CMI-DUPLICATE-1',
+            'status' => 'paid',
+        ];
+        $payload['signature'] = app(CmiGateway::class)->generateSignature($payload);
+
+        $this->postJson('/api/payments/cmi/callback', $payload)->assertOk();
+        $this->postJson('/api/payments/cmi/callback', $payload)
+            ->assertOk()
+            ->assertJsonPath('status', Payment::STATUS_PAID)
+            ->assertJsonPath('message', 'Callback fournisseur duplique ignore.');
+
+        $this->assertSame(Payment::STATUS_PAID, $payment->refresh()->status);
+        $this->assertSame(1, PaymentTransaction::query()
+            ->where('payment_id', $payment->id)
+            ->where('type', PaymentTransaction::TYPE_CALLBACK)
+            ->count());
+    }
+
+    public function test_paid_payment_cannot_be_downgraded_by_late_failed_callback_or_cancellation(): void
+    {
+        config([
+            'payments.providers.cmi.enabled' => true,
+            'payments.providers.cmi.store_key' => 'test-store-key',
+        ]);
+
+        $payment = $this->paymentForCallback();
+        app(PaymentService::class)->markPaid($payment);
+        $payload = [
+            'internal_reference' => $payment->internal_reference,
+            'provider_reference' => 'CMI-LATE-FAILURE',
+            'status' => 'failed',
+        ];
+        $payload['signature'] = app(CmiGateway::class)->generateSignature($payload);
+
+        $this->postJson('/api/payments/cmi/callback', $payload)
+            ->assertOk()
+            ->assertJsonPath('status', Payment::STATUS_PAID)
+            ->assertJsonPath('message', 'Callback fournisseur hors ordre ignore; etat terminal conserve.');
+
+        $this->assertSame(Payment::STATUS_PAID, $payment->refresh()->status);
+        $this->assertSame('paid', $payment->reservation->refresh()->payment_status);
+
+        try {
+            app(PaymentService::class)->cancelPayment($payment);
+            $this->fail('A paid payment must never be downgraded to cancelled.');
+        } catch (HttpException $exception) {
+            $this->assertSame(422, $exception->getStatusCode());
+        }
+
+        $this->assertSame(Payment::STATUS_PAID, $payment->refresh()->status);
+    }
+
     public function test_reservation_payment_status_becomes_paid_only_after_valid_callback(): void
     {
         config([
@@ -577,7 +641,7 @@ class PaymentApiTest extends TestCase
         try {
             app(PaymentService::class)->markPaid($payment);
             $this->fail('A cancelled reservation must never become paid.');
-        } catch (\Illuminate\Validation\ValidationException) {
+        } catch (ValidationException) {
             $this->assertSame(Payment::STATUS_PENDING, $payment->refresh()->status);
             $this->assertSame('cancelled', $reservation->refresh()->payment_status);
         }

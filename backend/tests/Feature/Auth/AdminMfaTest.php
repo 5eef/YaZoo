@@ -109,4 +109,69 @@ class AdminMfaTest extends TestCase
             ->assertStatus(423)
             ->assertJsonPath('reason', 'enrollment_required');
     }
+
+    public function test_unenrolled_admin_can_only_access_mfa_bootstrap_when_enforcement_is_enabled(): void
+    {
+        $admin = User::factory()->admin()->create([
+            'password' => Hash::make('StrongPass!123'),
+        ]);
+        Sanctum::actingAs($admin);
+        config(['auth.admin_mfa.enforced' => true]);
+
+        $this->getJson('/api/admin/mfa')->assertOk();
+        $this->postJson('/api/admin/mfa/enroll', ['password' => 'StrongPass!123'])->assertOk();
+
+        $this->getJson('/api/admin/stats')
+            ->assertStatus(423)
+            ->assertJsonPath('reason', 'enrollment_required');
+        $this->postJson('/api/admin/users', [
+            'name' => 'Blocked Admin',
+            'email' => 'blocked-admin@example.com',
+            'password' => 'StrongPass!123',
+            'password_confirmation' => 'StrongPass!123',
+            'is_admin' => true,
+        ])->assertStatus(423);
+    }
+
+    public function test_sensitive_user_attributes_are_not_mass_assignable(): void
+    {
+        $user = User::factory()->create();
+        $protectedAttributes = [
+            'is_admin',
+            'is_suspended',
+            'suspended_at',
+            'suspended_reason',
+            'banned_at',
+            'banned_reason',
+            'phone_verified_at',
+            'google_id',
+            'google_avatar',
+            'admin_mfa_secret',
+            'admin_mfa_recovery_codes',
+            'admin_mfa_confirmed_at',
+        ];
+        $original = collect($protectedAttributes)
+            ->mapWithKeys(fn (string $key): array => [$key => $user->getRawOriginal($key)])
+            ->all();
+
+        $user->fill([
+            'is_admin' => true,
+            'is_suspended' => true,
+            'suspended_at' => now(),
+            'suspended_reason' => 'payload',
+            'banned_at' => now(),
+            'banned_reason' => 'payload',
+            'phone_verified_at' => now(),
+            'google_id' => 'attacker-google-id',
+            'google_avatar' => 'https://attacker.invalid/avatar.jpg',
+            'admin_mfa_secret' => Totp::secret(),
+            'admin_mfa_recovery_codes' => ['attacker-code'],
+            'admin_mfa_confirmed_at' => now(),
+        ])->save();
+
+        $user->refresh();
+        foreach ($original as $key => $value) {
+            $this->assertEquals($value, $user->getRawOriginal($key), $key.' was unexpectedly mass assigned.');
+        }
+    }
 }

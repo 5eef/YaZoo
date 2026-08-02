@@ -125,7 +125,7 @@ return [
     ],
 
     'admin_mfa' => [
-        'enforced' => (bool) env('ADMIN_MFA_ENFORCED', false),
+        'enforced' => (bool) env('ADMIN_MFA_ENFORCED', env('APP_ENV') === 'production'),
         'issuer' => env('ADMIN_MFA_ISSUER', env('APP_NAME', 'YaZoo')),
         'challenge_ttl_minutes' => (int) env('ADMIN_MFA_CHALLENGE_TTL_MINUTES', 15),
         'recovery_code_count' => 8,

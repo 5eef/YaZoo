@@ -132,9 +132,7 @@ class AnimalApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('message', 'Annonce supprimee avec succes.');
 
-        $this->assertDatabaseMissing('animals', [
-            'id' => $animalId,
-        ]);
+        $this->assertSoftDeleted('animals', ['id' => $animalId]);
     }
 
     public function test_user_cannot_update_or_delete_another_users_listing(): void

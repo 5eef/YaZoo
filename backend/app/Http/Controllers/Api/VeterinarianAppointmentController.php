@@ -185,7 +185,20 @@ class VeterinarianAppointmentController extends Controller
             'rating' => ['required', 'integer', 'between:1,5'],
             'comment' => ['nullable', 'string', 'max:1000'],
         ]);
-        $review = $appointment->review()->create([...$data, 'client_id' => $request->user()->id]);
+        $review = DB::transaction(function () use ($appointment, $data, $request) {
+            $lockedAppointment = VeterinarianAppointment::query()
+                ->whereKey($appointment->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($lockedAppointment->review()->exists()) {
+                throw ValidationException::withMessages([
+                    'appointment' => [__('messages.appointments.review_exists')],
+                ]);
+            }
+
+            return $lockedAppointment->review()->create([...$data, 'client_id' => $request->user()->id]);
+        }, 3);
 
         return response()->json(['data' => $review], 201);
     }

@@ -96,17 +96,16 @@ class ProductionPreflight extends Command
             $failures[] = 'At least one active administrator is required.';
         }
 
-        if (
-            (bool) config('auth.admin_mfa.enforced')
-            && ! User::query()
-                ->where('is_admin', true)
-                ->whereNotNull('admin_mfa_confirmed_at')
-                ->whereNotNull('admin_mfa_recovery_codes')
-                ->whereNull('banned_at')
-                ->where('is_suspended', false)
-                ->get()
-                ->contains(fn (User $admin): bool => count($admin->admin_mfa_recovery_codes ?? []) > 0)
-        ) {
+        if (! (bool) config('auth.admin_mfa.enforced')) {
+            $failures[] = 'ADMIN_MFA_ENFORCED must be true in production.';
+        } elseif (! User::query()
+            ->where('is_admin', true)
+            ->whereNotNull('admin_mfa_confirmed_at')
+            ->whereNotNull('admin_mfa_recovery_codes')
+            ->whereNull('banned_at')
+            ->where('is_suspended', false)
+            ->get()
+            ->contains(fn (User $admin): bool => count($admin->admin_mfa_recovery_codes ?? []) > 0)) {
             $failures[] = 'ADMIN_MFA_ENFORCED requires an active administrator with confirmed TOTP and recovery codes.';
         }
 

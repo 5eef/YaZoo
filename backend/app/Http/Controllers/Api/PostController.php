@@ -9,6 +9,7 @@ use App\Http\Resources\Feed\PostResource;
 use App\Models\Community;
 use App\Models\Post;
 use App\Notifications\PostLikedNotification;
+use App\Services\MediaAssetService;
 use App\Support\MediaStorage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,6 +19,10 @@ use Throwable;
 
 class PostController extends Controller
 {
+    public function __construct(
+        private readonly MediaAssetService $mediaAssets,
+    ) {}
+
     /**
      * Display a paginated listing of posts for the feed.
      */
@@ -28,47 +33,41 @@ class PostController extends Controller
 
         if ($communityId) {
             $community = Community::query()->findOrFail($communityId);
-
-            abort_unless(
-                $this->canViewCommunity($request, $community),
-                403,
-                "Vous n'avez pas acces a ce groupe.",
-            );
+            $this->authorize('view', $community);
         }
 
         $posts = Post::query()
-            ->when($communityId, function ($query) use ($communityId): void {
-                $query->where('community_id', $communityId);
-            }, function ($query) use ($request): void {
-                $query
-                    ->whereNull('community_id')
-                    ->where(function ($query) use ($request): void {
-                        $query
-                            ->where('visibility', Post::VISIBILITY_PUBLIC)
-                            ->orWhere('user_id', $request->user()->id);
-                    });
-            })
+            ->visibleTo($request->user())
+            ->when(
+                $communityId,
+                fn ($query) => $query->where('community_id', $communityId),
+                fn ($query) => $query->whereNull('community_id'),
+            )
             ->with([
-                'likes:id,user_id,likeable_id,likeable_type,reaction',
-                'user:id,name,phone_verified_at,avatar,city,country',
+                'likes' => fn ($query) => $query
+                    ->where('user_id', $request->user()->id)
+                    ->select('id', 'user_id', 'likeable_id', 'likeable_type', 'reaction'),
+                'user' => fn ($query) => $query
+                    ->select('id', 'name', 'phone_verified_at', 'avatar', 'city', 'country')
+                    ->withExists([
+                        'followers as is_followed_by_viewer' => fn ($followers) => $followers
+                            ->where('follower_user_id', $request->user()->id),
+                    ]),
                 'community:id,name,is_private',
                 'comments' => fn ($query) => $query
                     ->whereNull('parent_id')
                     ->latest()
                     ->limit(3)
+                    ->withCount('replies')
                     ->with([
                         'user:id,name,avatar,city,country',
-                        'replies.user:id,name,avatar,city,country',
+                        'replies' => fn ($replies) => $replies
+                            ->oldest()
+                            ->limit(3)
+                            ->with('user:id,name,avatar,city,country'),
                     ]),
             ])
-            ->withCount([
-                'likes',
-                'comments',
-                'likes as liked_by_user' => fn ($query) => $query->where(
-                    'user_id',
-                    $request->user()->id,
-                ),
-            ])
+            ->withCount($this->feedCounts($request->user()->id))
             ->latest()
             ->paginate($pagination->perPage);
 
@@ -96,29 +95,41 @@ class PostController extends Controller
 
         $mediaPath = null;
         $mediaKind = null;
+        $mediaAsset = null;
 
         try {
             if ($request->hasFile('media_file')) {
                 $mediaKind = MediaStorage::detectMediaKind($request->file('media_file'));
-                $mediaPath = MediaStorage::storeUploadedFile(
+                $mediaAsset = $this->mediaAssets->registerUpload(
+                    $request->user(),
                     $request->file('media_file'),
                     'feed/posts',
+                    $mediaKind,
                 );
+                $mediaPath = $mediaAsset->path;
             }
 
-            $post = DB::transaction(fn (): Post => $request->user()->posts()->create([
-                'community_id' => $communityId,
-                'content' => $request->validated('content'),
-                'image_path' => $mediaKind === 'image' ? $mediaPath : null,
-                'media_path' => $mediaPath,
-                'media_kind' => $mediaKind,
-                'location' => $request->validated('location'),
-                'tags' => $request->validated('tags', []),
-                'visibility' => $request->validated('visibility', Post::VISIBILITY_PUBLIC),
-            ]));
+            $post = DB::transaction(function () use ($request, $communityId, $mediaAsset, $mediaKind, $mediaPath): Post {
+                $post = $request->user()->posts()->create([
+                    'community_id' => $communityId,
+                    'content' => $request->validated('content'),
+                    'image_path' => $mediaKind === 'image' ? $mediaPath : null,
+                    'media_path' => $mediaPath,
+                    'media_kind' => $mediaKind,
+                    'location' => $request->validated('location'),
+                    'tags' => $request->validated('tags', []),
+                    'visibility' => $request->validated('visibility', Post::VISIBILITY_PUBLIC),
+                ]);
+
+                if ($mediaAsset) {
+                    $this->mediaAssets->attach($mediaAsset, $post, 'media_path');
+                }
+
+                return $post;
+            });
         } catch (Throwable $exception) {
-            if ($mediaPath !== null) {
-                MediaStorage::deleteStoredFiles([$mediaPath]);
+            if ($mediaAsset) {
+                $this->mediaAssets->discardUnattached($mediaAsset, $request->user());
             }
 
             throw $exception;
@@ -167,13 +178,11 @@ class PostController extends Controller
     {
         $this->authorize('delete', $post);
 
-        $storedPaths = [
-            $post->media_path,
-            $post->image_path,
-        ];
+        $post->loadMissing('user');
+        $owner = $post->user;
 
         DB::transaction(fn () => $post->delete());
-        MediaStorage::deleteStoredFiles($storedPaths);
+        $this->mediaAssets->deleteAttached($post, $owner);
 
         return response()->json([
             'message' => __('messages.posts.deleted'),
@@ -226,34 +235,48 @@ class PostController extends Controller
     protected function loadFeedRelations(Post $post, int $userId): void
     {
         $post->load([
-            'likes:id,user_id,likeable_id,likeable_type,reaction',
-            'user:id,name,phone_verified_at,avatar,city,country',
+            'likes' => fn ($query) => $query
+                ->where('user_id', $userId)
+                ->select('id', 'user_id', 'likeable_id', 'likeable_type', 'reaction'),
+            'user' => fn ($query) => $query
+                ->select('id', 'name', 'phone_verified_at', 'avatar', 'city', 'country')
+                ->withExists([
+                    'followers as is_followed_by_viewer' => fn ($followers) => $followers
+                        ->where('follower_user_id', $userId),
+                ]),
             'community:id,name,is_private',
             'comments' => fn ($query) => $query
                 ->whereNull('parent_id')
                 ->latest()
                 ->limit(3)
+                ->withCount('replies')
                 ->with([
                     'user:id,name,avatar,city,country',
-                    'replies.user:id,name,avatar,city,country',
+                    'replies' => fn ($replies) => $replies
+                        ->oldest()
+                        ->limit(3)
+                        ->with('user:id,name,avatar,city,country'),
                 ]),
-        ])->loadCount([
+        ])->loadCount($this->feedCounts($userId));
+    }
+
+    /**
+     * @return array<string|int, mixed>
+     */
+    private function feedCounts(int $userId): array
+    {
+        $counts = [
             'likes',
             'comments',
             'likes as liked_by_user' => fn ($query) => $query->where('user_id', $userId),
-        ]);
-    }
+        ];
 
-    private function canViewCommunity(Request $request, Community $community): bool
-    {
-        if (! $community->is_private) {
-            return true;
+        foreach (Post::REACTIONS as $reaction) {
+            $counts["likes as reaction_{$reaction}_count"] = fn ($query) => $query
+                ->where('reaction', $reaction);
         }
 
-        return $community->memberships()
-            ->where('user_id', $request->user()->id)
-            ->where('status', 'approved')
-            ->exists();
+        return $counts;
     }
 
     private function canPostInCommunity(Request $request, Community $community): bool

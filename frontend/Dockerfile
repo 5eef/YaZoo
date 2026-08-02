@@ -3,14 +3,14 @@ FROM node:22.22-alpine AS build
 WORKDIR /app/frontend
 
 ARG VITE_APP_NAME=YaZoo
-ARG VITE_API_URL=https://yazoo-api.azurewebsites.net/api
-ARG VITE_STORAGE_URL=https://yazoo-api.azurewebsites.net/storage
+ARG VITE_API_URL=/api
+ARG VITE_STORAGE_URL=/storage
 ARG VITE_REALTIME_ENABLED=false
 ARG VITE_REVERB_HOST=
 ARG VITE_REVERB_PORT=443
 ARG VITE_REVERB_SCHEME=https
 ARG VITE_MONITORING_ENABLED=false
-ARG VITE_MONITORING_ENDPOINT=https://yazoo-api.azurewebsites.net/api/monitoring/frontend-error
+ARG VITE_MONITORING_ENDPOINT=/api/monitoring/frontend-error
 ARG VITE_NOTIFICATIONS_POLL_MS=30000
 ARG VITE_BUILD_SOURCEMAPS=false
 ARG APP_VERSION=local
@@ -36,6 +36,7 @@ RUN npm run build
 FROM nginx:1.27-alpine
 
 ARG APP_VERSION=local
+ENV BACKEND_UPSTREAM=https://yazoo-api.azurewebsites.net
 
 LABEL org.opencontainers.image.title="YaZoo Frontend" \
       org.opencontainers.image.description="YaZoo social platform and animal marketplace frontend." \
@@ -43,7 +44,7 @@ LABEL org.opencontainers.image.title="YaZoo Frontend" \
       org.opencontainers.image.licenses="MIT" \
       org.opencontainers.image.vendor="Youssef BOUGHIOUL"
 
-COPY infra/nginx/frontend.conf /etc/nginx/conf.d/default.conf
+COPY infra/nginx/frontend.conf /etc/nginx/templates/default.conf.template
 COPY --from=build /app/frontend/dist /usr/share/nginx/html
 COPY LICENSE /usr/share/nginx/html/LICENSE.txt
 RUN printf '{"version":"%s"}\n' "$APP_VERSION" > /usr/share/nginx/html/version.json

@@ -130,7 +130,9 @@ class PaymentService
         $result = $gateway->handleCallback($payload);
         $payment = $this->paymentForCallback($result);
 
-        if ($payment) {
+        $eventKey = $this->callbackEventKey($result);
+
+        if ($payment && $result->signatureValid === false) {
             $this->recordTransaction(
                 $payment,
                 PaymentTransaction::TYPE_CALLBACK,
@@ -140,6 +142,7 @@ class PaymentService
                 ['status' => $result->status, 'message' => $result->message],
                 $result->signatureValid,
                 $request,
+                $eventKey,
             );
         }
 
@@ -151,19 +154,53 @@ class PaymentService
 
         abort_if(! $payment, 404, 'Paiement introuvable pour ce callback.');
 
-        if ($result->success && $result->status === Payment::STATUS_PAID) {
-            $this->markPaid($payment, [
-                'provider_reference' => $result->providerReference,
-                'skip_transaction' => true,
-            ]);
-        } elseif ($result->status === Payment::STATUS_FAILED) {
-            $this->markFailed($payment, [
-                'provider_reference' => $result->providerReference,
-                'skip_transaction' => true,
-            ]);
-        }
+        return DB::transaction(function () use ($payment, $result, $request, $eventKey): PaymentCallbackResult {
+            $lockedPayment = Payment::query()->lockForUpdate()->findOrFail($payment->id);
+            $existingEvent = PaymentTransaction::query()->where('event_key', $eventKey)->exists();
 
-        return $result;
+            if ($existingEvent) {
+                return $this->callbackResultForState($result, $lockedPayment->status, 'Callback fournisseur duplique ignore.');
+            }
+
+            $targetStatus = in_array($result->status, [Payment::STATUS_PAID, Payment::STATUS_FAILED], true)
+                ? $result->status
+                : null;
+            $applied = $targetStatus === null || $lockedPayment->canTransitionTo($targetStatus);
+
+            if ($targetStatus === Payment::STATUS_PAID && $applied) {
+                $lockedPayment = $this->markPaid($lockedPayment, [
+                    'provider_reference' => $result->providerReference,
+                    'skip_transaction' => true,
+                ]);
+            } elseif ($targetStatus === Payment::STATUS_FAILED && $applied) {
+                $lockedPayment = $this->markFailed($lockedPayment, [
+                    'provider_reference' => $result->providerReference,
+                    'skip_transaction' => true,
+                ]);
+            }
+
+            $this->recordTransaction(
+                $lockedPayment,
+                PaymentTransaction::TYPE_CALLBACK,
+                $applied ? PaymentTransaction::STATUS_SUCCEEDED : PaymentTransaction::STATUS_REJECTED,
+                $result->providerReference,
+                $result->payload,
+                [
+                    'provider_status' => $result->status,
+                    'applied_status' => $lockedPayment->fresh()->status,
+                    'ignored' => ! $applied,
+                ],
+                true,
+                $request,
+                $eventKey,
+            );
+
+            $message = $applied
+                ? $result->message
+                : 'Callback fournisseur hors ordre ignore; etat terminal conserve.';
+
+            return $this->callbackResultForState($result, $lockedPayment->fresh()->status, $message);
+        });
     }
 
     /**
@@ -178,6 +215,12 @@ class PaymentService
             $lockedPayment = Payment::query()
                 ->lockForUpdate()
                 ->findOrFail($payment->id);
+
+            if ($lockedPayment->status === Payment::STATUS_PAID) {
+                return $lockedPayment->fresh(['reservation', 'buyer', 'seller', 'transactions']);
+            }
+
+            abort_unless($lockedPayment->canTransitionTo(Payment::STATUS_PAID), 422, 'Transition de paiement interdite.');
 
             $this->assertReservationCanBecomePaid($lockedReservation);
 
@@ -321,6 +364,12 @@ class PaymentService
                 ->lockForUpdate()
                 ->with('reservation')
                 ->findOrFail($payment->id);
+
+            if ($lockedPayment->status === $status) {
+                return $lockedPayment->fresh(['reservation', 'buyer', 'seller', 'transactions']);
+            }
+
+            abort_unless($lockedPayment->canTransitionTo($status), 422, 'Transition de paiement interdite.');
 
             $lockedPayment->forceFill([
                 'status' => $status,
@@ -477,9 +526,11 @@ class PaymentService
         ?array $responsePayload,
         ?bool $signatureValid,
         ?Request $request,
+        ?string $eventKey = null,
     ): PaymentTransaction {
-        return PaymentTransaction::create([
+        $attributes = [
             'payment_id' => $payment->id,
+            'event_key' => $eventKey,
             'provider' => $payment->provider,
             'type' => $type,
             'status' => $status,
@@ -490,6 +541,37 @@ class PaymentService
             'ip_address' => $request?->ip(),
             'user_agent' => $request?->userAgent(),
             'processed_at' => now(),
-        ]);
+        ];
+
+        return $eventKey
+            ? PaymentTransaction::query()->firstOrCreate(['event_key' => $eventKey], $attributes)
+            : PaymentTransaction::query()->create($attributes);
+    }
+
+    protected function callbackEventKey(PaymentCallbackResult $result): string
+    {
+        return hash('sha256', implode('|', [
+            $result->provider,
+            (string) $result->internalReference,
+            (string) $result->providerReference,
+            $result->status,
+        ]));
+    }
+
+    protected function callbackResultForState(
+        PaymentCallbackResult $result,
+        string $status,
+        ?string $message,
+    ): PaymentCallbackResult {
+        return new PaymentCallbackResult(
+            provider: $result->provider,
+            success: $status === Payment::STATUS_PAID,
+            status: $status,
+            internalReference: $result->internalReference,
+            providerReference: $result->providerReference,
+            message: $message,
+            payload: $result->payload,
+            signatureValid: $result->signatureValid,
+        );
     }
 }

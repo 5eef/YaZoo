@@ -2,20 +2,20 @@
 
 namespace Tests\Feature;
 
-use App\Models\DataDeletionRequest;
-use App\Models\Comment;
 use App\Models\Conversation;
+use App\Models\DataDeletionRequest;
 use App\Models\Post;
+use App\Models\PrivacyConsent;
 use App\Models\Product;
 use App\Models\ProfessionalVerification;
 use App\Models\Reservation;
-use App\Models\PrivacyConsent;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use RuntimeException;
+use Symfony\Component\HttpFoundation\StreamedJsonResponse;
 use Tests\TestCase;
 
 class PrivacyApiTest extends TestCase
@@ -91,15 +91,19 @@ class PrivacyApiTest extends TestCase
 
         $exportResponse = $this->getJson('/api/privacy/export');
 
+        $this->assertInstanceOf(StreamedJsonResponse::class, $exportResponse->baseResponse);
+
         $exportResponse
             ->assertOk()
             ->assertJsonPath('profile.email', 'privacy@example.com')
             ->assertJsonPath('profile.phone', '+212600000000')
             ->assertJsonMissingPath('profile.password')
+            ->assertJsonMissingPath('posts.0.user_id')
             ->assertJsonPath('privacyConsents.0.type', 'sms_otp')
             ->assertJsonPath('comments.0.body', 'Mon commentaire exportable')
             ->assertJsonPath('sentMessages.0.body', 'Message écrit par la personne concernée')
             ->assertJsonPath('professionalVerifications.0.legal_name', 'Privacy Commerce')
+            ->assertJsonMissingPath('professionalVerifications.0.document_path')
             ->assertJsonMissing(['Message tiers à ne pas exporter'])
             ->assertJsonPath('excluded.messagesAuthoredByOthers', 'Only messages authored by this account are included.');
     }

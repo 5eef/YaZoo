@@ -2,16 +2,18 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasMediaAssets;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Veterinarian extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, HasMediaAssets, SoftDeletes;
 
     public const MODERATION_STATUS_PENDING_REVIEW = 'pending_review';
 
@@ -75,6 +77,16 @@ class Veterinarian extends Model
     public function appointments(): HasMany
     {
         return $this->hasMany(VeterinarianAppointment::class);
+    }
+
+    public function appointmentReviews(): HasManyThrough
+    {
+        return $this->hasManyThrough(
+            VeterinarianAppointmentReview::class,
+            VeterinarianAppointment::class,
+            'veterinarian_id',
+            'veterinarian_appointment_id',
+        );
     }
 
     public function isPubliclyVisible(): bool

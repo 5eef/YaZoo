@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router'
 
 import { defaultAnimalFilters, defaultAnimalForm } from '../features/marketplace/marketplaceOptions'
@@ -14,7 +14,7 @@ import { useI18n } from './useI18n'
 
 const cloneAnimalForm = () => ({
   ...defaultAnimalForm,
-  existing_gallery_paths: [],
+  gallery_asset_ids: [],
   existing_gallery_urls: [],
 })
 
@@ -36,50 +36,26 @@ export function useAnimalsMarketplace() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isFiltersOpen, setIsFiltersOpen] = useState(false)
+  const latestRequestId = useRef(0)
 
   const loadAnimals = useCallback(async (activeFilters = filters) => {
+    const requestId = latestRequestId.current + 1
+    latestRequestId.current = requestId
     try {
       const nextAnimals = await animalService.fetchAnimals(activeFilters)
 
-      setAnimals(nextAnimals)
-      setErrorMessage('')
+      if (requestId === latestRequestId.current) {
+        setAnimals(nextAnimals)
+        setErrorMessage('')
+      }
     } catch (error) {
-      setErrorMessage(
-        getErrorMessage(error, t('animals.loadError')),
-      )
+      if (requestId === latestRequestId.current) {
+        setErrorMessage(getErrorMessage(error, t('animals.loadError')))
+      }
     } finally {
-      setIsLoading(false)
+      if (requestId === latestRequestId.current) setIsLoading(false)
     }
   }, [filters, t])
-
-  useEffect(() => {
-    let cancelled = false
-
-    const loadInitialAnimals = async () => {
-      try {
-        const nextAnimals = await animalService.fetchAnimals()
-
-        if (!cancelled) {
-          setAnimals(nextAnimals)
-          setErrorMessage('')
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setErrorMessage(
-            getErrorMessage(error, t('animals.loadError')),
-          )
-        }
-      } finally {
-        if (!cancelled) setIsLoading(false)
-      }
-    }
-
-    loadInitialAnimals()
-
-    return () => {
-      cancelled = true
-    }
-  }, [t])
 
   useEffect(() => {
     setFilters((current) => {
@@ -94,6 +70,10 @@ export function useAnimalsMarketplace() {
     loadAnimals({ ...filters, q: queryFromUrl })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryFromUrl])
+
+  useEffect(() => () => {
+    latestRequestId.current += 1
+  }, [])
 
   const handleFilterChange = (field) => (event) => {
     setFilters((current) => ({ ...current, [field]: event.target.value }))
@@ -115,18 +95,25 @@ export function useAnimalsMarketplace() {
 
   const handleSearch = async (event) => {
     event.preventDefault()
-    if (filters.q.trim()) {
-      setSearchParams({ q: filters.q.trim() })
-    } else {
-      setSearchParams({})
+    const nextQuery = filters.q.trim()
+
+    if (nextQuery !== queryFromUrl) {
+      setSearchParams(nextQuery ? { q: nextQuery } : {})
+      return
     }
+
     setIsLoading(true)
-    await loadAnimals(filters)
+    await loadAnimals({ ...filters, q: nextQuery })
   }
 
   const handleResetFilters = async () => {
     setFilters(defaultAnimalFilters)
-    setSearchParams({})
+
+    if (queryFromUrl) {
+      setSearchParams({})
+      return
+    }
+
     setIsLoading(true)
     await loadAnimals(defaultAnimalFilters)
   }
@@ -199,12 +186,10 @@ export function useAnimalsMarketplace() {
       seller_type: animal.sellerType ?? 'individual',
       origin: animal.origin ?? '',
       identification_number: animal.identificationNumber ?? '',
-      health_certificate_path: animal.healthCertificatePath ?? '',
-      vaccination_book_path: animal.vaccinationBookPath ?? '',
       onssa_authorization_number: animal.onssaAuthorizationNumber ?? '',
-      existing_photo_path: animal.photoPath ?? '',
+      photo_asset_id: animal.photoAssetId ?? '',
       existing_photo_url: animal.photoUrl ?? '',
-      existing_gallery_paths: animal.galleryPaths ?? [],
+      gallery_asset_ids: animal.galleryAssetIds ?? [],
       existing_gallery_urls: animal.galleryUrls ?? [],
     })
     setSuccessMessage('')
@@ -212,6 +197,8 @@ export function useAnimalsMarketplace() {
   }
 
   const handleDelete = async (animalId) => {
+    if (!globalThis.confirm(t('admin.moderation.deleteConfirm', { label: `#${animalId}` }))) return
+
     setErrorMessage('')
     setSuccessMessage('')
 

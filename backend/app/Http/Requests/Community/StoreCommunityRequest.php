@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Community;
 
+use App\Rules\SafeMediaUpload;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -25,7 +26,7 @@ class StoreCommunityRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:150'],
             'description' => ['nullable', 'string', 'max:5000'],
-            'image_file' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,gif,mp4,webm,mov', 'max:51200'],
+            'image_file' => ['nullable', 'file', new SafeMediaUpload, 'max:20480'],
             'image_url' => ['nullable', 'string', 'max:2048'],
             'is_private' => ['required', 'boolean'],
         ];

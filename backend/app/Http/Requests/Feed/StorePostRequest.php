@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Feed;
 
 use App\Models\Post;
+use App\Rules\SafeMediaUpload;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -31,7 +32,7 @@ class StorePostRequest extends FormRequest
             'location' => ['nullable', 'string', 'max:255'],
             'tags' => ['nullable', 'array', 'max:10'],
             'tags.*' => ['string', 'max:50'],
-            'media_file' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,gif,mp4,webm,mov', 'max:51200'],
+            'media_file' => ['nullable', 'file', new SafeMediaUpload, 'max:20480'],
             'visibility' => ['nullable', 'string', Rule::in(Post::VISIBILITIES)],
         ];
     }

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import PropTypes from 'prop-types'
 
 import { useI18n } from '../../hooks/useI18n'
+import { useAccessibleDialog } from '../../hooks/useAccessibleDialog'
 import Button from '../ui/Button'
 
 function StoryComposerModal({
@@ -37,6 +38,7 @@ function StoryComposerModal({
     resetForm()
     onClose()
   }, [onClose, resetForm])
+  const dialogRef = useAccessibleDialog(isOpen, handleClose, closeButtonRef)
 
   useEffect(() => {
     if (!isOpen) {
@@ -61,28 +63,6 @@ function StoryComposerModal({
       }
     }
   }, [mediaPreviewUrl])
-
-  useEffect(() => {
-    if (!isOpen) {
-      return undefined
-    }
-
-    const handleKeyDown = (event) => {
-      if (event.key === 'Escape') {
-        handleClose()
-      }
-    }
-
-    globalThis.addEventListener('keydown', handleKeyDown)
-    const focusTimerId = globalThis.setTimeout(() => {
-      closeButtonRef.current?.focus()
-    }, 40)
-
-    return () => {
-      globalThis.removeEventListener('keydown', handleKeyDown)
-      globalThis.clearTimeout(focusTimerId)
-    }
-  }, [handleClose, isOpen])
 
   if (!isOpen) {
     return null
@@ -137,6 +117,7 @@ function StoryComposerModal({
       />
       <div className="relative mx-auto w-full max-w-2xl">
         <form
+          ref={dialogRef}
           onSubmit={handleSubmit}
           className="w-full max-h-[calc(100dvh-0.5rem)] overflow-y-auto rounded-[30px] border border-white/80 bg-white shadow-[0_28px_70px_rgba(15,23,42,0.26)] sm:max-h-[calc(100dvh-2rem)]"
           style={{ WebkitOverflowScrolling: 'touch', scrollbarGutter: 'stable both-edges' }}

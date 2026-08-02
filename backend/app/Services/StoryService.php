@@ -7,9 +7,9 @@ use App\Models\User;
 use App\Repositories\StoryRepository;
 use App\Support\MediaStorage;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Throwable;
-use Illuminate\Support\Collection;
 
 class StoryService
 {
@@ -17,6 +17,7 @@ class StoryService
 
     public function __construct(
         protected StoryRepository $stories,
+        protected MediaAssetService $mediaAssets,
     ) {}
 
     /**
@@ -79,18 +80,29 @@ class StoryService
      */
     public function create(User $user, array $validated, UploadedFile $mediaFile): Story
     {
-        $mediaPath = MediaStorage::storeUploadedFile($mediaFile, 'feed/stories');
+        $mediaKind = MediaStorage::detectMediaKind($mediaFile);
+        $mediaAsset = $this->mediaAssets->registerUpload(
+            $user,
+            $mediaFile,
+            'feed/stories',
+            $mediaKind,
+        );
 
         try {
-            $story = DB::transaction(fn (): Story => $user->stories()->create([
-                'content' => $validated['content'] ?? null,
-                'location' => $validated['location'] ?? null,
-                'media_path' => $mediaPath,
-                'media_kind' => MediaStorage::detectMediaKind($mediaFile),
-                'expires_at' => now()->addDay(),
-            ]));
+            $story = DB::transaction(function () use ($user, $validated, $mediaAsset, $mediaKind): Story {
+                $story = $user->stories()->create([
+                    'content' => $validated['content'] ?? null,
+                    'location' => $validated['location'] ?? null,
+                    'media_path' => $mediaAsset->path,
+                    'media_kind' => $mediaKind,
+                    'expires_at' => now()->addDay(),
+                ]);
+                $this->mediaAssets->attach($mediaAsset, $story, 'media_path');
+
+                return $story;
+            });
         } catch (Throwable $exception) {
-            MediaStorage::deleteStoredFiles([$mediaPath]);
+            $this->mediaAssets->discardUnattached($mediaAsset, $user);
 
             throw $exception;
         }
@@ -112,9 +124,10 @@ class StoryService
 
     public function delete(Story $story): void
     {
-        $mediaPath = $story->media_path;
+        $story->loadMissing('user');
+        $owner = $story->user;
         DB::transaction(fn () => $story->delete());
-        MediaStorage::deleteStoredFiles([$mediaPath]);
+        $this->mediaAssets->deleteAttached($story, $owner);
     }
 
     protected function storyGroupSorter(): callable

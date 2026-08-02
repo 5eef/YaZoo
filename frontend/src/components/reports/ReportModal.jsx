@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import PropTypes from 'prop-types'
 
 import { createReportRequest } from '../../api/reports'
 import { useI18n } from '../../hooks/useI18n'
+import { useAccessibleDialog } from '../../hooks/useAccessibleDialog'
 import { getErrorMessage } from '../../utils/getErrorMessage'
 import Button from '../ui/Button'
 
@@ -23,6 +24,8 @@ function ReportModal({ isOpen, reportableType, reportableId, onClose }) {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const closeButtonRef = useRef(null)
+  const dialogRef = useAccessibleDialog(isOpen, onClose, closeButtonRef)
 
   if (!isOpen) {
     return null
@@ -53,13 +56,15 @@ function ReportModal({ isOpen, reportableType, reportableId, onClose }) {
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center bg-stone-950/58 px-4 py-6 backdrop-blur-sm">
       <section
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
+        aria-labelledby="report-dialog-title"
         className="max-h-[86vh] w-full max-w-lg overflow-y-auto rounded-[30px] border border-white/70 bg-white/96 p-5 text-start shadow-[0_30px_80px_rgba(76,29,149,0.28)] dark:border-violet-300/16 dark:bg-[#12051f]"
       >
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-lg font-semibold text-stone-950 dark:text-violet-50">
+            <h2 id="report-dialog-title" className="text-lg font-semibold text-stone-950 dark:text-violet-50">
               {t('reports.title')}
             </h2>
             <p className="mt-1 text-sm leading-6 text-stone-600 dark:text-violet-100/72">
@@ -68,6 +73,7 @@ function ReportModal({ isOpen, reportableType, reportableId, onClose }) {
           </div>
           <button
             type="button"
+            ref={closeButtonRef}
             onClick={onClose}
             className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-violet-100 bg-white text-lg font-semibold text-stone-600 transition hover:bg-violet-50 dark:border-violet-300/14 dark:bg-white/8 dark:text-violet-50"
             aria-label={t('common.close')}
@@ -105,8 +111,8 @@ function ReportModal({ isOpen, reportableType, reportableId, onClose }) {
             />
           </label>
 
-          {error ? <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p> : null}
-          {message ? <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{message}</p> : null}
+          {error ? <p role="alert" aria-live="assertive" className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p> : null}
+          {message ? <p role="status" aria-live="polite" className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{message}</p> : null}
 
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
             <Button type="button" variant="ghost" onClick={onClose} className="w-full sm:w-auto">

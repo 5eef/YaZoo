@@ -331,17 +331,7 @@ class AdminModerationController extends Controller
             'operation' => 'delete_animal',
         ]);
 
-        $storedPaths = [
-            $animal->photo_url,
-            ...($animal->gallery_urls ?? []),
-        ];
-
-        DB::transaction(function () use ($animal): void {
-            $animal->reservations()->delete();
-            $animal->delete();
-        });
-
-        MarketplaceMedia::deleteStoredFiles($storedPaths);
+        DB::transaction(fn () => $animal->delete());
 
         return response()->json([
             'message' => __('messages.admin.animal_deleted'),
@@ -358,17 +348,7 @@ class AdminModerationController extends Controller
             'operation' => 'delete_product',
         ]);
 
-        $storedPaths = [
-            $product->image_url,
-            ...($product->gallery_urls ?? []),
-        ];
-
-        DB::transaction(function () use ($product): void {
-            $product->reservations()->delete();
-            $product->delete();
-        });
-
-        MarketplaceMedia::deleteStoredFiles($storedPaths);
+        DB::transaction(fn () => $product->delete());
 
         return response()->json([
             'message' => __('messages.admin.product_deleted'),

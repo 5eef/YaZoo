@@ -20,7 +20,7 @@ class CommunityPolicy
      */
     public function view(User $user, Community $community): bool
     {
-        return $user->exists && $community->exists;
+        return $user->exists && $community->isVisibleTo($user);
     }
 
     /**

@@ -36,11 +36,7 @@ class ConversationController extends Controller
                     ->where('participant_one_id', $request->user()->id)
                     ->orWhere('participant_two_id', $request->user()->id);
             })
-            ->with([
-                'participantOne:id,name,email,phone,avatar,city,country',
-                'participantTwo:id,name,email,phone,avatar,city,country',
-                'latestMessage.sender:id,name,avatar',
-            ])
+            ->with($this->participantRelations($request->user()->id))
             ->withCount([
                 'messages as unread_messages_count' => fn ($query) => $query
                     ->where('user_id', '!=', $request->user()->id)
@@ -155,34 +151,17 @@ class ConversationController extends Controller
      */
     protected function findOrCreateConversation(User $user, User $recipient): array
     {
-        $conversation = Conversation::query()
-            ->where(function ($query) use ($user, $recipient) {
-                $query
-                    ->where('participant_one_id', $user->id)
-                    ->where('participant_two_id', $recipient->id);
-            })
-            ->orWhere(function ($query) use ($user, $recipient) {
-                $query
-                    ->where('participant_one_id', $recipient->id)
-                    ->where('participant_two_id', $user->id);
-            })
-            ->first();
-
-        if ($conversation) {
-            return [$conversation, false];
-        }
-
         [$participantOneId, $participantTwoId] = collect([$user->id, $recipient->id])
             ->sort()
             ->values()
             ->all();
 
-        $conversation = Conversation::query()->create([
+        $conversation = Conversation::query()->firstOrCreate([
             'participant_one_id' => $participantOneId,
             'participant_two_id' => $participantTwoId,
         ]);
 
-        return [$conversation, true];
+        return [$conversation, $conversation->wasRecentlyCreated];
     }
 
     /**
@@ -245,11 +224,7 @@ class ConversationController extends Controller
         int $userId,
         bool $withMessages = false,
     ): void {
-        $relations = [
-            'participantOne:id,name,email,phone,avatar,city,country',
-            'participantTwo:id,name,email,phone,avatar,city,country',
-            'latestMessage.sender:id,name,avatar',
-        ];
+        $relations = $this->participantRelations($userId);
 
         if ($withMessages) {
             $relations['messages'] = fn ($query) => $query
@@ -290,6 +265,25 @@ class ConversationController extends Controller
             ->where('email', $contact)
             ->orWhere('phone', $phone)
             ->firstOrFail();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function participantRelations(int $viewerId): array
+    {
+        $participant = fn ($query) => $query
+            ->select('id', 'name', 'email', 'phone', 'phone_verified_at', 'avatar', 'city', 'country')
+            ->withExists([
+                'followers as is_followed_by_viewer' => fn ($followers) => $followers
+                    ->where('follower_user_id', $viewerId),
+            ]);
+
+        return [
+            'participantOne' => $participant,
+            'participantTwo' => $participant,
+            'latestMessage.sender:id,name,avatar',
+        ];
     }
 
     protected function logMessageActivity(

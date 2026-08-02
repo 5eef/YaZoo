@@ -55,10 +55,10 @@ class SearchController extends Controller
         return response()->json([
             'data' => [
                 'users' => in_array('users', $types, true) ? $this->userResults($query, 8) : [],
-                'communities' => in_array('communities', $types, true) ? $this->communityResults($query, 8) : [],
+                'communities' => in_array('communities', $types, true) ? $this->communityResults($query, 8, $request->user()) : [],
                 'animals' => in_array('animals', $types, true) ? $this->animalResults($query, 8) : [],
                 'products' => in_array('products', $types, true) ? $this->productResults($query, 8) : [],
-                'posts' => in_array('posts', $types, true) ? $this->postResults($query, 8) : [],
+                'posts' => in_array('posts', $types, true) ? $this->postResults($query, 8, $request->user()) : [],
                 'services' => in_array('services', $types, true) ? $this->serviceResults($query, 8) : [],
                 'veterinarians' => in_array('veterinarians', $types, true) ? $this->veterinarianResults($query, 8) : [],
             ],
@@ -107,9 +107,10 @@ class SearchController extends Controller
     /**
      * @return array<int, array<string, mixed>>
      */
-    protected function communityResults(string $query, int $limit): array
+    protected function communityResults(string $query, int $limit, ?User $viewer): array
     {
         return Community::query()
+            ->visibleTo($viewer)
             ->withCount('approvedMemberships')
             ->where(fn (Builder $builder) => $this->whereLike($builder, ['name', 'description'], $query))
             ->latest()
@@ -179,11 +180,11 @@ class SearchController extends Controller
     /**
      * @return array<int, array<string, mixed>>
      */
-    protected function postResults(string $query, int $limit): array
+    protected function postResults(string $query, int $limit, ?User $viewer): array
     {
         return Post::query()
+            ->visibleTo($viewer)
             ->with('user:id,name,avatar')
-            ->where('visibility', Post::VISIBILITY_PUBLIC)
             ->where(function (Builder $builder) use ($query): void {
                 $this->whereLike($builder, ['content', 'location'], $query);
                 $builder->orWhereJsonContains('tags', $query);

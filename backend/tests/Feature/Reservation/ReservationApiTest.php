@@ -64,6 +64,44 @@ class ReservationApiTest extends TestCase
         Notification::assertSentTo($seller, ReservationRequestedNotification::class);
     }
 
+    public function test_listing_deletion_preserves_reservation_and_immutable_transaction_snapshot(): void
+    {
+        Notification::fake();
+        $seller = User::factory()->create(['name' => 'Vendeur historique']);
+        $buyer = User::factory()->create();
+        $animal = Animal::factory()->create([
+            'user_id' => $seller->id,
+            'name' => 'Atlas',
+            'description' => 'Description contractuelle',
+            'listing_status' => 'available',
+            'price' => 950,
+        ]);
+
+        Sanctum::actingAs($buyer, ['*']);
+        $this->postJson("/api/animals/{$animal->id}/reservations", [
+            'payment_method' => 'cash_on_pickup',
+            'delivery_method' => 'pickup',
+        ])->assertCreated();
+
+        $reservation = Reservation::query()->firstOrFail();
+        $snapshot = $reservation->transaction_snapshot;
+        $this->assertSame('Atlas', $snapshot['listing']['title']);
+        $this->assertSame('Vendeur historique', $snapshot['seller']['name']);
+        $this->assertSame(950, $snapshot['pricing']['unit_price']);
+        $this->assertSame(1, $snapshot['pricing']['quantity']);
+
+        Sanctum::actingAs($seller, ['*']);
+        $this->deleteJson("/api/animals/{$animal->id}")->assertOk();
+
+        $this->assertSoftDeleted('animals', ['id' => $animal->id]);
+        $this->assertDatabaseHas('reservations', ['id' => $reservation->id]);
+        $this->assertNotNull($reservation->refresh()->reservable);
+        $this->assertSame($snapshot, $reservation->transaction_snapshot);
+
+        $this->expectException(\LogicException::class);
+        $reservation->update(['transaction_snapshot' => ['tampered' => true]]);
+    }
+
     public function test_seller_can_approve_and_complete_an_animal_reservation(): void
     {
         Notification::fake();

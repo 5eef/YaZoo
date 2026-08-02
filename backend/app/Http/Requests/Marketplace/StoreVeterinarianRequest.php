@@ -25,8 +25,9 @@ class StoreVeterinarianRequest extends FormRequest
             'specialties' => ['nullable', 'array'],
             'specialties.*' => ['string', 'max:120'],
             'working_hours' => ['nullable', 'array'],
-            'image' => ['nullable', 'image', 'max:4096'],
-            'image_path' => ['nullable', 'string', 'max:1000'],
+            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'dimensions:max_width=6000,max_height=6000', 'max:5120'],
+            'image_path' => ['nullable', 'url:http,https', 'max:1000'],
+            'image_asset_id' => ['nullable', 'uuid'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'location_url' => ['nullable', 'url', 'max:1000'],
@@ -45,9 +46,14 @@ class StoreVeterinarianRequest extends FormRequest
             'phone' => trim((string) $this->input('phone')) ?: null,
             'whatsapp' => trim((string) $this->input('whatsapp')) ?: null,
             'email' => trim((string) $this->input('email')) ?: null,
-            'image_path' => trim((string) $this->input('image_path')) ?: null,
             'location_url' => trim((string) $this->input('location_url')) ?: null,
             'is_active' => $this->boolean('is_active', true),
         ]);
+
+        if ($this->exists('image_path')) {
+            $this->merge([
+                'image_path' => trim((string) $this->input('image_path')) ?: null,
+            ]);
+        }
     }
 }

@@ -4,6 +4,8 @@ namespace Tests\Feature\Marketplace;
 
 use App\Models\User;
 use App\Models\Veterinarian;
+use App\Models\VeterinarianAppointment;
+use App\Models\VeterinarianAppointmentReview;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Http\Request as HttpRequest;
@@ -90,6 +92,43 @@ class VeterinarianApiTest extends TestCase
             ->assertJsonPath('data.0.name', 'Dr Sara Vet')
             ->assertJsonPath('data.0.city', 'Casablanca')
             ->assertJsonPath('data.0.isActive', true);
+    }
+
+    public function test_veterinarian_rating_uses_preloaded_appointment_review_aggregates(): void
+    {
+        $viewer = User::factory()->create();
+        $veterinarian = Veterinarian::factory()->create([
+            'is_active' => true,
+            'moderation_status' => Veterinarian::MODERATION_STATUS_ACTIVE,
+        ]);
+        $client = User::factory()->create();
+        $appointment = VeterinarianAppointment::query()->create([
+            'veterinarian_id' => $veterinarian->id,
+            'client_id' => $client->id,
+            'animal_type' => 'chat',
+            'reason' => 'Controle',
+            'starts_at' => now()->subHour(),
+            'ends_at' => now(),
+            'status' => 'completed',
+        ]);
+        VeterinarianAppointmentReview::query()->create([
+            'veterinarian_appointment_id' => $appointment->id,
+            'client_id' => $client->id,
+            'rating' => 4,
+            'comment' => 'Consultation utile',
+        ]);
+
+        Sanctum::actingAs($viewer, ['*']);
+
+        $this->getJson('/api/veterinarians')
+            ->assertOk()
+            ->assertJsonPath('data.0.reviewsCount', 1)
+            ->assertJsonPath('data.0.averageRating', 4);
+
+        $this->getJson("/api/veterinarians/{$veterinarian->id}")
+            ->assertOk()
+            ->assertJsonPath('data.reviewsCount', 1)
+            ->assertJsonPath('data.averageRating', 4);
     }
 
     public function test_authenticated_user_can_create_update_and_delete_veterinarian(): void

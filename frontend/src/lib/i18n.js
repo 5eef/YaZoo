@@ -36,7 +36,7 @@ export const messages = {
       book: 'Prendre rendez-vous', manageSlots: 'Gérer les créneaux', slot: 'Créneau', choose: 'Choisir un créneau',
       animalType: 'Type d’animal', reason: 'Motif', request: 'Demander le rendez-vous', requested: 'Demande envoyée.',
       startsAt: 'Début', endsAt: 'Fin', addSlot: 'Ajouter le créneau', slotCreated: 'Créneau ajouté.',
-      confirm: 'Confirmer', complete: 'Terminer', review: 'Donner un avis 5/5', updated: 'Statut mis à jour.',
+      confirm: 'Confirmer', complete: 'Terminer', review: 'Publier la note', updated: 'Statut mis à jour.',
       reviewed: 'Avis enregistré.', loadError: 'Chargement impossible.', actionError: 'Action impossible.',
       status: { pending: 'En attente', confirmed: 'Confirmé', rejected: 'Refusé', cancelled: 'Annulé', completed: 'Terminé' },
     },
@@ -183,6 +183,9 @@ export const messages = {
     },
     errors: {
       generic: 'Une erreur est survenue. Reessayez dans quelques instants.',
+      boundaryTitle: 'Une erreur inattendue est survenue',
+      boundaryDescription: "Rechargez l'application. Si le probleme persiste, contactez le support.",
+      reload: 'Recharger',
     },
     follow: {
       follow: 'Suivre',
@@ -501,7 +504,7 @@ export const messages = {
       book: 'حجز موعد', manageSlots: 'إدارة الفترات', slot: 'الفترة', choose: 'اختر فترة',
       animalType: 'نوع الحيوان', reason: 'السبب', request: 'طلب الموعد', requested: 'تم إرسال الطلب.',
       startsAt: 'البداية', endsAt: 'النهاية', addSlot: 'إضافة فترة', slotCreated: 'تمت إضافة الفترة.',
-      confirm: 'تأكيد', complete: 'إكمال', review: 'إضافة تقييم 5/5', updated: 'تم تحديث الحالة.',
+      confirm: 'تأكيد', complete: 'إكمال', review: 'نشر التقييم', updated: 'تم تحديث الحالة.',
       reviewed: 'تم حفظ التقييم.', loadError: 'تعذر التحميل.', actionError: 'تعذر تنفيذ الإجراء.',
       status: { pending: 'قيد الانتظار', confirmed: 'مؤكد', rejected: 'مرفوض', cancelled: 'ملغى', completed: 'مكتمل' },
     },
@@ -644,6 +647,9 @@ export const messages = {
     },
     errors: {
       generic: 'حدث خطأ. حاول مرة أخرى بعد قليل.',
+      boundaryTitle: 'حدث خطأ غير متوقع',
+      boundaryDescription: 'أعد تحميل التطبيق. إذا استمرت المشكلة، تواصل مع الدعم.',
+      reload: 'إعادة التحميل',
     },
     follow: {
       follow: 'متابعة',
@@ -911,7 +917,7 @@ export const messages = {
       book: 'Book appointment', manageSlots: 'Manage slots', slot: 'Slot', choose: 'Choose a slot',
       animalType: 'Animal type', reason: 'Reason', request: 'Request appointment', requested: 'Request sent.',
       startsAt: 'Start', endsAt: 'End', addSlot: 'Add slot', slotCreated: 'Slot added.',
-      confirm: 'Confirm', complete: 'Complete', review: 'Leave a 5/5 review', updated: 'Status updated.',
+      confirm: 'Confirm', complete: 'Complete', review: 'Submit rating', updated: 'Status updated.',
       reviewed: 'Review saved.', loadError: 'Unable to load.', actionError: 'Unable to complete action.',
       status: { pending: 'Pending', confirmed: 'Confirmed', rejected: 'Rejected', cancelled: 'Cancelled', completed: 'Completed' },
     },
@@ -1740,6 +1746,9 @@ messages.fr = deepMerge(messages.fr, {
     sending: 'Envoi...',
   },
   errors: {
+    boundaryTitle: 'Une erreur inattendue est survenue',
+    boundaryDescription: "Rechargez l'application. Si le probleme persiste, contactez le support.",
+    reload: 'Recharger',
     sessionExpired: 'Votre session a expiré. Reconnectez-vous pour continuer.',
     tooManyRequests: 'Trop de requêtes ont été envoyées. Réessayez dans quelques instants.',
     serverTemporary: 'Le serveur rencontre un problème temporaire.',
@@ -2454,6 +2463,9 @@ messages.en = deepMerge(messages.en, {
     sending: 'Sending...',
   },
   errors: {
+    boundaryTitle: 'An unexpected error occurred',
+    boundaryDescription: 'Reload the application. If the problem persists, contact support.',
+    reload: 'Reload',
     sessionExpired: 'Your session expired. Sign in again to continue.',
     tooManyRequests: 'Too many requests were sent. Try again in a moment.',
     serverTemporary: 'The server is having a temporary issue.',

@@ -6,6 +6,7 @@ import { useI18n } from './hooks/useI18n'
 import CookieConsentBanner from './components/privacy/CookieConsentBanner'
 import SeoManager from './components/seo/SeoManager'
 import AdminRoute from './components/auth/AdminRoute'
+import AppErrorBoundary from './components/errors/AppErrorBoundary'
 
 const AdminModerationPage = lazy(() => import('./pages/AdminModerationPage'))
 const AdminAnimalReviewPage = lazy(() => import('./pages/AdminAnimalReviewPage'))
@@ -60,7 +61,7 @@ function App() {
   const { isAuthenticated } = useAuth()
 
   return (
-    <>
+    <AppErrorBoundary>
       <SeoManager />
       <Suspense fallback={<RouteLoader />}>
         <Routes>
@@ -142,7 +143,7 @@ function App() {
         </Routes>
         <CookieConsentBanner />
       </Suspense>
-    </>
+    </AppErrorBoundary>
   )
 }
 

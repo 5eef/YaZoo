@@ -122,6 +122,10 @@ return [
     'appointments' => [
         'slot_overlap' => 'Ce creneau chevauche une disponibilite existante.',
         'slot_unavailable' => 'Ce creneau n est plus disponible.',
+        'review_exists' => 'Un avis existe deja pour ce rendez-vous.',
+    ],
+    'uploads' => [
+        'invalid_media' => 'Le fichier ne correspond pas a un format media autorise.',
     ],
     'privacy' => [
         'consent_saved' => 'Preference de confidentialite enregistree.',

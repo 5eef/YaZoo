@@ -12,8 +12,11 @@ class ReservationReview extends Model
     use HasFactory;
 
     public const STATUS_PUBLISHED = 'published';
+
     public const STATUS_PENDING_MODERATION = 'pending_moderation';
+
     public const STATUS_HIDDEN = 'hidden';
+
     public const STATUS_REPORTED = 'reported';
 
     public const STATUSES = [

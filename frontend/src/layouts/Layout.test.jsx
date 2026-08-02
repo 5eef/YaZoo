@@ -148,6 +148,22 @@ describe('Layout', () => {
     )
   })
 
+  it('ne laisse aucun drawer mobile interactif dans le DOM lorsqu il est ferme', async () => {
+    const user = userEvent.setup()
+    const { container } = renderLayout()
+    const trigger = container.querySelector('[aria-controls="yazoo-mobile-navigation"]')
+
+    expect(trigger).not.toBeNull()
+    expect(screen.queryByRole('dialog', { name: 'Menu principal' })).not.toBeInTheDocument()
+
+    await user.click(trigger)
+    const dialog = screen.getByRole('dialog', { name: 'Menu principal' })
+    expect(dialog).toBeInTheDocument()
+
+    await user.click(within(dialog).getByRole('button', { name: 'Fermer le menu' }))
+    expect(screen.queryByRole('dialog', { name: 'Menu principal' })).not.toBeInTheDocument()
+  })
+
   it('affiche les libelles arabes et le RTL dans la sidebar', () => {
     renderLayout({ locale: 'ar' })
 

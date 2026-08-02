@@ -6,10 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\UpdateAnimalLegalStatusRequest;
 use App\Http\Resources\Marketplace\AnimalResource;
 use App\Models\Animal;
+use App\Services\Admin\ModerationLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
-use App\Services\Admin\ModerationLogger;
 
 class AdminAnimalReviewController extends Controller
 {

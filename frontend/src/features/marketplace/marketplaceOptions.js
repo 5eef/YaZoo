@@ -64,12 +64,10 @@ export const defaultAnimalForm = {
   seller_type: 'individual',
   origin: '',
   identification_number: '',
-  health_certificate_path: '',
-  vaccination_book_path: '',
   onssa_authorization_number: '',
-  existing_photo_path: '',
+  photo_asset_id: '',
   existing_photo_url: '',
-  existing_gallery_paths: [],
+  gallery_asset_ids: [],
   existing_gallery_urls: [],
 }
 
@@ -123,9 +121,9 @@ export const defaultProductForm = {
   stock: 1,
   listing_status: 'available',
   condition_status: 'new',
-  existing_image_path: '',
+  image_asset_id: '',
   existing_image_url: '',
-  existing_gallery_paths: [],
+  gallery_asset_ids: [],
   existing_gallery_urls: [],
 }
 

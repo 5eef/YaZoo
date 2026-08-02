@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Support\ContentVisibility;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -65,5 +67,19 @@ class Community extends Model
     public function pendingMemberships(): HasMany
     {
         return $this->memberships()->where('status', 'pending');
+    }
+
+    /**
+     * @param  Builder<Community>  $query
+     * @return Builder<Community>
+     */
+    public function scopeVisibleTo(Builder $query, ?User $viewer): Builder
+    {
+        return ContentVisibility::communities($query, $viewer);
+    }
+
+    public function isVisibleTo(?User $viewer): bool
+    {
+        return ContentVisibility::canViewCommunity($viewer, $this);
     }
 }

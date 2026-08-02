@@ -22,6 +22,8 @@ class ProductResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $canManage = ($request->user()?->is_admin ?? false) || ($request->user()?->is($this->user) ?? false);
+        $assets = $this->relationLoaded('mediaAssets') ? $this->mediaAssets : collect();
         $professionalBadge = $this->user
             ? app(MarketplacePublishingResolver::class)->badgeFor($this->user, 'products')
             : null;
@@ -32,9 +34,12 @@ class ProductResource extends JsonResource
             'category' => $this->category,
             'description' => $this->description,
             'price' => (float) $this->price,
-            'imagePath' => $this->image_url,
+            'imageAssetId' => $this->when($canManage, $assets->firstWhere('role', 'image_url')?->id),
             'imageUrl' => MarketplaceMedia::resolveUrl($this->image_url),
-            'galleryPaths' => $this->gallery_urls ?? [],
+            'galleryAssetIds' => $this->when(
+                $canManage,
+                $assets->where('role', 'gallery')->pluck('id')->values()->all(),
+            ),
             'galleryUrls' => MarketplaceMedia::resolveUrls($this->gallery_urls),
             'location' => $this->location,
             ...MarketplaceContact::payload($this->resource, $request, $this->isPubliclyVisible()),
@@ -43,7 +48,7 @@ class ProductResource extends JsonResource
             'conditionStatus' => $this->condition_status,
             'moderationStatus' => $this->moderation_status ?? 'active',
             'moderationNote' => $this->when(
-                ($request->user()?->is_admin ?? false) || ($request->user()?->is($this->user) ?? false),
+                $canManage,
                 $this->moderation_note,
             ),
             'averageRating' => $this->average_rating !== null ? round((float) $this->average_rating, 1) : null,

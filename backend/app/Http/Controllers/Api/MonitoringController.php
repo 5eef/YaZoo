@@ -59,10 +59,6 @@ class MonitoringController extends Controller
         ], 202);
     }
 
-    /**
-     * @param  mixed  $payload
-     * @return mixed
-     */
     private function sanitizePayload(mixed $payload): mixed
     {
         if (! is_array($payload)) {

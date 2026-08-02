@@ -8,10 +8,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class PaymentTransaction extends Model
 {
     public const TYPE_INITIATE = 'initiate';
+
     public const TYPE_CALLBACK = 'callback';
+
     public const TYPE_POSTAUTH = 'postauth';
+
     public const TYPE_REFUND = 'refund';
+
     public const TYPE_STATUS_CHECK = 'status_check';
+
     public const TYPE_MANUAL_UPDATE = 'manual_update';
 
     public const TYPES = [
@@ -24,8 +29,11 @@ class PaymentTransaction extends Model
     ];
 
     public const STATUS_PENDING = 'pending';
+
     public const STATUS_SUCCEEDED = 'succeeded';
+
     public const STATUS_FAILED = 'failed';
+
     public const STATUS_REJECTED = 'rejected';
 
     /**
@@ -33,6 +41,7 @@ class PaymentTransaction extends Model
      */
     protected $fillable = [
         'payment_id',
+        'event_key',
         'provider',
         'type',
         'status',

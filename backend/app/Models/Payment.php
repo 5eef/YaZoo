@@ -59,6 +59,16 @@ class Payment extends Model
         self::STATUS_AUTHORIZED,
     ];
 
+    public const ALLOWED_TRANSITIONS = [
+        self::STATUS_PENDING => [self::STATUS_AWAITING_VERIFICATION, self::STATUS_AUTHORIZED, self::STATUS_PAID, self::STATUS_FAILED, self::STATUS_CANCELLED],
+        self::STATUS_AWAITING_VERIFICATION => [self::STATUS_AUTHORIZED, self::STATUS_PAID, self::STATUS_FAILED, self::STATUS_CANCELLED],
+        self::STATUS_AUTHORIZED => [self::STATUS_PAID, self::STATUS_FAILED, self::STATUS_CANCELLED],
+        self::STATUS_PAID => [self::STATUS_REFUNDED],
+        self::STATUS_FAILED => [],
+        self::STATUS_REFUNDED => [],
+        self::STATUS_CANCELLED => [],
+    ];
+
     /**
      * @var list<string>
      */
@@ -128,6 +138,12 @@ class Payment extends Model
     public function isPaid(): bool
     {
         return $this->status === self::STATUS_PAID;
+    }
+
+    public function canTransitionTo(string $status): bool
+    {
+        return $status === $this->status
+            || in_array($status, self::ALLOWED_TRANSITIONS[$this->status] ?? [], true);
     }
 
     public static function normalizeProvider(string $provider): string

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Feed;
 
+use App\Rules\SafeMediaUpload;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -25,7 +26,7 @@ class StoreStoryRequest extends FormRequest
         return [
             'content' => ['nullable', 'string', 'max:1200'],
             'location' => ['nullable', 'string', 'max:255'],
-            'media_file' => ['required', 'file', 'mimes:jpg,jpeg,png,webp,gif,mp4,webm,mov', 'max:51200'],
+            'media_file' => ['required', 'file', new SafeMediaUpload, 'max:20480'],
         ];
     }
 

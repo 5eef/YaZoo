@@ -57,6 +57,7 @@ RUN set -eux; \
 COPY --from=vendor /app/vendor ./vendor
 COPY backend/ ./
 COPY LICENSE /licenses/YaZoo-LICENSE
+COPY backend/php-upload.ini /usr/local/etc/php/conf.d/yazoo-upload.ini
 
 RUN set -eux; \
     composer dump-autoload --optimize; \

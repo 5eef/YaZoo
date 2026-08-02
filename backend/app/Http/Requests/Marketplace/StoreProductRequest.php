@@ -30,12 +30,15 @@ class StoreProductRequest extends FormRequest
             'category' => ['required', Rule::in(Product::CATEGORIES)],
             'description' => ['required', 'string', 'max:5000'],
             'price' => ['required', 'numeric', 'min:0', 'max:999999.99'],
-            'image_url' => ['nullable', 'string', 'max:2048'],
-            'image' => ['nullable', 'image', 'max:5120'],
+            'image_url' => ['nullable', 'url:http,https', 'max:2048'],
+            'image_asset_id' => ['nullable', 'uuid'],
+            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'dimensions:max_width=6000,max_height=6000', 'max:5120'],
             'gallery_urls' => ['nullable', 'array', 'max:6'],
-            'gallery_urls.*' => ['string', 'max:2048'],
+            'gallery_urls.*' => ['url:http,https', 'max:2048'],
+            'gallery_asset_ids' => ['nullable', 'array', 'max:6'],
+            'gallery_asset_ids.*' => ['uuid'],
             'gallery_files' => ['nullable', 'array', 'max:6'],
-            'gallery_files.*' => ['image', 'max:5120'],
+            'gallery_files.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'dimensions:max_width=6000,max_height=6000', 'max:5120'],
             'location' => ['required', 'string', 'max:150'],
             'contact_visibility' => ['required', Rule::in(MarketplaceContact::VISIBILITIES)],
             'contact_phone' => ['nullable', 'string', 'max:50', 'required_if:contact_visibility,phone,whatsapp'],
@@ -71,22 +74,17 @@ class StoreProductRequest extends FormRequest
             $normalized[$field] = is_string($value) ? trim($value) : $value;
         }
 
-        $galleryUrls = collect($this->input('gallery_urls', []))
+        $normalized['gallery_urls'] = collect($this->input('gallery_urls', []))
             ->filter(fn ($value) => is_string($value))
             ->map(fn ($value) => trim($value))
             ->filter()
             ->values()
             ->all();
 
-        $normalized['gallery_urls'] = $galleryUrls;
         $normalized['category'] = $normalized['category'] ?: 'other';
         $normalized['listing_status'] = $normalized['listing_status'] ?: 'available';
         $normalized['contact_visibility'] = $normalized['contact_visibility'] ?: 'messages_only';
         $normalized['whatsapp_enabled'] = $normalized['contact_visibility'] === 'whatsapp';
-
-        if (! $normalized['image_url'] && ! empty($galleryUrls)) {
-            $normalized['image_url'] = $galleryUrls[0];
-        }
 
         $this->merge($normalized);
     }

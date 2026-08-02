@@ -105,6 +105,31 @@ class FeedApiTest extends TestCase
         Storage::disk('public')->assertExists($path);
     }
 
+    public function test_feed_upload_accepts_product_limit_and_rejects_oversize_or_disguised_file(): void
+    {
+        Storage::fake('public');
+        Sanctum::actingAs(User::factory()->create(), ['*']);
+
+        $this->post('/api/posts', [
+            'content' => 'Image a la limite',
+            'media_file' => $this->fakeImageUpload('limit.png')->size(20 * 1024),
+        ], ['Accept' => 'application/json'])->assertCreated();
+
+        $this->post('/api/posts', [
+            'content' => 'Image trop grande',
+            'media_file' => $this->fakeImageUpload('oversize.png')->size((20 * 1024) + 1),
+        ], ['Accept' => 'application/json'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('media_file');
+
+        $this->post('/api/posts', [
+            'content' => 'Fichier deguise',
+            'media_file' => UploadedFile::fake()->createWithContent('payload.jpg', '<?php echo "not an image";'),
+        ], ['Accept' => 'application/json'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('media_file');
+    }
+
     public function test_non_member_is_rejected_before_community_media_is_written(): void
     {
         Storage::fake('public');

@@ -83,7 +83,7 @@ class CmiGateway implements PaymentGateway
             provider: Payment::PROVIDER_CMI,
             success: false,
             status: Payment::STATUS_PENDING,
-            message: "Remboursement CMI non implemente sans kit officiel.",
+            message: 'Remboursement CMI non implemente sans kit officiel.',
         );
     }
 

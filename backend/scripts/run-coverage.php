@@ -30,6 +30,7 @@ $clover = escapeshellarg($coverageDir.DIRECTORY_SEPARATOR.'clover.xml');
 $junit = escapeshellarg($coverageDir.DIRECTORY_SEPARATOR.'junit.xml');
 $html = escapeshellarg($coverageDir);
 $coverageArgs = sprintf('--coverage-clover=%s --coverage-html=%s --log-junit=%s', $clover, $html, $junit);
+$coverageMemory = '-dmemory_limit=512M';
 
 $hasCoverageExtension = extension_loaded('xdebug') || extension_loaded('pcov');
 $xdebugDll = $root.DIRECTORY_SEPARATOR.'tools'.DIRECTORY_SEPARATOR.'coverage'.DIRECTORY_SEPARATOR.'php_xdebug-3.5.1-8.5-nts-vs17-x86_64.dll';
@@ -55,18 +56,19 @@ foreach ($phpdbgCandidates as $candidate) {
 
 if (! $hasCoverageExtension && PHP_OS_FAMILY === 'Windows' && is_file($xdebugDll)) {
     $command = sprintf(
-        '%s -dzend_extension=%s -dxdebug.mode=coverage %s %s',
+        '%s %s -dzend_extension=%s -dxdebug.mode=coverage %s %s',
         escapeshellarg(PHP_BINARY),
+        $coverageMemory,
         escapeshellarg($xdebugDll),
         $phpunit,
         $coverageArgs,
     );
 } elseif (! $hasCoverageExtension && $phpdbgBinary !== null) {
-    $command = sprintf('%s -qrr %s %s', escapeshellarg($phpdbgBinary), $phpunit, $coverageArgs);
+    $command = sprintf('%s %s -qrr %s %s', escapeshellarg($phpdbgBinary), $coverageMemory, $phpunit, $coverageArgs);
 } else {
     putenv('XDEBUG_MODE=coverage');
 
-    $command = sprintf('%s %s %s', escapeshellarg(PHP_BINARY), $phpunit, $coverageArgs);
+    $command = sprintf('%s %s %s %s', escapeshellarg(PHP_BINARY), $coverageMemory, $phpunit, $coverageArgs);
 }
 
 passthru($command, $exitCode);

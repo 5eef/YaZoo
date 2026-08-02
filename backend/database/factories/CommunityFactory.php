@@ -30,7 +30,12 @@ class CommunityFactory extends Factory
             'name' => fake()->words(3, true),
             'description' => fake()->sentence(15),
             'image_url' => fake()->imageUrl(640, 480, 'nature'),
-            'is_private' => fake()->boolean(),
+            'is_private' => false,
         ];
+    }
+
+    public function private(): static
+    {
+        return $this->state(fn (): array => ['is_private' => true]);
     }
 }

@@ -79,8 +79,6 @@ function AnimalListingForm({
         <SelectField label={t('animals.sellerType')} value={form.seller_type} onChange={onFormChange('seller_type')} options={animalSellerTypeOptions} />
         <Field label={t('animals.origin')} value={form.origin} onChange={onFormChange('origin')} />
         <Field label={t('animals.identificationNumber')} value={form.identification_number} onChange={onFormChange('identification_number')} />
-        <Field label={t('animals.healthCertificatePath')} value={form.health_certificate_path} onChange={onFormChange('health_certificate_path')} />
-        <Field label={t('animals.vaccinationBookPath')} value={form.vaccination_book_path} onChange={onFormChange('vaccination_book_path')} />
         <Field label={t('animals.onssaAuthorizationNumber')} value={form.onssa_authorization_number} onChange={onFormChange('onssa_authorization_number')} />
       </div>
 

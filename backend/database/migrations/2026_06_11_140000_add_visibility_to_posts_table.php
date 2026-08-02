@@ -19,6 +19,7 @@ return new class extends Migration
     {
         Schema::table('posts', function (Blueprint $table): void {
             if (Schema::hasColumn('posts', 'visibility')) {
+                $table->dropIndex('posts_visibility_index');
                 $table->dropColumn('visibility');
             }
         });

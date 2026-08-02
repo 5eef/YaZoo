@@ -8,9 +8,14 @@ use Illuminate\Support\Facades\Hash;
 
 class UserService
 {
-    public function paginate(int $perPage = 15): LengthAwarePaginator
+    public function paginate(int $perPage = 15, ?int $viewerId = null): LengthAwarePaginator
     {
         return User::query()
+            ->withCount(['followers', 'following'])
+            ->when($viewerId, fn ($query) => $query->withExists([
+                'followers as is_followed_by_viewer' => fn ($followers) => $followers
+                    ->where('follower_user_id', $viewerId),
+            ]))
             ->latest()
             ->paginate($perPage);
     }
@@ -20,9 +25,16 @@ class UserService
      */
     public function create(array $validated): User
     {
-        return User::create([
+        $isAdmin = (bool) ($validated['is_admin'] ?? false);
+        unset($validated['is_admin']);
+
+        $user = new User;
+        $user->fill([
             ...$validated,
             'password' => Hash::make((string) $validated['password']),
         ]);
+        $user->forceFill(['is_admin' => $isAdmin])->save();
+
+        return $user;
     }
 }

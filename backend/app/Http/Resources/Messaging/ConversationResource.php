@@ -31,9 +31,7 @@ class ConversationResource extends JsonResource
                 'city' => $participant?->city,
                 'country' => $participant?->country,
                 'profile_url' => $participant ? "/profile/{$participant->id}" : null,
-                'is_following' => $participant && $request->user()
-                    ? $participant->followers()->where('follower_user_id', $request->user()->id)->exists()
-                    : false,
+                'is_following' => (bool) ($participant?->is_followed_by_viewer ?? false),
             ],
             'latestMessage' => $this->whenLoaded('latestMessage', function (): ?array {
                 return $this->latestMessage

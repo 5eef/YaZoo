@@ -2,10 +2,13 @@
 
 namespace Tests\Feature\Messaging;
 
+use App\Events\ConversationMessageSent;
 use App\Models\Conversation;
 use App\Models\User;
 use App\Notifications\NewMessageNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -192,5 +195,38 @@ class MessagingApiTest extends TestCase
 
         $this->getJson("/api/conversations/{$conversation->id}")
             ->assertForbidden();
+    }
+
+    public function test_message_broadcast_is_dispatched_only_after_commit_and_not_after_rollback(): void
+    {
+        Event::fake([ConversationMessageSent::class]);
+        $sender = User::factory()->create();
+        $recipient = User::factory()->create();
+        $conversation = Conversation::query()->create([
+            'participant_one_id' => min($sender->id, $recipient->id),
+            'participant_two_id' => max($sender->id, $recipient->id),
+        ]);
+        $message = $conversation->messages()->create([
+            'user_id' => $sender->id,
+            'body' => 'Commit message',
+        ]);
+
+        DB::beginTransaction();
+        event(new ConversationMessageSent($conversation, $message));
+        Event::assertNotDispatched(ConversationMessageSent::class);
+        DB::commit();
+        Event::assertDispatchedTimes(ConversationMessageSent::class, 1);
+
+        Event::fake([ConversationMessageSent::class]);
+        try {
+            DB::transaction(function () use ($conversation, $message): void {
+                event(new ConversationMessageSent($conversation, $message));
+                throw new \RuntimeException('force rollback');
+            });
+        } catch (\RuntimeException) {
+            // Expected rollback: the after-commit callback must be discarded.
+        }
+
+        Event::assertNotDispatched(ConversationMessageSent::class);
     }
 }

@@ -11,6 +11,14 @@ export default defineConfig({
   resolve: {
     preserveSymlinks: true,
   },
+  server: {
+    proxy: {
+      '/api': 'http://127.0.0.1:8000',
+      '/sanctum': 'http://127.0.0.1:8000',
+      '/broadcasting': 'http://127.0.0.1:8000',
+      '/storage': 'http://127.0.0.1:8000',
+    },
+  },
   build: {
     sourcemap: process.env.VITE_BUILD_SOURCEMAPS === 'true',
     rollupOptions: {

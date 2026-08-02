@@ -21,7 +21,6 @@ class UserProfileResource extends JsonResource
     {
         $canViewPrivateDetails = $request->user()?->is($this->resource)
             || (bool) $request->user()?->is_admin;
-        $viewer = $request->user();
 
         return [
             'id' => $this->id,
@@ -53,9 +52,7 @@ class UserProfileResource extends JsonResource
             'professionalVerificationStatus' => $this->professionalVerificationStatus(),
             'isSuspended' => (bool) $this->is_suspended,
             'isBanned' => $this->banned_at !== null,
-            'isFollowing' => $viewer
-                ? $this->followers()->where('follower_user_id', $viewer->id)->exists()
-                : false,
+            'isFollowing' => (bool) ($this->is_followed_by_viewer ?? false),
             'preferredLocale' => $this->preferred_locale ?? 'fr',
             'joinedAt' => $this->created_at?->toISOString(),
             'updatedAt' => $this->updated_at?->toISOString(),

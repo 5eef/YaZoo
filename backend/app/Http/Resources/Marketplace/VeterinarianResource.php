@@ -15,6 +15,8 @@ class VeterinarianResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $canManage = ($request->user()?->is_admin ?? false) || ($request->user()?->is($this->user) ?? false);
+        $assets = $this->relationLoaded('mediaAssets') ? $this->mediaAssets : collect();
         $professionalBadge = $this->user
             ? app(MarketplacePublishingResolver::class)->badgeFor($this->user, 'veterinarians')
             : null;
@@ -31,14 +33,16 @@ class VeterinarianResource extends JsonResource
             'email' => $this->email,
             'specialties' => $this->specialties ?? [],
             'workingHours' => $this->working_hours ?? [],
-            'imagePath' => $this->image_path,
+            'imageAssetId' => $this->when($canManage, $assets->firstWhere('role', 'image_path')?->id),
             'imageUrl' => MarketplaceMedia::resolveUrl($this->image_path),
             'latitude' => $this->latitude !== null ? (float) $this->latitude : null,
             'longitude' => $this->longitude !== null ? (float) $this->longitude : null,
             'locationUrl' => $this->location_url,
             'isActive' => (bool) $this->is_active,
-            'averageRating' => null,
-            'reviewsCount' => 0,
+            'averageRating' => $this->average_rating !== null
+                ? round((float) $this->average_rating, 1)
+                : null,
+            'reviewsCount' => (int) ($this->reviews_count ?? 0),
             'favoritesCount' => (int) ($this->favorites_count ?? 0),
             'isFavorited' => (bool) ($this->is_favorited ?? false),
             'createdAt' => $this->created_at?->toISOString(),

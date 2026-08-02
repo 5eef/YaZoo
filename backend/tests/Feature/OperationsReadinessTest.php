@@ -9,6 +9,7 @@ use Database\Seeders\DatabaseSeeder;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class OperationsReadinessTest extends TestCase
@@ -129,7 +130,11 @@ class OperationsReadinessTest extends TestCase
 
     public function test_production_preflight_passes_with_complete_safe_configuration(): void
     {
-        User::factory()->admin()->create();
+        User::factory()->admin()->create([
+            'admin_mfa_secret' => 'test-mfa-secret',
+            'admin_mfa_recovery_codes' => [Hash::make('TESTRECOVERY')],
+            'admin_mfa_confirmed_at' => now(),
+        ]);
         config([
             'app.key' => 'base64:test-key',
             'legal.legal_status' => 'Configuration de test',
@@ -150,6 +155,7 @@ class OperationsReadinessTest extends TestCase
             'operations.persistent_storage_path' => '/home/site/yazoo-storage',
             'payments.providers.cmi.enabled' => false,
             'auth.admin_bootstrap.enabled' => false,
+            'auth.admin_mfa.enforced' => true,
         ]);
 
         $this->artisan('yazoo:preflight-production')

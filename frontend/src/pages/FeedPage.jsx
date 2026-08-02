@@ -76,6 +76,7 @@ function FeedPage() {
   const [isStorySubmitting, setIsStorySubmitting] = useState(false)
   const [isDeletingStoryId, setIsDeletingStoryId] = useState('')
   const [storyPendingDelete, setStoryPendingDelete] = useState(null)
+  const [profileShareMessage, setProfileShareMessage] = useState('')
   const viewingStoryIdsRef = useRef(new Set())
 
   const loadPosts = useCallback(async () => {
@@ -449,6 +450,24 @@ function FeedPage() {
     }
   }
 
+  const handleShareProfile = async () => {
+    const profileUrl = `${globalThis.location.origin}/profile/${user?.id}`
+    setProfileShareMessage('')
+
+    try {
+      if (typeof globalThis.navigator?.share === 'function') {
+        await globalThis.navigator.share({ title: sidebarName, url: profileUrl })
+      } else if (typeof globalThis.navigator?.clipboard?.writeText === 'function') {
+        await globalThis.navigator.clipboard.writeText(profileUrl)
+      } else {
+        throw new Error('Profile sharing is not supported by this browser.')
+      }
+      setProfileShareMessage(t('profile.copied'))
+    } catch (error) {
+      if (error?.name !== 'AbortError') setProfileShareMessage(t('errors.generic'))
+    }
+  }
+
   const requestDeleteStory = (story) => {
     if (!story?.id) {
       return
@@ -675,7 +694,7 @@ function FeedPage() {
             <div className="mt-4 grid gap-2 sm:grid-cols-2">
               <button
                 type="button"
-                onClick={() => navigate('/profile')}
+                onClick={handleShareProfile}
                 className="rounded-full border border-violet-100 bg-white px-3 py-2 text-xs font-medium text-stone-700 transition hover:bg-violet-50"
               >
                 {t('feed.editProfile')}
@@ -688,6 +707,11 @@ function FeedPage() {
                 {t('feed.shareProfile')}
               </button>
             </div>
+            {profileShareMessage ? (
+              <p role="status" aria-live="polite" className="mt-3 text-xs text-violet-800 dark:text-violet-100">
+                {profileShareMessage}
+              </p>
+            ) : null}
           </article>
 
           <article className="rounded-[28px] border border-white/80 bg-white/95 p-5 shadow-[0_18px_42px_rgba(124,58,237,0.08)]">

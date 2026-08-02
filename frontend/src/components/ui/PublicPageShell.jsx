@@ -35,7 +35,7 @@ function PublicPageShell({ titleKey, eyebrowKey, introKey, sections = [], ctaKey
             <h1 className="mt-3 text-3xl font-semibold leading-tight text-stone-950 dark:text-violet-50 sm:text-4xl xl:text-5xl">
               {t(titleKey)}
             </h1>
-            <p className="mt-4 max-w-3xl text-sm leading-7 text-stone-650 dark:text-violet-100/78 lg:text-base xl:text-[17px] xl:leading-8">
+            <p className="mt-4 max-w-3xl text-sm leading-7 text-stone-600 dark:text-violet-100/78 lg:text-base xl:text-[17px] xl:leading-8">
               {t(introKey)}
             </p>
           </section>

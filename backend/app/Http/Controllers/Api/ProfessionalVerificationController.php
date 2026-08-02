@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\ProfessionalVerification\StoreProfessionalVerificationRequest;
 use App\Http\Requests\ProfessionalVerification\UpdateProfessionalVerificationStatusRequest;
 use App\Http\Resources\ProfessionalVerificationResource;
+use App\Models\MediaAsset;
 use App\Models\ProfessionalVerification;
 use App\Services\Admin\ModerationLogger;
+use App\Services\MediaAssetService;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
@@ -18,13 +20,14 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-use Throwable;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use Throwable;
 
 class ProfessionalVerificationController extends Controller
 {
     public function __construct(
         private readonly ModerationLogger $logger,
+        private readonly MediaAssetService $mediaAssets,
     ) {}
 
     public function store(StoreProfessionalVerificationRequest $request): JsonResponse
@@ -35,6 +38,7 @@ class ProfessionalVerificationController extends Controller
         $businessType = (string) $validated['business_type'];
         $pendingKey = $request->user()->id.':'.$businessType;
         $path = null;
+        $documentAsset = null;
 
         if ($document) {
             $extension = strtolower($document->extension() ?: $document->getClientOriginalExtension());
@@ -51,17 +55,28 @@ class ProfessionalVerificationController extends Controller
                 'document_mime' => $document->getMimeType() ?: $document->getClientMimeType(),
                 'document_size' => $document->getSize(),
             ];
+            $documentAsset = $this->mediaAssets->registerStoredPath(
+                $request->user(),
+                $path,
+                'document',
+                MediaAsset::VISIBILITY_PRIVATE,
+                $validated['document_mime'],
+                $validated['document_size'],
+                $validated['document_original_name'],
+                $this->documentDisk(),
+            );
         }
 
         try {
             $verification = Cache::lock('professional-verification:'.$pendingKey, 15)->block(
                 5,
-                function () use ($request, $validated, $pendingKey, $businessType): ProfessionalVerification {
+                function () use ($request, $validated, $pendingKey, $businessType, $documentAsset): ProfessionalVerification {
                     return DB::transaction(function () use (
                         $request,
                         $validated,
                         $pendingKey,
                         $businessType,
+                        $documentAsset,
                     ): ProfessionalVerification {
                         $existingPending = ProfessionalVerification::query()
                             ->where('user_id', $request->user()->id)
@@ -76,16 +91,25 @@ class ProfessionalVerificationController extends Controller
                             ]);
                         }
 
-                        return ProfessionalVerification::query()->create([
+                        $verification = ProfessionalVerification::query()->create([
                             ...$validated,
                             'user_id' => $request->user()->id,
                             'status' => 'pending',
                             'pending_key' => $pendingKey,
                         ]);
+
+                        if ($documentAsset) {
+                            $this->mediaAssets->attach($documentAsset, $verification, 'document_path');
+                        }
+
+                        return $verification;
                     });
                 },
             );
         } catch (Throwable $exception) {
+            if ($documentAsset) {
+                $this->mediaAssets->discardUnattached($documentAsset, $request->user());
+            }
             if ($path && Storage::disk($this->documentDisk())->exists($path)) {
                 Storage::disk($this->documentDisk())->delete($path);
             }

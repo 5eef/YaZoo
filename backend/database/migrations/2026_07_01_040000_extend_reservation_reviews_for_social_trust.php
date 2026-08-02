@@ -47,6 +47,7 @@ return new class extends Migration
             }
 
             if (Schema::hasColumn('reservation_reviews', 'status')) {
+                $table->dropIndex('reservation_reviews_status_index');
                 $table->dropColumn('status');
             }
 

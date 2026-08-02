@@ -2,8 +2,8 @@
 
 namespace Tests\Feature\Marketplace;
 
-use App\Models\Product;
 use App\Models\Favorite;
+use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;

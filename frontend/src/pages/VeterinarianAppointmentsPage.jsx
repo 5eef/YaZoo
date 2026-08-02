@@ -26,6 +26,7 @@ function VeterinarianAppointmentsPage() {
   const [startsAt, setStartsAt] = useState('')
   const [endsAt, setEndsAt] = useState('')
   const [message, setMessage] = useState('')
+  const [ratings, setRatings] = useState({})
 
   const load = async () => {
     const response = await listVeterinarianAppointmentsRequest()
@@ -84,7 +85,7 @@ function VeterinarianAppointmentsPage() {
 
   const review = async (id) => {
     try {
-      await reviewVeterinarianAppointmentRequest(id, { rating: 5 })
+      await reviewVeterinarianAppointmentRequest(id, { rating: Number(ratings[id] ?? 5) })
       setMessage(t('vetAppointments.reviewed'))
       await load()
     } catch (error) {
@@ -137,7 +138,22 @@ function VeterinarianAppointmentsPage() {
               {appointment.canManage && appointment.status === 'pending' ? <Button type="button" onClick={() => updateStatus(appointment.id, 'confirmed')}>{t('vetAppointments.confirm')}</Button> : null}
               {appointment.canCancel ? <Button type="button" variant="ghost" onClick={() => updateStatus(appointment.id, 'cancelled')}>{t('common.cancel')}</Button> : null}
               {appointment.canManage && appointment.status === 'confirmed' ? <Button type="button" variant="secondary" onClick={() => updateStatus(appointment.id, 'completed')}>{t('vetAppointments.complete')}</Button> : null}
-              {appointment.canReview ? <Button type="button" variant="secondary" onClick={() => review(appointment.id)}>{t('vetAppointments.review')}</Button> : null}
+              {appointment.canReview ? (
+                <div className="flex items-center gap-2">
+                  <label htmlFor={`appointment-rating-${appointment.id}`} className="text-sm font-medium text-stone-700 dark:text-violet-100">
+                    {t('common.rating')}
+                  </label>
+                  <select
+                    id={`appointment-rating-${appointment.id}`}
+                    value={ratings[appointment.id] ?? 5}
+                    onChange={(event) => setRatings((current) => ({ ...current, [appointment.id]: Number(event.target.value) }))}
+                    className="h-11 rounded-xl border border-violet-200 bg-white px-3 text-sm text-stone-800 dark:border-violet-300/20 dark:bg-white/10 dark:text-white"
+                  >
+                    {[1, 2, 3, 4, 5].map((rating) => <option key={rating} value={rating}>{rating}</option>)}
+                  </select>
+                  <Button type="button" variant="secondary" onClick={() => review(appointment.id)}>{t('vetAppointments.review')}</Button>
+                </div>
+              ) : null}
             </div>
           </article>
         ))}

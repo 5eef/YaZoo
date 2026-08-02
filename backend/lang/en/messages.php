@@ -122,6 +122,10 @@ return [
     'appointments' => [
         'slot_overlap' => 'This slot overlaps an existing availability.',
         'slot_unavailable' => 'This slot is no longer available.',
+        'review_exists' => 'A review already exists for this appointment.',
+    ],
+    'uploads' => [
+        'invalid_media' => 'The file does not match an allowed media format.',
     ],
     'privacy' => [
         'consent_saved' => 'Privacy preference saved.',

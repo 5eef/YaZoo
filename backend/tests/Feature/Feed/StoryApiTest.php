@@ -4,6 +4,7 @@ namespace Tests\Feature\Feed;
 
 use App\Models\Story;
 use App\Models\User;
+use App\Services\MediaAssetService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -131,6 +132,12 @@ class StoryApiTest extends TestCase
             'media_path' => 'feed/stories/example.jpg',
         ]);
         Storage::disk('public')->put('feed/stories/example.jpg', 'fake-image');
+        $asset = app(MediaAssetService::class)->registerStoredPath(
+            $owner,
+            'feed/stories/example.jpg',
+            'image',
+        );
+        app(MediaAssetService::class)->attach($asset, $story, 'media_path');
 
         Sanctum::actingAs($intruder, ['*']);
         $this->deleteJson("/api/stories/{$story->id}")
