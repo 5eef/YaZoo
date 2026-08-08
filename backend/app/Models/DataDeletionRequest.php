@@ -26,6 +26,9 @@ class DataDeletionRequest extends Model
         'processing_attempts',
         'failure_code',
         'processing_started_at',
+        'purge_manifest',
+        'database_anonymized_at',
+        'purge_completed_at',
         'completed_at',
         'reviewed_by',
         'reviewed_at',
@@ -37,6 +40,9 @@ class DataDeletionRequest extends Model
         return [
             'reviewed_at' => 'datetime',
             'processing_started_at' => 'datetime',
+            'purge_manifest' => 'array',
+            'database_anonymized_at' => 'datetime',
+            'purge_completed_at' => 'datetime',
             'completed_at' => 'datetime',
         ];
     }

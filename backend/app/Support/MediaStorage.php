@@ -11,6 +11,7 @@ use MongoDB\BSON\UTCDateTime;
 use MongoDB\Client;
 use MongoDB\Collection;
 use MongoDB\GridFS\Bucket;
+use MongoDB\GridFS\Exception\FileNotFoundException;
 use RuntimeException;
 use Throwable;
 
@@ -113,7 +114,11 @@ class MediaStorage
             ->all();
 
         foreach ($mongoIds as $mongoId) {
-            self::mongoBucket()->delete(new ObjectId($mongoId));
+            try {
+                self::mongoBucket()->delete(new ObjectId($mongoId));
+            } catch (FileNotFoundException) {
+                // A retry after a partial purge must treat an absent file as success.
+            }
         }
 
         $internalPaths = collect($paths)

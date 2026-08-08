@@ -77,6 +77,8 @@ class SmsSender
         }
 
         Http::asForm()
+            ->connectTimeout((int) config('services.sms.connect_timeout_seconds', 5))
+            ->timeout((int) config('services.sms.timeout_seconds', 10))
             ->withBasicAuth($sid, $token)
             ->post(sprintf('https://api.twilio.com/2010-04-01/Accounts/%s/Messages.json', $sid), [
                 'From' => $from,
@@ -97,6 +99,8 @@ class SmsSender
         }
 
         Http::withToken($token)
+            ->connectTimeout((int) config('services.sms.connect_timeout_seconds', 5))
+            ->timeout((int) config('services.sms.timeout_seconds', 10))
             ->post(rtrim($baseUrl, '/').'/messages', [
                 'sender' => $sender,
                 'recipient' => $phone,

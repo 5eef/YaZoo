@@ -55,6 +55,8 @@ return [
         'otp_max_attempts' => (int) env('SMS_OTP_MAX_ATTEMPTS', 5),
         'otp_resend_cooldown_seconds' => (int) env('SMS_OTP_RESEND_COOLDOWN_SECONDS', 60),
         'otp_lock_minutes' => (int) env('SMS_OTP_LOCK_MINUTES', 15),
+        'connect_timeout_seconds' => (int) env('SMS_CONNECT_TIMEOUT_SECONDS', 5),
+        'timeout_seconds' => (int) env('SMS_TIMEOUT_SECONDS', 10),
         'twilio' => [
             'sid' => env('TWILIO_SID'),
             'token' => env('TWILIO_AUTH_TOKEN'),

@@ -11,6 +11,8 @@ return [
     'queue_heartbeat_ttl_seconds' => (int) env('YAZOO_QUEUE_HEARTBEAT_TTL_SECONDS', 180),
     'scheduler_heartbeat_ttl_seconds' => (int) env('YAZOO_SCHEDULER_HEARTBEAT_TTL_SECONDS', 180),
     'migration_lock_seconds' => (int) env('YAZOO_MIGRATION_LOCK_SECONDS', 1800),
+    'account_deletion_retry_max_attempts' => (int) env('YAZOO_ACCOUNT_DELETION_RETRY_MAX_ATTEMPTS', 5),
+    'account_deletion_retry_batch_size' => (int) env('YAZOO_ACCOUNT_DELETION_RETRY_BATCH_SIZE', 25),
     'app_service_storage_enabled' => filter_var(
         env('WEBSITES_ENABLE_APP_SERVICE_STORAGE', false),
         FILTER_VALIDATE_BOOL,

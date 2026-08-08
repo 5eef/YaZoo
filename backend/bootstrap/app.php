@@ -43,8 +43,16 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $trustedProxies = array_values(array_filter(array_map(
             'trim',
-            explode(',', (string) env('TRUSTED_PROXIES', env('APP_ENV') === 'production' ? '*' : ''))
+            explode(',', (string) env('TRUSTED_PROXIES', ''))
         )));
+
+        if (in_array('*', $trustedProxies, true)) {
+            Log::warning('TRUSTED_PROXIES=* is unsafe and has been ignored. Configure explicit proxy addresses or CIDR ranges.');
+            $trustedProxies = array_values(array_filter(
+                $trustedProxies,
+                fn (string $proxy): bool => $proxy !== '*',
+            ));
+        }
 
         if ($trustedProxies !== []) {
             $middleware->trustProxies(

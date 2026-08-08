@@ -38,7 +38,8 @@ Backend `yazoo-api`:
 
 - `ADMIN_BOOTSTRAP_ENABLED=false`
 - `CMI_ENABLED=false`
-- `TRUSTED_PROXIES=*` supporte par le code en production; les headers proxy Azure sont maintenant respectes.
+- `TRUSTED_PROXIES` contient uniquement les adresses/CIDR du proxy d'entree verifies pour l'instance Azure. La valeur universelle `*` est refusee par le code.
+- Apres toute modification de `TRUSTED_PROXIES`, verifier la detection HTTPS, l'IP client, le rate limiting, les cookies Secure et les URLs signees.
 - `APP_ENV=production`
 - `APP_DEBUG=false`
 - `CORS_ALLOWED_ORIGINS=https://yazoo.azurewebsites.net`

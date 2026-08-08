@@ -20,6 +20,8 @@ return [
 
     'default' => env('LOG_CHANNEL', 'stack'),
 
+    'frontend_channel' => env('FRONTEND_MONITORING_LOG_CHANNEL', 'frontend'),
+
     /*
     |--------------------------------------------------------------------------
     | Deprecations Log Channel

@@ -5,6 +5,8 @@ let echoLoadPromise = null
 let echoGeneration = 0
 let realtimeStatus = isRealtimeEnabled() ? 'idle' : 'disabled'
 
+const BROADCAST_AUTH_TIMEOUT_MS = 10000
+
 const channelSubscriptions = new Map()
 const statusListeners = new Set()
 
@@ -60,6 +62,12 @@ function bindConnectionEvents(echo) {
 function createAuthorizer(channel) {
   return {
     authorize: async (socketId, callback) => {
+      const abortController = new AbortController()
+      const timeoutId = globalThis.setTimeout(
+        () => abortController.abort(),
+        BROADCAST_AUTH_TIMEOUT_MS,
+      )
+
       try {
         const response = await fetch(getBroadcastAuthUrl(), {
           method: 'POST',
@@ -72,6 +80,7 @@ function createAuthorizer(channel) {
             socket_id: socketId,
             channel_name: channel.name,
           }),
+          signal: abortController.signal,
         })
 
         if (!response.ok) {
@@ -82,6 +91,8 @@ function createAuthorizer(channel) {
       } catch (error) {
         setRealtimeStatus('error')
         callback(error, null)
+      } finally {
+        globalThis.clearTimeout(timeoutId)
       }
     },
   }

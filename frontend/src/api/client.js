@@ -8,8 +8,12 @@ import { emitErrorToast } from '../lib/toastBus'
 
 export const AUTH_SESSION_EXPIRED_EVENT = 'yazoo:auth-session-expired'
 
+const API_TIMEOUT_MS = 30000
+const CSRF_TIMEOUT_MS = 10000
+
 const api = axios.create({
   baseURL: getApiBaseUrl(),
+  timeout: API_TIMEOUT_MS,
   withCredentials: true,
   withXSRFToken: true,
   headers: {
@@ -21,6 +25,7 @@ const api = axios.create({
 export const ensureCsrfCookie = () =>
   axios.get(`${getBackendBaseUrl()}/sanctum/csrf-cookie`, {
     withCredentials: true,
+    timeout: CSRF_TIMEOUT_MS,
     headers: {
       Accept: 'application/json',
     },

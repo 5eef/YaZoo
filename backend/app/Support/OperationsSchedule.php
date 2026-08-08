@@ -43,6 +43,15 @@ class OperationsSchedule
             ->withoutOverlapping()
             ->onOneServer();
 
+        if (config('queue.default') !== 'sync') {
+            $schedule
+                ->command('yazoo:dispatch-account-deletion-retries')
+                ->everyFiveMinutes()
+                ->name('privacy:dispatch-account-deletion-retries')
+                ->withoutOverlapping()
+                ->onOneServer();
+        }
+
         if (! (bool) config('media.backup.enabled', false)) {
             return;
         }

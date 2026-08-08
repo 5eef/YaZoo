@@ -22,7 +22,10 @@ class SecurityHeaders
             'Cross-Origin-Resource-Policy' => 'same-site',
         ];
 
-        if ($request->isSecure() || strtolower((string) $request->headers->get('X-Forwarded-Proto')) === 'https') {
+        $isAzureHttpsRequest = filled(config('app.azure_instance_id'))
+            && strtolower((string) $request->headers->get('X-AppService-Proto')) === 'https';
+
+        if ($request->isSecure() || $isAzureHttpsRequest) {
             $headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains; preload';
         }
 

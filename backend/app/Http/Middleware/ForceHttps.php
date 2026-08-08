@@ -33,8 +33,12 @@ class ForceHttps
             return false;
         }
 
-        $forwardedProto = strtolower((string) $request->headers->get('X-Forwarded-Proto'));
+        return ! $request->isSecure() && ! $this->isAzureHttpsRequest($request);
+    }
 
-        return ! $request->isSecure() && $forwardedProto !== 'https';
+    private function isAzureHttpsRequest(Request $request): bool
+    {
+        return filled(config('app.azure_instance_id'))
+            && strtolower((string) $request->headers->get('X-AppService-Proto')) === 'https';
     }
 }

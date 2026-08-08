@@ -18,6 +18,8 @@ class OperationsReadinessTest extends TestCase
 
     public function test_retention_and_heartbeats_are_scheduled_with_distributed_guards(): void
     {
+        config(['queue.default' => 'redis']);
+
         $schedule = $this->app->make(Schedule::class);
         OperationsSchedule::register($schedule);
         $events = collect($schedule->events());
@@ -28,6 +30,9 @@ class OperationsReadinessTest extends TestCase
         $schedulerHeartbeat = $events->first(
             fn ($event): bool => $event->description === 'operations:scheduler-heartbeat',
         );
+        $deletionRetries = $events->first(
+            fn ($event): bool => $event->description === 'privacy:dispatch-account-deletion-retries',
+        );
 
         $this->assertNotNull($purge);
         $this->assertTrue($purge->withoutOverlapping);
@@ -37,6 +42,11 @@ class OperationsReadinessTest extends TestCase
         $this->assertNotNull($schedulerHeartbeat);
         $this->assertTrue($schedulerHeartbeat->withoutOverlapping);
         $this->assertTrue($schedulerHeartbeat->onOneServer);
+
+        $this->assertNotNull($deletionRetries);
+        $this->assertTrue($deletionRetries->withoutOverlapping);
+        $this->assertTrue($deletionRetries->onOneServer);
+        $this->assertSame('*/5 * * * *', $deletionRetries->expression);
     }
 
     public function test_production_migration_command_is_disabled_by_default(): void

@@ -134,9 +134,10 @@ services:
       APP_ENV: production
       APP_DEBUG: "false"
       APP_KEY: ${APP_KEY:?APP_KEY is required}
-      REVERB_APP_ID: ${REVERB_APP_ID:?REVERB_APP_ID is required}
-      REVERB_APP_KEY: ${REVERB_APP_KEY:?REVERB_APP_KEY is required}
-      REVERB_APP_SECRET: ${REVERB_APP_SECRET:?REVERB_APP_SECRET is required}
+      # Local-only fallbacks keep Compose reproducible. Azure uses explicit App Settings.
+      REVERB_APP_ID: ${REVERB_APP_ID:-yazoo-local}
+      REVERB_APP_KEY: ${REVERB_APP_KEY:-yazoo-local-key}
+      REVERB_APP_SECRET: ${REVERB_APP_SECRET:-yazoo-local-secret-change-me}
       REVERB_HOST: reverb
       REVERB_PORT: 8080
       REVERB_SCHEME: http

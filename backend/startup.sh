@@ -31,13 +31,75 @@ if [ "${YAZOO_RUNTIME_OPTIMIZE:-true}" = "true" ]; then
     su-exec www-data php artisan optimize
 fi
 
+managed_pids=""
+scheduler_pid=""
+queue_pid=""
+php_fpm_pid=""
+nginx_pid=""
+
+start_managed_process() {
+    process_name="$1"
+    shift
+    "$@" &
+    process_pid=$!
+    managed_pids="${managed_pids} ${process_pid}"
+    eval "${process_name}_pid=${process_pid}"
+    echo "Started ${process_name} with PID ${process_pid}."
+}
+
+shutdown_managed_processes() {
+    exit_status="${1:-0}"
+    trap - TERM INT
+
+    for process_pid in ${managed_pids}; do
+        kill -TERM "${process_pid}" 2>/dev/null || true
+    done
+
+    for process_pid in ${managed_pids}; do
+        wait "${process_pid}" 2>/dev/null || true
+    done
+
+    exit "${exit_status}"
+}
+
+check_managed_process() {
+    process_name="$1"
+    process_pid="$2"
+
+    if [ -z "${process_pid}" ] || kill -0 "${process_pid}" 2>/dev/null; then
+        return
+    fi
+
+    set +e
+    wait "${process_pid}"
+    process_status=$?
+    set -e
+
+    if [ "${process_status}" -eq 0 ]; then
+        process_status=1
+    fi
+
+    echo "Managed process ${process_name} exited unexpectedly with status ${process_status}." >&2
+    shutdown_managed_processes "${process_status}"
+}
+
+trap 'shutdown_managed_processes 143' TERM INT
+
 if [ "${YAZOO_RUN_SCHEDULER:-false}" = "true" ]; then
-    su-exec www-data php artisan schedule:work &
+    start_managed_process scheduler su-exec www-data php artisan schedule:work
 fi
 
 if [ "${YAZOO_RUN_QUEUE_WORKER:-false}" = "true" ]; then
-    su-exec www-data php artisan queue:work "${QUEUE_CONNECTION:-redis}" --sleep="${YAZOO_QUEUE_SLEEP:-1}" --tries="${YAZOO_QUEUE_TRIES:-3}" --backoff="${YAZOO_QUEUE_BACKOFF:-5}" --timeout="${YAZOO_QUEUE_TIMEOUT:-90}" --memory="${YAZOO_QUEUE_MEMORY:-256}" &
+    start_managed_process queue su-exec www-data php artisan queue:work "${QUEUE_CONNECTION:-redis}" --sleep="${YAZOO_QUEUE_SLEEP:-1}" --tries="${YAZOO_QUEUE_TRIES:-3}" --backoff="${YAZOO_QUEUE_BACKOFF:-5}" --timeout="${YAZOO_QUEUE_TIMEOUT:-90}" --memory="${YAZOO_QUEUE_MEMORY:-256}"
 fi
 
-php-fpm -D
-exec nginx -g "daemon off;"
+start_managed_process php_fpm php-fpm -F
+start_managed_process nginx nginx -g "daemon off;"
+
+while true; do
+    check_managed_process scheduler "${scheduler_pid}"
+    check_managed_process queue "${queue_pid}"
+    check_managed_process php-fpm "${php_fpm_pid}"
+    check_managed_process nginx "${nginx_pid}"
+    sleep 2
+done

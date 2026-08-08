@@ -446,8 +446,7 @@ class AuthApiTest extends TestCase
         $this->app->detectEnvironment(fn () => 'production');
 
         $response = $this
-            ->withHeader('X-Forwarded-Proto', 'https')
-            ->postJson('/api/auth/register', [
+            ->postJson('https://localhost/api/auth/register', [
                 'name' => 'Production User',
                 'email' => 'production-user@yazoo.app',
                 'password' => 'password123',
@@ -458,6 +457,42 @@ class AuthApiTest extends TestCase
         $response
             ->assertCreated()
             ->assertJsonPath('user.isAdmin', false);
+    }
+
+    public function test_untrusted_forwarded_proto_cannot_bypass_forced_https(): void
+    {
+        config(['app.force_https' => true]);
+
+        $this
+            ->withHeader('X-Forwarded-Proto', 'https')
+            ->withHeader('X-AppService-Proto', 'https')
+            ->postJson('/api/auth/register', [
+                'name' => 'Spoofed Transport',
+                'email' => 'spoofed-transport@yazoo.app',
+                'password' => 'password123',
+                'password_confirmation' => 'password123',
+                'device_name' => 'phpunit',
+            ])
+            ->assertStatus(426);
+    }
+
+    public function test_azure_platform_proto_is_used_only_with_the_azure_runtime_marker(): void
+    {
+        config([
+            'app.force_https' => true,
+            'app.azure_instance_id' => 'test-instance',
+        ]);
+
+        $this
+            ->withHeader('X-AppService-Proto', 'https')
+            ->postJson('/api/auth/register', [
+                'name' => 'Azure Transport',
+                'email' => 'azure-transport@yazoo.app',
+                'password' => 'password123',
+                'password_confirmation' => 'password123',
+                'device_name' => 'phpunit',
+            ])
+            ->assertCreated();
     }
 
     public function test_google_oauth_never_creates_admin_automatically_in_production(): void

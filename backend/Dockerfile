@@ -1,8 +1,8 @@
-FROM php:8.4-fpm-alpine AS vendor
+FROM php:8.4-fpm-alpine@sha256:5992f8b7433fe7fa96dfbf67746c86d6c41bc91e686eac38fe531c72a02e40e4 AS vendor
 
 WORKDIR /app
 
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+COPY --from=composer:2@sha256:4d71c3c2109c61d5415544264b59ad4087e4c5b7244481723664138fd36d5040 /usr/bin/composer /usr/bin/composer
 
 RUN set -eux; \
     apk add --no-cache --virtual .build-deps \
@@ -15,7 +15,7 @@ RUN set -eux; \
 COPY backend/composer.json backend/composer.lock ./
 RUN composer install --no-dev --prefer-dist --no-interaction --no-progress --no-scripts
 
-FROM php:8.4-fpm-alpine AS production
+FROM php:8.4-fpm-alpine@sha256:5992f8b7433fe7fa96dfbf67746c86d6c41bc91e686eac38fe531c72a02e40e4 AS production
 
 ARG APP_VERSION=local
 ENV APP_VERSION=$APP_VERSION
@@ -28,7 +28,7 @@ LABEL org.opencontainers.image.title="YaZoo API" \
 
 WORKDIR /var/www/html
 
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+COPY --from=composer:2@sha256:4d71c3c2109c61d5415544264b59ad4087e4c5b7244481723664138fd36d5040 /usr/bin/composer /usr/bin/composer
 
 RUN set -eux; \
     apk add --no-cache \

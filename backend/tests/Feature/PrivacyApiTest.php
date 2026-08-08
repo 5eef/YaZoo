@@ -298,6 +298,115 @@ class PrivacyApiTest extends TestCase
         $this->assertSame('failed', $deletionRequest->status);
         $this->assertSame('storage_cleanup_failed', $deletionRequest->failure_code);
         $this->assertNull($deletionRequest->completed_at);
+        $this->assertNotNull($deletionRequest->database_anonymized_at);
+        $this->assertNotNull($deletionRequest->purge_manifest);
         $this->assertTrue($user->fresh()->isBanned());
+        $this->assertStringStartsWith('deleted.', $user->fresh()->email);
+
+    }
+
+    public function test_partially_completed_deletion_can_retry_the_persisted_purge_manifest(): void
+    {
+        Storage::fake('public');
+        Storage::fake('private');
+        Storage::disk('public')->put('avatars/retry.jpg', 'avatar');
+        Storage::disk('private')->put('professional-verifications/retry.pdf', 'document');
+
+        $user = User::factory()->create([
+            'email' => 'deleted.retry@deleted.invalid',
+            'is_suspended' => true,
+            'banned_at' => now(),
+        ]);
+        $admin = User::factory()->admin()->create();
+        $deletionRequest = DataDeletionRequest::query()->create([
+            'user_id' => $user->id,
+            'status' => 'failed',
+            'processing_attempts' => 1,
+            'failure_code' => 'storage_cleanup_failed',
+            'database_anonymized_at' => now(),
+            'purge_manifest' => [
+                'private' => ['professional-verifications/retry.pdf'],
+                'public' => ['avatars/retry.jpg'],
+            ],
+        ]);
+
+        Sanctum::actingAs($admin, ['*']);
+        $this->patchJson("/api/admin/privacy/delete-requests/{$deletionRequest->id}/status", [
+            'status' => 'completed',
+        ])->assertOk()->assertJsonPath('request.status', 'completed');
+
+        $deletionRequest->refresh();
+        $this->assertSame(2, $deletionRequest->processing_attempts);
+        $this->assertNull($deletionRequest->purge_manifest);
+        $this->assertNotNull($deletionRequest->purge_completed_at);
+        Storage::disk('public')->assertMissing('avatars/retry.jpg');
+        Storage::disk('private')->assertMissing('professional-verifications/retry.pdf');
+    }
+
+    public function test_database_failure_never_deletes_files_before_anonymization_commits(): void
+    {
+        Storage::fake('public');
+        Storage::fake('private');
+        Storage::disk('public')->put('avatars/must-survive.jpg', 'avatar');
+
+        $user = User::factory()->create([
+            'email' => 'database-failure@example.com',
+            'avatar' => 'avatars/must-survive.jpg',
+        ]);
+        $anonymousId = substr(hash_hmac(
+            'sha256',
+            'deleted-user:'.$user->id,
+            (string) config('app.key'),
+        ), 0, 24);
+        User::factory()->create([
+            'email' => "deleted.{$anonymousId}@deleted.invalid",
+        ]);
+        $admin = User::factory()->admin()->create();
+        $deletionRequest = DataDeletionRequest::query()->create([
+            'user_id' => $user->id,
+            'status' => 'pending',
+        ]);
+
+        Sanctum::actingAs($admin, ['*']);
+        $this->patchJson("/api/admin/privacy/delete-requests/{$deletionRequest->id}/status", [
+            'status' => 'completed',
+        ])->assertServerError();
+
+        $deletionRequest->refresh();
+        $this->assertSame('failed', $deletionRequest->status);
+        $this->assertSame('database_processing_failed', $deletionRequest->failure_code);
+        $this->assertNull($deletionRequest->database_anonymized_at);
+        $this->assertNull($deletionRequest->purge_manifest);
+        $this->assertSame('database-failure@example.com', $user->fresh()->email);
+        Storage::disk('public')->assertExists('avatars/must-survive.jpg');
+    }
+
+    public function test_a_recent_processing_lease_prevents_concurrent_deletion_work(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('avatars/concurrent.jpg', 'avatar');
+
+        $user = User::factory()->create([
+            'email' => 'concurrent-deletion@example.com',
+            'avatar' => 'avatars/concurrent.jpg',
+        ]);
+        $admin = User::factory()->admin()->create();
+        $deletionRequest = DataDeletionRequest::query()->create([
+            'user_id' => $user->id,
+            'status' => 'processing',
+            'processing_attempts' => 1,
+            'processing_started_at' => now(),
+        ]);
+
+        Sanctum::actingAs($admin, ['*']);
+        $this->patchJson("/api/admin/privacy/delete-requests/{$deletionRequest->id}/status", [
+            'status' => 'completed',
+        ])->assertOk()->assertJsonPath('request.status', 'processing');
+
+        $deletionRequest->refresh();
+        $this->assertSame(1, $deletionRequest->processing_attempts);
+        $this->assertNull($deletionRequest->database_anonymized_at);
+        $this->assertSame('concurrent-deletion@example.com', $user->fresh()->email);
+        Storage::disk('public')->assertExists('avatars/concurrent.jpg');
     }
 }

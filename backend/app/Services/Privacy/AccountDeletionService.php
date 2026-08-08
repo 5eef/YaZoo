@@ -2,6 +2,7 @@
 
 namespace App\Services\Privacy;
 
+use App\Exceptions\StorageCleanupException;
 use App\Models\Animal;
 use App\Models\DataDeletionRequest;
 use App\Models\Payment;
@@ -30,14 +31,14 @@ class AccountDeletionService
             return $deletionRequest;
         }
 
-        $user = $deletionRequest->user()->firstOrFail();
-
-        $this->blockAccess($deletionRequest, $user, $reviewer);
-
         try {
-            $this->deletePrivateDocuments($user);
-            MediaStorage::deleteStoredFilesOrFail($this->publicMediaPaths($user));
-            $this->anonymizeDatabase($deletionRequest, $user, $reviewer);
+            if (! $this->claimAndBlockAccess($deletionRequest, $reviewer)) {
+                return $deletionRequest->fresh();
+            }
+
+            $manifest = $this->anonymizeDatabase($deletionRequest, $reviewer);
+            $this->purgePhysicalFiles($manifest);
+            $this->completePurge($deletionRequest, $reviewer);
         } catch (Throwable $exception) {
             DataDeletionRequest::query()
                 ->whereKey($deletionRequest->id)
@@ -50,20 +51,31 @@ class AccountDeletionService
                     'updated_at' => now(),
                 ]);
 
-            throw $exception;
+            if ($deletionRequest->fresh()->status !== 'completed') {
+                throw $exception;
+            }
         }
 
         return $deletionRequest->fresh();
     }
 
-    private function blockAccess(DataDeletionRequest $deletionRequest, User $user, User $reviewer): void
+    private function claimAndBlockAccess(DataDeletionRequest $deletionRequest, User $reviewer): bool
     {
-        DB::transaction(function () use ($deletionRequest, $user, $reviewer): void {
+        return DB::transaction(function () use ($deletionRequest, $reviewer): bool {
             $lockedRequest = DataDeletionRequest::query()->lockForUpdate()->findOrFail($deletionRequest->id);
 
             if ($lockedRequest->status === 'completed') {
-                return;
+                return false;
             }
+
+            if (
+                $lockedRequest->status === 'processing'
+                && $lockedRequest->processing_started_at?->isAfter(now()->subMinutes(15))
+            ) {
+                return false;
+            }
+
+            $user = User::query()->lockForUpdate()->findOrFail($lockedRequest->user_id);
 
             $lockedRequest->forceFill([
                 'status' => 'processing',
@@ -85,24 +97,32 @@ class AccountDeletionService
             $user->tokens()->delete();
             DB::table('sessions')->where('user_id', $user->id)->delete();
             DB::table('password_reset_tokens')->where('email', $user->email)->delete();
+
+            return true;
         });
     }
 
-    private function deletePrivateDocuments(User $user): void
+    /**
+     * @param  array{private: array<int, string>, public: array<int, string|null>}  $manifest
+     */
+    private function purgePhysicalFiles(array $manifest): void
     {
-        $disk = Storage::disk((string) config('professional_verifications.disk', 'private'));
+        try {
+            $disk = Storage::disk((string) config('professional_verifications.disk', 'private'));
 
-        ProfessionalVerification::query()
-            ->where('user_id', $user->id)
-            ->whereNotNull('document_path')
-            ->pluck('document_path')
-            ->filter(fn (mixed $path): bool => is_string($path) && $this->isSafePrivatePath($path))
-            ->unique()
-            ->each(function (string $path) use ($disk): void {
+            foreach ($manifest['private'] as $path) {
                 if ($disk->exists($path) && ! $disk->delete($path)) {
                     throw new RuntimeException('Private document cleanup failed.');
                 }
-            });
+            }
+
+            MediaStorage::deleteStoredFilesOrFail($manifest['public']);
+        } catch (Throwable $exception) {
+            throw new StorageCleanupException(
+                'Account deletion storage purge failed.',
+                previous: $exception,
+            );
+        }
     }
 
     /**
@@ -154,18 +174,22 @@ class AccountDeletionService
         return array_values(array_unique($paths, SORT_REGULAR));
     }
 
-    private function anonymizeDatabase(
-        DataDeletionRequest $deletionRequest,
-        User $user,
-        User $reviewer,
-    ): void {
-        DB::transaction(function () use ($deletionRequest, $user, $reviewer): void {
-            $lockedUser = User::query()->lockForUpdate()->findOrFail($user->id);
+    /**
+     * @return array{private: array<int, string>, public: array<int, string|null>}
+     */
+    private function anonymizeDatabase(DataDeletionRequest $deletionRequest, User $reviewer): array
+    {
+        return DB::transaction(function () use ($deletionRequest, $reviewer): array {
             $lockedRequest = DataDeletionRequest::query()->lockForUpdate()->findOrFail($deletionRequest->id);
 
-            if ($lockedRequest->status === 'completed') {
-                return;
+            if ($lockedRequest->database_anonymized_at !== null) {
+                return $this->normalizeManifest($lockedRequest->purge_manifest);
             }
+
+            $lockedUser = User::query()->lockForUpdate()->findOrFail($lockedRequest->user_id);
+            $manifest = $this->buildPurgeManifest($lockedUser);
+
+            $lockedRequest->forceFill(['purge_manifest' => $manifest])->save();
 
             $this->removeSocialData($lockedUser);
             $this->anonymizeRetainedRecords($lockedUser);
@@ -201,8 +225,72 @@ class AccountDeletionService
             $lockedRequest->forceFill([
                 'reason' => null,
                 'admin_note' => null,
+                'status' => 'processing',
+                'failure_code' => null,
+                'database_anonymized_at' => now(),
+                'reviewed_by' => $reviewer->id,
+                'reviewed_at' => now(),
+            ])->save();
+
+            return $manifest;
+        });
+    }
+
+    /**
+     * @return array{private: array<int, string>, public: array<int, string|null>}
+     */
+    private function buildPurgeManifest(User $user): array
+    {
+        $privatePaths = ProfessionalVerification::query()
+            ->where('user_id', $user->id)
+            ->whereNotNull('document_path')
+            ->pluck('document_path')
+            ->filter(fn (mixed $path): bool => is_string($path) && $this->isSafePrivatePath($path))
+            ->unique()
+            ->values()
+            ->all();
+
+        return [
+            'private' => $privatePaths,
+            'public' => $this->publicMediaPaths($user),
+        ];
+    }
+
+    /**
+     * @return array{private: array<int, string>, public: array<int, string|null>}
+     */
+    private function normalizeManifest(mixed $manifest): array
+    {
+        if (! is_array($manifest)) {
+            throw new RuntimeException('Account deletion purge manifest is missing.');
+        }
+
+        return [
+            'private' => array_values(array_filter(
+                $manifest['private'] ?? [],
+                fn (mixed $path): bool => is_string($path) && $this->isSafePrivatePath($path),
+            )),
+            'public' => array_values(array_filter(
+                $manifest['public'] ?? [],
+                fn (mixed $path): bool => is_string($path) && $path !== '',
+            )),
+        ];
+    }
+
+    private function completePurge(DataDeletionRequest $deletionRequest, User $reviewer): void
+    {
+        DB::transaction(function () use ($deletionRequest, $reviewer): void {
+            $lockedRequest = DataDeletionRequest::query()->lockForUpdate()->findOrFail($deletionRequest->id);
+
+            if ($lockedRequest->status === 'completed') {
+                return;
+            }
+
+            $lockedRequest->forceFill([
                 'status' => 'completed',
                 'failure_code' => null,
+                'purge_manifest' => null,
+                'purge_completed_at' => now(),
                 'completed_at' => now(),
                 'reviewed_by' => $reviewer->id,
                 'reviewed_at' => now(),
@@ -347,7 +435,7 @@ class AccountDeletionService
     private function failureCode(Throwable $exception): string
     {
         return match (true) {
-            $exception instanceof RuntimeException => 'storage_cleanup_failed',
+            $exception instanceof StorageCleanupException => 'storage_cleanup_failed',
             default => 'database_processing_failed',
         };
     }

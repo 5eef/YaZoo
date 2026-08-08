@@ -3,6 +3,8 @@ import { getMonitoringEndpoint, isMonitoringEnabled } from './appConfig'
 let monitoringStarted = false
 let monitoringUser = null
 
+const MONITORING_TIMEOUT_MS = 5000
+
 const recentReports = new Map()
 
 function buildPayload(errorLike, context = {}, source = 'frontend') {
@@ -88,6 +90,12 @@ export async function reportFrontendError(errorLike, context = {}, source = 'fro
     return false
   }
 
+  const abortController = new AbortController()
+  const timeoutId = globalThis.setTimeout(
+    () => abortController.abort(),
+    MONITORING_TIMEOUT_MS,
+  )
+
   try {
     const response = await fetch(getMonitoringEndpoint(), {
       method: 'POST',
@@ -97,11 +105,14 @@ export async function reportFrontendError(errorLike, context = {}, source = 'fro
         Accept: 'application/json',
       },
       body: JSON.stringify(payload),
+      signal: abortController.signal,
     })
 
     return response.ok
   } catch {
     return false
+  } finally {
+    globalThis.clearTimeout(timeoutId)
   }
 }
 
