@@ -22,6 +22,8 @@ return [
 
     'frontend_channel' => env('FRONTEND_MONITORING_LOG_CHANNEL', 'frontend'),
 
+    'monitoring_channel' => env('MONITORING_LOG_CHANNEL', 'observability'),
+
     /*
     |--------------------------------------------------------------------------
     | Deprecations Log Channel

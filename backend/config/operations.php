@@ -13,6 +13,11 @@ return [
     'migration_lock_seconds' => (int) env('YAZOO_MIGRATION_LOCK_SECONDS', 1800),
     'account_deletion_retry_max_attempts' => (int) env('YAZOO_ACCOUNT_DELETION_RETRY_MAX_ATTEMPTS', 5),
     'account_deletion_retry_batch_size' => (int) env('YAZOO_ACCOUNT_DELETION_RETRY_BATCH_SIZE', 25),
+    'account_deletion_processing_lease_seconds' => (int) env('YAZOO_ACCOUNT_DELETION_PROCESSING_LEASE_SECONDS', 900),
+    'account_deletion_unique_lock_store' => env(
+        'YAZOO_ACCOUNT_DELETION_UNIQUE_LOCK_STORE',
+        env('CACHE_STORE', 'database'),
+    ),
     'app_service_storage_enabled' => filter_var(
         env('WEBSITES_ENABLE_APP_SERVICE_STORAGE', false),
         FILTER_VALIDATE_BOOL,

@@ -8,7 +8,7 @@ RUN set -eux; \
     apk add --no-cache --virtual .build-deps \
         $PHPIZE_DEPS \
         linux-headers; \
-    pecl install mongodb; \
+    pecl install mongodb-2.3.3; \
     docker-php-ext-enable mongodb; \
     apk del .build-deps
 
@@ -50,7 +50,7 @@ RUN set -eux; \
         pcntl \
         pdo_mysql \
         zip; \
-    pecl install redis mongodb; \
+    pecl install redis-6.3.0 mongodb-2.3.3; \
     docker-php-ext-enable redis mongodb opcache; \
     apk del .build-deps
 

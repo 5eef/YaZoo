@@ -54,6 +54,51 @@ class MonitoringApiTest extends TestCase
         ])->assertAccepted();
     }
 
+    public function test_frontend_monitoring_redacts_all_logged_text_fields(): void
+    {
+        config(['logging.frontend_channel' => 'frontend']);
+
+        Log::shouldReceive('channel')->once()->with('frontend')->andReturnSelf();
+        Log::shouldReceive('error')
+            ->once()
+            ->with(
+                \Mockery::on(fn (string $message): bool => ! str_contains($message, 'message-secret')
+                    && ! str_contains($message, 'person@example.test')),
+                \Mockery::on(function (array $context): bool {
+                    $serialized = json_encode($context, JSON_THROW_ON_ERROR);
+
+                    foreach ([
+                        'stack-secret',
+                        'source-secret',
+                        'agent-secret',
+                        'url-secret',
+                        'nested-secret',
+                        'person@example.test',
+                    ] as $forbidden) {
+                        if (str_contains($serialized, $forbidden)) {
+                            return false;
+                        }
+                    }
+
+                    return $context['url'] === 'https://yazoo.test/feed'
+                        && $context['context']['deep']['customer_access_token'] === '[masked]'
+                        && $context['user']['AUTH-TOKEN'] === '[masked]';
+                }),
+            );
+
+        $this->postJson('/api/monitoring/frontend-error', [
+            'message' => 'Failure password=message-secret for person@example.test',
+            'stack' => 'Trace bearer=stack-secret',
+            'source' => 'source token=source-secret',
+            'url' => 'https://user:url-secret@yazoo.test/feed?token=url-secret#url-secret',
+            'userAgent' => 'Agent apiKey=agent-secret',
+            'context' => [
+                'deep' => ['customer_access_token' => 'nested-secret'],
+            ],
+            'user' => ['AUTH-TOKEN' => 'nested-secret'],
+        ])->assertAccepted();
+    }
+
     public function test_frontend_monitoring_rejects_an_oversized_payload(): void
     {
         $this->postJson('/api/monitoring/frontend-error', [

@@ -4,9 +4,12 @@ namespace App\Jobs;
 
 use App\Models\DataDeletionRequest;
 use App\Services\Privacy\AccountDeletionService;
+use App\Support\AccountDeletionRetryPolicy;
+use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
 use Throwable;
@@ -15,16 +18,29 @@ class RetryAccountDeletionPurge implements ShouldBeUnique, ShouldQueue
 {
     use Queueable;
 
-    public int $tries = 4;
-
     public int $timeout = 120;
 
     public bool $failOnTimeout = true;
 
-    public int $uniqueFor = 7200;
+    public function __construct(
+        public readonly int $deletionRequestId,
+        public readonly int $processingAttemptsAtDispatch = 1,
+    ) {}
 
-    public function __construct(public readonly int $deletionRequestId)
+    public function tries(): int
     {
+        return max(
+            1,
+            AccountDeletionRetryPolicy::remainingProcessingAttempts($this->processingAttemptsAtDispatch),
+        );
+    }
+
+    public function uniqueFor(): int
+    {
+        return max(
+            7200,
+            ($this->tries() * 3600) + $this->timeout + AccountDeletionRetryPolicy::processingLeaseSeconds(),
+        );
     }
 
     /**
@@ -40,21 +56,27 @@ class RetryAccountDeletionPurge implements ShouldBeUnique, ShouldQueue
         return 'account-deletion-purge:'.$this->deletionRequestId;
     }
 
+    public function uniqueVia(): Repository
+    {
+        return Cache::store((string) config(
+            'operations.account_deletion_unique_lock_store',
+            config('cache.default'),
+        ));
+    }
+
     public function handle(AccountDeletionService $accountDeletion): void
     {
         $deletionRequest = DataDeletionRequest::query()
             ->with('reviewer')
             ->find($this->deletionRequestId);
 
-        if (
-            ! $deletionRequest
-            || $deletionRequest->status === 'completed'
-            || $deletionRequest->failure_code !== 'storage_cleanup_failed'
-        ) {
+        if (! $deletionRequest || ! AccountDeletionRetryPolicy::isAutomaticallyRecoverable($deletionRequest)) {
             return;
         }
 
-        if ($deletionRequest->processing_attempts >= $this->maxProcessingAttempts()) {
+        if ($deletionRequest->processing_attempts >= AccountDeletionRetryPolicy::maxProcessingAttempts()) {
+            $this->markExhausted($deletionRequest);
+
             return;
         }
 
@@ -98,23 +120,52 @@ class RetryAccountDeletionPurge implements ShouldBeUnique, ShouldQueue
 
     public function failed(?Throwable $exception): void
     {
-        DataDeletionRequest::query()
-            ->whereKey($this->deletionRequestId)
-            ->where('status', 'failed')
-            ->where('failure_code', 'storage_cleanup_failed')
-            ->update([
-                'failure_code' => 'storage_cleanup_exhausted',
-                'updated_at' => now(),
-            ]);
+        $deletionRequest = DataDeletionRequest::query()->find($this->deletionRequestId);
 
-        Log::critical('Automated account deletion purge retries exhausted.', [
+        if ($deletionRequest && $deletionRequest->processing_attempts >= AccountDeletionRetryPolicy::maxProcessingAttempts()) {
+            $this->markExhausted($deletionRequest);
+
+            return;
+        }
+
+        Log::error('Account deletion queue job exhausted before the processing-attempt budget.', [
             'deletion_request_id' => $this->deletionRequestId,
             'exception' => $exception !== null ? $exception::class : null,
         ]);
     }
 
-    private function maxProcessingAttempts(): int
+    private function markExhausted(DataDeletionRequest $deletionRequest): void
     {
-        return max(2, (int) config('operations.account_deletion_retry_max_attempts', 5));
+        if (! AccountDeletionRetryPolicy::isAutomaticallyRecoverable($deletionRequest)) {
+            return;
+        }
+
+        $failureCode = AccountDeletionRetryPolicy::exhaustedFailureCode($deletionRequest);
+        $updated = DataDeletionRequest::query()
+            ->whereKey($deletionRequest->id)
+            ->where('status', '!=', 'completed')
+            ->where(function ($query): void {
+                $query
+                    ->whereNull('failure_code')
+                    ->orWhereNotIn('failure_code', [
+                        'storage_cleanup_exhausted',
+                        'processing_recovery_exhausted',
+                        'retry_reviewer_unavailable',
+                    ]);
+            })
+            ->update([
+                'status' => 'failed',
+                'failure_code' => $failureCode,
+                'processing_started_at' => null,
+                'updated_at' => now(),
+            ]);
+
+        if ($updated > 0) {
+            Log::critical('Automated account deletion processing attempts exhausted.', [
+                'deletion_request_id' => $deletionRequest->id,
+                'failure_code' => $failureCode,
+                'processing_attempts' => $deletionRequest->processing_attempts,
+            ]);
+        }
     }
 }

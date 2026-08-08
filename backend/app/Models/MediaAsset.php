@@ -14,6 +14,16 @@ class MediaAsset extends Model
 
     public const STATE_ACTIVE = 'active';
 
+    public const STATE_PENDING = 'pending';
+
+    public const STATE_SCANNING = 'scanning';
+
+    public const STATE_CLEAN = 'clean';
+
+    public const STATE_INFECTED = 'infected';
+
+    public const STATE_SCAN_FAILED = 'scan_failed';
+
     public const VISIBILITY_PUBLIC = 'public';
 
     public const VISIBILITY_PRIVATE = 'private';

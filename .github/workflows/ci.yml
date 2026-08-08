@@ -96,6 +96,67 @@ jobs:
         env:
           SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
 
+  mysql-concurrency:
+    runs-on: ubuntu-latest
+    env:
+      APP_ENV: testing
+      APP_KEY: base64:c49vk2fjl1WJZPUaxanThGkmCDU9hHDldPjseMgdaQc=
+      CACHE_STORE: redis
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: yazoo_concurrency
+      DB_USERNAME: yazoo_test
+      DB_PASSWORD: test-only-password
+      QUEUE_CONNECTION: database
+      REDIS_CLIENT: phpredis
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: 6379
+      YAZOO_ACCOUNT_DELETION_PROCESSING_LEASE_SECONDS: 60
+      YAZOO_ACCOUNT_DELETION_RETRY_MAX_ATTEMPTS: 5
+      YAZOO_ACCOUNT_DELETION_UNIQUE_LOCK_STORE: redis
+      YAZOO_MYSQL_CONCURRENCY_TEST: "true"
+    services:
+      mysql:
+        image: mysql:8.4.10@sha256:8dbcf531a03aade657e181b9cf2f1d1803ce621a1d55610cb44cb531ab7d7db6
+        env:
+          MYSQL_DATABASE: yazoo_concurrency
+          MYSQL_USER: yazoo_test
+          MYSQL_PASSWORD: test-only-password
+          MYSQL_ROOT_PASSWORD: test-only-root-password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -ptest-only-root-password"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+      redis:
+        image: redis:7.4.10-alpine@sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: "8.4"
+          extensions: bcmath, intl, mbstring, dom, fileinfo, pdo_mysql, redis
+          coverage: none
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Run real MySQL account-deletion concurrency tests
+        working-directory: backend
+        run: ./vendor/bin/phpunit tests/Integration/AccountDeletionMySqlConcurrencyTest.php
+
   container-and-secrets:
     runs-on: ubuntu-latest
     permissions:

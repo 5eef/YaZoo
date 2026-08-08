@@ -2,7 +2,9 @@
 
 namespace App\Console\Commands;
 
+use App\Contracts\MediaScanner;
 use App\Models\User;
+use App\Support\AccountDeletionRetryPolicy;
 use App\Support\Sms\SmsSender;
 use Illuminate\Console\Command;
 
@@ -67,12 +69,45 @@ class ProductionPreflight extends Command
             $failures[] = 'YAZOO_RUN_SCHEDULER=true is required for retention and heartbeat tasks.';
         }
 
+        $uniqueLockStore = (string) config('operations.account_deletion_unique_lock_store');
+        $uniqueLockDriver = (string) config("cache.stores.{$uniqueLockStore}.driver");
+        if (! in_array($uniqueLockDriver, ['redis', 'database', 'dynamodb', 'memcached'], true)) {
+            $failures[] = 'YAZOO_ACCOUNT_DELETION_UNIQUE_LOCK_STORE must use a shared atomic cache store in production.';
+        }
+
+        $configuredDeletionAttempts = (int) config('operations.account_deletion_retry_max_attempts');
+        if (
+            $configuredDeletionAttempts < AccountDeletionRetryPolicy::MIN_PROCESSING_ATTEMPTS
+            || $configuredDeletionAttempts > AccountDeletionRetryPolicy::MAX_PROCESSING_ATTEMPTS
+        ) {
+            $failures[] = 'YAZOO_ACCOUNT_DELETION_RETRY_MAX_ATTEMPTS must be between 2 and 50, including the initial attempt.';
+        }
+
+        if ((int) config('operations.account_deletion_processing_lease_seconds') < 60) {
+            $failures[] = 'YAZOO_ACCOUNT_DELETION_PROCESSING_LEASE_SECONDS must be at least 60.';
+        }
+
         if (! (bool) config('operations.app_service_storage_enabled')) {
             $failures[] = 'WEBSITES_ENABLE_APP_SERVICE_STORAGE=true is required for persistent App Service media.';
         }
 
         if ((string) config('operations.persistent_storage_path') !== '/home/site/yazoo-storage') {
             $failures[] = 'YAZOO_PERSISTENT_STORAGE_PATH must be /home/site/yazoo-storage.';
+        }
+
+        if ((bool) config('media.scanning.required_in_production')) {
+            $mediaLockStore = (string) config('media.scanning.unique_lock_store');
+            $mediaLockDriver = (string) config("cache.stores.{$mediaLockStore}.driver");
+
+            if (! in_array($mediaLockDriver, ['redis', 'database', 'dynamodb', 'memcached'], true)) {
+                $failures[] = 'MEDIA_SCAN_UNIQUE_LOCK_STORE must use a shared atomic cache store in production.';
+            }
+
+            if (! (bool) config('media.scanning.enabled')) {
+                $failures[] = 'MEDIA_SCAN_ENABLED=true is required by the production media policy.';
+            } elseif (! app(MediaScanner::class)->isAvailable()) {
+                $failures[] = 'MEDIA_SCAN_DRIVER must provide an available scanner in production.';
+            }
         }
 
         if (

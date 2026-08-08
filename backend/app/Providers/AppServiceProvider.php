@@ -2,8 +2,10 @@
 
 namespace App\Providers;
 
+use App\Contracts\MediaScanner;
 use App\Events\UserNotificationCreated;
 use App\Notifications\NewMessageNotification;
+use App\Services\Media\UnavailableMediaScanner;
 use App\Support\PhoneNumber;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
@@ -22,7 +24,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(MediaScanner::class, UnavailableMediaScanner::class);
     }
 
     /**

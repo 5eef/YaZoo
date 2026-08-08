@@ -127,6 +127,10 @@ class OperationsReadinessTest extends TestCase
             'queue.default' => 'redis',
             'operations.run_queue_worker' => false,
             'operations.run_scheduler' => false,
+            'operations.account_deletion_unique_lock_store' => 'array',
+            'media.scanning.required_in_production' => true,
+            'media.scanning.enabled' => true,
+            'media.scanning.unique_lock_store' => 'array',
             'auth.admin_bootstrap.enabled' => true,
         ]);
 
@@ -134,6 +138,9 @@ class OperationsReadinessTest extends TestCase
             ->expectsOutput('LEGAL_STATUS is required and must not use a placeholder.')
             ->expectsOutput('ADMIN_BOOTSTRAP_ENABLED must be false in production.')
             ->expectsOutput('SMS_DRIVER=log is forbidden in production.')
+            ->expectsOutput('YAZOO_ACCOUNT_DELETION_UNIQUE_LOCK_STORE must use a shared atomic cache store in production.')
+            ->expectsOutput('MEDIA_SCAN_UNIQUE_LOCK_STORE must use a shared atomic cache store in production.')
+            ->expectsOutput('MEDIA_SCAN_DRIVER must provide an available scanner in production.')
             ->expectsOutput('At least one active administrator is required.')
             ->assertExitCode(1);
     }
@@ -161,6 +168,9 @@ class OperationsReadinessTest extends TestCase
             'queue.default' => 'redis',
             'operations.run_queue_worker' => true,
             'operations.run_scheduler' => true,
+            'operations.account_deletion_unique_lock_store' => 'redis',
+            'operations.account_deletion_retry_max_attempts' => 5,
+            'operations.account_deletion_processing_lease_seconds' => 900,
             'operations.app_service_storage_enabled' => true,
             'operations.persistent_storage_path' => '/home/site/yazoo-storage',
             'payments.providers.cmi.enabled' => false,

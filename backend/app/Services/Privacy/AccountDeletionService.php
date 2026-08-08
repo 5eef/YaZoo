@@ -13,9 +13,11 @@ use App\Models\ServiceListing;
 use App\Models\Story;
 use App\Models\User;
 use App\Models\Veterinarian;
+use App\Support\AccountDeletionRetryPolicy;
 use App\Support\MediaStorage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -40,16 +42,35 @@ class AccountDeletionService
             $this->purgePhysicalFiles($manifest);
             $this->completePurge($deletionRequest, $reviewer);
         } catch (Throwable $exception) {
+            $currentRequest = $deletionRequest->fresh();
+            $failureCode = $this->failureCode($exception);
+
+            if (
+                $currentRequest->processing_attempts
+                >= AccountDeletionRetryPolicy::maxProcessingAttempts()
+            ) {
+                $failureCode = AccountDeletionRetryPolicy::exhaustedFailureCode($currentRequest);
+            }
+
             DataDeletionRequest::query()
                 ->whereKey($deletionRequest->id)
                 ->where('status', '!=', 'completed')
                 ->update([
                     'status' => 'failed',
-                    'failure_code' => $this->failureCode($exception),
+                    'failure_code' => $failureCode,
+                    'processing_started_at' => null,
                     'reviewed_by' => $reviewer->id,
                     'reviewed_at' => now(),
                     'updated_at' => now(),
                 ]);
+
+            if (str_ends_with($failureCode, '_exhausted')) {
+                Log::critical('Account deletion processing reached its configured attempt limit.', [
+                    'deletion_request_id' => $deletionRequest->id,
+                    'failure_code' => $failureCode,
+                    'processing_attempts' => $currentRequest->processing_attempts,
+                ]);
+            }
 
             if ($deletionRequest->fresh()->status !== 'completed') {
                 throw $exception;
@@ -68,9 +89,32 @@ class AccountDeletionService
                 return false;
             }
 
+            if (AccountDeletionRetryPolicy::isTerminal($lockedRequest)) {
+                return false;
+            }
+
+            if (
+                $lockedRequest->processing_attempts
+                >= AccountDeletionRetryPolicy::maxProcessingAttempts()
+            ) {
+                $failureCode = AccountDeletionRetryPolicy::exhaustedFailureCode($lockedRequest);
+                $lockedRequest->forceFill([
+                    'status' => 'failed',
+                    'failure_code' => $failureCode,
+                    'processing_started_at' => null,
+                ])->save();
+                Log::critical('Account deletion processing refused after its configured attempt limit.', [
+                    'deletion_request_id' => $lockedRequest->id,
+                    'failure_code' => $failureCode,
+                    'processing_attempts' => $lockedRequest->processing_attempts,
+                ]);
+
+                return false;
+            }
+
             if (
                 $lockedRequest->status === 'processing'
-                && $lockedRequest->processing_started_at?->isAfter(now()->subMinutes(15))
+                && ! AccountDeletionRetryPolicy::hasExpiredProcessingLease($lockedRequest)
             ) {
                 return false;
             }

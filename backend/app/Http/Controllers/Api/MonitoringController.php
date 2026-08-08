@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Support\Monitoring\FrontendTelemetryRedactor;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -11,8 +12,6 @@ use JsonException;
 
 class MonitoringController extends Controller
 {
-    private const MASKED_VALUE = '[masked]';
-
     private const MAX_BODY_BYTES = 65536;
 
     private const MAX_NESTING_DEPTH = 8;
@@ -25,31 +24,10 @@ class MonitoringController extends Controller
 
     private const MAX_CONTEXT_STRING_LENGTH = 4096;
 
-    private const SENSITIVE_KEYS = [
-        'accesstoken',
-        'apikey',
-        'authorization',
-        'address',
-        'card',
-        'cardnumber',
-        'clientsecret',
-        'cvc',
-        'cvv',
-        'email',
-        'hash',
-        'name',
-        'password',
-        'phone',
-        'secret',
-        'signature',
-        'storekey',
-        'token',
-    ];
-
     /**
      * Persist a frontend error report into the observability logs.
      */
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, FrontendTelemetryRedactor $redactor): JsonResponse
     {
         $rawPayload = $request->getContent();
 
@@ -92,38 +70,19 @@ class MonitoringController extends Controller
         $this->validatePayloadShape($validated['user'] ?? [], 'user', 1, $totalItems);
 
         Log::channel((string) config('logging.frontend_channel', 'frontend'))
-            ->error($validated['message'], [
-                'source' => $validated['source'] ?? 'frontend',
-                'stack' => $validated['stack'] ?? null,
-                'url' => $this->sanitizeUrl($validated['url'] ?? null),
-                'user_agent' => $validated['userAgent'] ?? null,
-                'context' => $this->sanitizePayload($validated['context'] ?? []),
-                'user' => $this->sanitizePayload($validated['user'] ?? null),
+            ->error($redactor->text($validated['message'], 5000), [
+                'source' => $redactor->text($validated['source'] ?? 'frontend', 255),
+                'stack' => $redactor->text($validated['stack'] ?? null, 50000),
+                'url' => $redactor->url($validated['url'] ?? null),
+                'user_agent' => $redactor->text($validated['userAgent'] ?? null, 2048),
+                'context' => $redactor->payload($validated['context'] ?? []),
+                'user' => $redactor->payload($validated['user'] ?? null),
                 'reported_at' => now()->toISOString(),
             ]);
 
         return response()->json([
             'message' => __('messages.monitoring.frontend_report_saved'),
         ], 202);
-    }
-
-    private function sanitizePayload(mixed $payload): mixed
-    {
-        if (! is_array($payload)) {
-            return $payload;
-        }
-
-        $sanitized = [];
-
-        foreach ($payload as $key => $value) {
-            $normalizedKey = preg_replace('/[^a-z0-9]/', '', strtolower((string) $key)) ?? '';
-
-            $sanitized[$key] = in_array($normalizedKey, self::SENSITIVE_KEYS, true)
-                ? self::MASKED_VALUE
-                : $this->sanitizePayload($value);
-        }
-
-        return $sanitized;
     }
 
     private function validatePayloadShape(mixed $payload, string $path, int $depth, int &$totalItems): void
@@ -169,22 +128,4 @@ class MonitoringController extends Controller
         }
     }
 
-    private function sanitizeUrl(?string $url): ?string
-    {
-        if ($url === null || trim($url) === '') {
-            return null;
-        }
-
-        $parts = parse_url($url);
-
-        if (! is_array($parts) || empty($parts['host'])) {
-            return null;
-        }
-
-        $scheme = isset($parts['scheme']) ? $parts['scheme'].'://' : '';
-        $port = isset($parts['port']) ? ':'.$parts['port'] : '';
-        $path = $parts['path'] ?? '';
-
-        return substr($scheme.$parts['host'].$port.$path, 0, 2048);
-    }
 }

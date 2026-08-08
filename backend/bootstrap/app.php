@@ -105,7 +105,7 @@ return Application::configure(basePath: dirname(__DIR__))
         });
 
         $exceptions->report(function (Throwable $exception): void {
-            Log::channel((string) env('MONITORING_LOG_CHANNEL', 'observability'))
+            Log::channel((string) config('logging.monitoring_channel', 'observability'))
                 ->error($exception->getMessage(), [
                     'exception' => $exception::class,
                     'file' => $exception->getFile(),
