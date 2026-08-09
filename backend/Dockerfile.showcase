@@ -1,0 +1,40 @@
+ARG BASE_IMAGE=yazoo-api:local
+FROM ${BASE_IMAGE}
+
+COPY backend/app/Console/Commands/BootstrapAzureShowcase.php /var/www/html/app/Console/Commands/BootstrapAzureShowcase.php
+COPY backend/app/Support/ShowcaseBootstrapGuard.php /var/www/html/app/Support/ShowcaseBootstrapGuard.php
+COPY backend/config/operations.php /var/www/html/config/operations.php
+COPY backend/database/seeders/MarketplaceTestSeeder.php /var/www/html/database/seeders/MarketplaceTestSeeder.php
+COPY backend/startup.sh /usr/local/bin/yazoo-startup
+
+RUN --mount=type=bind,from=showcase_images,source=/,target=/source,readonly \
+    set -eux; \
+    mkdir -p /opt/yazoo-showcase-images; \
+    cp -- "/source/cafe_chat.png" "/opt/yazoo-showcase-images/cafe_chat.png"; \
+    cp -- "/source/cafe_chat2.png" "/opt/yazoo-showcase-images/cafe_chat2.png"; \
+    cp -- "/source/cafe_chien1.png" "/opt/yazoo-showcase-images/cafe_chien1.png"; \
+    cp -- "/source/cafe_chien2.png" "/opt/yazoo-showcase-images/cafe_chien2.png"; \
+    cp -- "/source/dresser_cirque.png" "/opt/yazoo-showcase-images/dresser_cirque.png"; \
+    cp -- "/source/dresseur d'animaux sauvages.png" "/opt/yazoo-showcase-images/dresseur d'animaux sauvages.png"; \
+    cp -- "/source/dresseur_cheval.png" "/opt/yazoo-showcase-images/dresseur_cheval.png"; \
+    cp -- "/source/dresseur_chien.png" "/opt/yazoo-showcase-images/dresseur_chien.png"; \
+    cp -- "/source/dresseur_chien2.png" "/opt/yazoo-showcase-images/dresseur_chien2.png"; \
+    cp -- "/source/dresseur_egle.png" "/opt/yazoo-showcase-images/dresseur_egle.png"; \
+    cp -- "/source/elveurs_poules.png" "/opt/yazoo-showcase-images/elveurs_poules.png"; \
+    cp -- "/source/elveurs_vaches.png" "/opt/yazoo-showcase-images/elveurs_vaches.png"; \
+    cp -- "/source/food_bird.png" "/opt/yazoo-showcase-images/food_bird.png"; \
+    cp -- "/source/food_cat_produit1.png" "/opt/yazoo-showcase-images/food_cat_produit1.png"; \
+    cp -- "/source/food_cat_produit2.png" "/opt/yazoo-showcase-images/food_cat_produit2.png"; \
+    cp -- "/source/food_dog_produit1.png" "/opt/yazoo-showcase-images/food_dog_produit1.png"; \
+    cp -- "/source/food_dog_produit2.png" "/opt/yazoo-showcase-images/food_dog_produit2.png"; \
+    cp -- "/source/produit_oiseau_cage.png" "/opt/yazoo-showcase-images/produit_oiseau_cage.png"; \
+    cp -- "/source/vétérinaire1.png" "/opt/yazoo-showcase-images/vétérinaire1.png"; \
+    cp -- "/source/vétérinaire2.png" "/opt/yazoo-showcase-images/vétérinaire2.png"; \
+    cp -- "/source/vétérinaire3.png" "/opt/yazoo-showcase-images/vétérinaire3.png"; \
+    test "$(find /opt/yazoo-showcase-images -maxdepth 1 -type f -name '*.png' | wc -l)" -eq 21; \
+    chown -R www-data:www-data /opt/yazoo-showcase-images; \
+    chmod -R a=rX /opt/yazoo-showcase-images; \
+    chmod +x /usr/local/bin/yazoo-startup; \
+    cd /var/www/html; \
+    composer dump-autoload --optimize; \
+    php artisan package:discover --ansi

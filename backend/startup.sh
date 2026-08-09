@@ -21,10 +21,40 @@ if [ -d /home/site/yazoo-storage ]; then
 fi
 cp /var/www/html/nginx.conf /etc/nginx/http.d/default.conf
 
-sh /var/www/html/scripts/run-production-preflight.sh
+if [ "${YAZOO_RUN_SHOWCASE_BOOTSTRAP:-false}" = "true" ]; then
+    if [ "${YAZOO_RUN_MIGRATIONS:-false}" != "true" ]; then
+        echo "YAZOO_RUN_MIGRATIONS=true is required for showcase bootstrap." >&2
+        exit 1
+    fi
 
-if [ "${YAZOO_RUN_MIGRATIONS:-false}" = "true" ]; then
+    if [ -z "${YAZOO_SHOWCASE_CONFIRMATION:-}" ]; then
+        echo "YAZOO_SHOWCASE_CONFIRMATION is required for showcase bootstrap." >&2
+        exit 1
+    fi
+
     su-exec www-data php artisan yazoo:migrate-production
+
+    if [ "${YAZOO_RESET_RUNTIME_STATE:-false}" = "true" ]; then
+        su-exec www-data php artisan cache:clear
+        su-exec www-data php artisan queue:clear "${QUEUE_CONNECTION:-redis}" --force
+    fi
+
+    su-exec www-data php artisan yazoo:bootstrap-azure-showcase \
+        --images="${YAZOO_SHOWCASE_IMAGES_PATH:-/opt/yazoo-showcase-images}" \
+        --confirmation="${YAZOO_SHOWCASE_CONFIRMATION}"
+
+    sh /var/www/html/scripts/run-production-preflight.sh
+else
+    sh /var/www/html/scripts/run-production-preflight.sh
+
+    if [ "${YAZOO_RUN_MIGRATIONS:-false}" = "true" ]; then
+        su-exec www-data php artisan yazoo:migrate-production
+    fi
+
+    if [ "${YAZOO_RESET_RUNTIME_STATE:-false}" = "true" ]; then
+        su-exec www-data php artisan cache:clear
+        su-exec www-data php artisan queue:clear "${QUEUE_CONNECTION:-redis}" --force
+    fi
 fi
 
 if [ "${YAZOO_RUNTIME_OPTIMIZE:-true}" = "true" ]; then

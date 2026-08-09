@@ -17,6 +17,7 @@ use App\Models\Veterinarian;
 use App\Models\VeterinarianAppointment;
 use App\Models\VeterinarianAppointmentReview;
 use App\Models\VeterinarianAvailabilitySlot;
+use App\Support\ShowcaseBootstrapGuard;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
@@ -71,11 +72,16 @@ class MarketplaceTestSeeder extends Seeder
     /**
      * @return array{dryRun: bool, images: array<int, array<string, mixed>>, stats: array<string, array{created: int, updated: int, unchanged: int}>}
      */
-    public function seedFrom(string $imagesPath, bool $dryRun = false, ?string $failAfter = null): array
+    public function seedFrom(
+        string $imagesPath,
+        bool $dryRun = false,
+        ?string $failAfter = null,
+        ?string $showcaseConfirmation = null,
+    ): array
     {
         $this->stats = [];
         $this->storageBackup = [];
-        $this->assertSafeEnvironment();
+        $this->assertSafeEnvironment($showcaseConfirmation);
         $this->validatedImages = $this->validateImages($imagesPath);
         $this->validatePdfTemplate();
 
@@ -111,8 +117,14 @@ class MarketplaceTestSeeder extends Seeder
         return ['dryRun' => false, 'images' => array_values($this->validatedImages), 'stats' => $this->stats];
     }
 
-    private function assertSafeEnvironment(): void
+    private function assertSafeEnvironment(?string $showcaseConfirmation): void
     {
+        if ($showcaseConfirmation !== null) {
+            app(ShowcaseBootstrapGuard::class)->assertAllowed($showcaseConfirmation);
+
+            return;
+        }
+
         if (! app()->environment(['local', 'testing'])) {
             throw new RuntimeException('Cette commande est strictement réservée aux environnements local ou testing.');
         }
@@ -142,6 +154,12 @@ class MarketplaceTestSeeder extends Seeder
         ) {
             throw new RuntimeException('La base doit être MySQL locale, sur localhost, et nommée exactement yazoo_local.');
         }
+    }
+
+    /** @return list<string> */
+    public function demoEmails(): array
+    {
+        return array_column($this->accounts(), 'email');
     }
 
     /**
