@@ -865,13 +865,14 @@ try {
     $appStopped = $false
     Wait-WebAppHealth "$expectedAppUrl/health/live"
 
+    $showcaseVerificationSql = "SELECT CONCAT('migrations=', COUNT(*)) FROM migrations; SELECT CONCAT('users=', COUNT(*)) FROM users; SELECT CONCAT('posts=', COUNT(*)) FROM posts; SELECT CONCAT('comments=', COUNT(*)) FROM comments; SELECT CONCAT('services=', COUNT(*)) FROM service_listings; SELECT CONCAT('reservations=', COUNT(*)) FROM reservations; SELECT CONCAT('payments=', COUNT(*)) FROM payments;"
     Invoke-MySqlContainer -Command @(
         'mysql',
         '--ssl-mode=REQUIRED',
         "--host=$databaseHost",
         "--user=$databaseUser",
         '--batch', '--skip-column-names',
-        '--execute=SELECT CONCAT("migrations=", COUNT(*)) FROM migrations; SELECT CONCAT("users=", COUNT(*)) FROM users; SELECT CONCAT("posts=", COUNT(*)) FROM posts; SELECT CONCAT("comments=", COUNT(*)) FROM comments; SELECT CONCAT("services=", COUNT(*)) FROM service_listings; SELECT CONCAT("reservations=", COUNT(*)) FROM reservations; SELECT CONCAT("payments=", COUNT(*)) FROM payments;'
+        "--execute=$showcaseVerificationSql"
     ) -DatabaseHost $databaseHost `
         -DatabaseHostIpv4 $databaseHostIpv4 `
         -DatabaseUser $databaseUser `
