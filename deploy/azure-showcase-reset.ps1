@@ -113,8 +113,16 @@ function Protect-LocalDirectory {
     }
 
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent().Name
-    $acl = New-Object Security.AccessControl.DirectorySecurity
+    $directory = Get-Item -LiteralPath $Path
+    $acl = $directory.GetAccessControl([Security.AccessControl.AccessControlSections]::Access)
     $acl.SetAccessRuleProtection($true, $false)
+    foreach ($existingRule in @($acl.GetAccessRules(
+        $true,
+        $true,
+        [Security.Principal.NTAccount]
+    ))) {
+        [void] $acl.RemoveAccessRuleSpecific($existingRule)
+    }
     $rule = New-Object Security.AccessControl.FileSystemAccessRule(
         $identity,
         [Security.AccessControl.FileSystemRights]::FullControl,
@@ -123,7 +131,7 @@ function Protect-LocalDirectory {
         [Security.AccessControl.AccessControlType]::Allow
     )
     $acl.AddAccessRule($rule)
-    Set-Acl -LiteralPath $Path -AclObject $acl
+    $directory.SetAccessControl($acl)
 }
 
 function Get-AppSetting {
