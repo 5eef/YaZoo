@@ -135,8 +135,11 @@ function Protect-LocalDirectory {
     $directory.SetAccessControl($acl)
 }
 
-function ConvertTo-ValidatedPublicIpv4 {
-    param([Parameter(Mandatory)][string] $Candidate)
+function ConvertTo-ValidatedIpv4 {
+    param(
+        [Parameter(Mandatory)][string] $Candidate,
+        [string] $Label = 'IPv4 address'
+    )
 
     $trimmedCandidate = $Candidate.Trim()
     $parsedAddress = $null
@@ -145,7 +148,7 @@ function ConvertTo-ValidatedPublicIpv4 {
         $parsedAddress.ToString() -ceq $trimmedCandidate
 
     if (-not $isIpv4) {
-        throw 'PublicIp must be a canonical IPv4 address such as 203.0.113.10.'
+        throw "$Label must be a canonical IPv4 address such as 203.0.113.10."
     }
 
     return $trimmedCandidate
@@ -155,7 +158,7 @@ function Resolve-PublicIpv4 {
     param([string] $ExplicitIp = '')
 
     if ($ExplicitIp) {
-        return ConvertTo-ValidatedPublicIpv4 $ExplicitIp
+        return ConvertTo-ValidatedIpv4 $ExplicitIp -Label 'PublicIp'
     }
 
     $providers = @(
@@ -168,13 +171,41 @@ function Resolve-PublicIpv4 {
     foreach ($provider in $providers) {
         try {
             $candidate = [string] (Invoke-RestMethod -Uri $provider -TimeoutSec 10)
-            return ConvertTo-ValidatedPublicIpv4 $candidate
+            return ConvertTo-ValidatedIpv4 $candidate -Label 'Resolved public IP address'
         } catch {
             Write-Warning "Unable to resolve the public IPv4 address through $provider; trying the next provider."
         }
     }
 
     throw 'Unable to resolve the public IPv4 address automatically. Re-run with -PublicIp <your-current-public-IPv4>.'
+}
+
+function Resolve-HostIpv4 {
+    param(
+        [Parameter(Mandatory)][string] $HostName,
+        [int] $MaxAttempts = 3
+    )
+
+    for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
+        try {
+            $address = [Net.Dns]::GetHostAddresses($HostName) |
+                Where-Object AddressFamily -eq ([Net.Sockets.AddressFamily]::InterNetwork) |
+                Select-Object -First 1
+            if ($null -ne $address) {
+                return ConvertTo-ValidatedIpv4 $address.ToString() -Label 'Resolved database address'
+            }
+        } catch {
+            if ($attempt -eq $MaxAttempts) {
+                break
+            }
+        }
+
+        if ($attempt -lt $MaxAttempts) {
+            Start-Sleep -Seconds 2
+        }
+    }
+
+    throw "Unable to resolve the IPv4 address for the approved database host '$HostName'. No Azure mutation was attempted."
 }
 
 function Get-AppSetting {
@@ -235,6 +266,7 @@ function Invoke-MySqlContainer {
     param(
         [Parameter(Mandatory)][string[]] $Command,
         [Parameter(Mandatory)][string] $DatabaseHost,
+        [Parameter(Mandatory)][string] $DatabaseHostIpv4,
         [Parameter(Mandatory)][string] $DatabaseUser,
         [Parameter(Mandatory)][string] $DatabasePassword,
         [Parameter(Mandatory)][string] $Database,
@@ -254,6 +286,7 @@ function Invoke-MySqlContainer {
 
         $arguments = @(
             'run', '--rm',
+            '--add-host', "${DatabaseHost}:$DatabaseHostIpv4",
             '-e', 'MYSQL_PWD',
             '-e', 'YAZOO_MYSQL_HOST',
             '-e', 'YAZOO_MYSQL_USER',
@@ -273,6 +306,50 @@ function Invoke-MySqlContainer {
         $env:YAZOO_MYSQL_USER = $previousUser
         $env:YAZOO_MYSQL_DATABASE = $previousDatabase
     }
+}
+
+function Wait-MySqlConnectivity {
+    param(
+        [Parameter(Mandatory)][string] $DatabaseHost,
+        [Parameter(Mandatory)][string] $DatabaseHostIpv4,
+        [Parameter(Mandatory)][string] $DatabaseUser,
+        [Parameter(Mandatory)][string] $DatabasePassword,
+        [Parameter(Mandatory)][string] $Database,
+        [int] $TimeoutSeconds = 300,
+        [int] $RetryIntervalSeconds = 15
+    )
+
+    # Azure documents up to five minutes for a new MySQL firewall rule to take effect.
+    $deadline = [DateTimeOffset]::UtcNow.AddSeconds($TimeoutSeconds)
+    $attempt = 0
+    do {
+        $attempt++
+        try {
+            Invoke-MySqlContainer -Command @(
+                'mysql',
+                '--ssl-mode=REQUIRED',
+                '--connect-timeout=15',
+                "--host=$DatabaseHost",
+                "--user=$DatabaseUser",
+                '--execute=SELECT 1'
+            ) -DatabaseHost $DatabaseHost `
+                -DatabaseHostIpv4 $DatabaseHostIpv4 `
+                -DatabaseUser $DatabaseUser `
+                -DatabasePassword $DatabasePassword `
+                -Database $Database
+            Write-Host "MySQL connectivity preflight passed on attempt $attempt."
+            return
+        } catch {
+            if ([DateTimeOffset]::UtcNow.AddSeconds($RetryIntervalSeconds) -ge $deadline) {
+                throw "MySQL connectivity preflight did not pass within $TimeoutSeconds seconds. The database was not deleted."
+            }
+
+            Write-Warning "MySQL connectivity preflight attempt $attempt failed; waiting $RetryIntervalSeconds seconds for DNS/network/firewall propagation."
+            Start-Sleep -Seconds $RetryIntervalSeconds
+        }
+    } while ([DateTimeOffset]::UtcNow -lt $deadline)
+
+    throw "MySQL connectivity preflight did not pass within $TimeoutSeconds seconds. The database was not deleted."
 }
 
 function Set-WebAppImage {
@@ -331,7 +408,7 @@ if ($Execute -and $Confirmation -cne $expectedConfirmation) {
 }
 
 if ($PublicIp) {
-    $PublicIp = ConvertTo-ValidatedPublicIpv4 $PublicIp
+    $PublicIp = ConvertTo-ValidatedIpv4 $PublicIp -Label 'PublicIp'
 }
 
 $normalizedRollbackImage = $RollbackImage -replace '^DOCKER\|', ''
@@ -602,6 +679,7 @@ $backupFile = Join-Path $BackupDirectory $backupFileName
 $credentialFile = Join-Path $BackupDirectory "yazoo-showcase-credentials-$timestamp.txt"
 $firewallRuleName = "yazoo-showcase-reset-$timestamp"
 $publicIp = Resolve-PublicIpv4 $PublicIp
+$databaseHostIpv4 = Resolve-HostIpv4 $databaseHost
 
 $showcasePasswordBytes = New-Object byte[] 24
 $randomGenerator = [Security.Cryptography.RandomNumberGenerator]::Create()
@@ -644,14 +722,11 @@ try {
     )
     $firewallCreated = $true
 
-    Invoke-MySqlContainer @(
-        'mysql',
-        '--ssl-mode=REQUIRED',
-        '--connect-timeout=15',
-        "--host=$databaseHost",
-        "--user=$databaseUser",
-        '--execute=SELECT 1'
-    ) $databaseHost $databaseUser $databasePassword $DatabaseName
+    Wait-MySqlConnectivity -DatabaseHost $databaseHost `
+        -DatabaseHostIpv4 $databaseHostIpv4 `
+        -DatabaseUser $databaseUser `
+        -DatabasePassword $databasePassword `
+        -Database $DatabaseName
 
     Invoke-NativeCommand az @(
         'webapp', 'stop',
@@ -662,7 +737,7 @@ try {
     )
     $appStopped = $true
 
-    Invoke-MySqlContainer @(
+    Invoke-MySqlContainer -Command @(
         'mysqldump',
         '--ssl-mode=REQUIRED',
         '--single-transaction',
@@ -676,7 +751,12 @@ try {
         "--user=$databaseUser",
         "--result-file=/backup/$backupFileName",
         $DatabaseName
-    ) $databaseHost $databaseUser $databasePassword $DatabaseName $BackupDirectory
+    ) -DatabaseHost $databaseHost `
+        -DatabaseHostIpv4 $databaseHostIpv4 `
+        -DatabaseUser $databaseUser `
+        -DatabasePassword $databasePassword `
+        -Database $DatabaseName `
+        -MountedBackupDirectory $BackupDirectory
 
     $backup = Get-Item -LiteralPath $backupFile
     if ($backup.Length -lt 1024) {
@@ -732,14 +812,18 @@ try {
     $appStopped = $false
     Wait-WebAppHealth "$expectedAppUrl/health/live"
 
-    Invoke-MySqlContainer @(
+    Invoke-MySqlContainer -Command @(
         'mysql',
         '--ssl-mode=REQUIRED',
         "--host=$databaseHost",
         "--user=$databaseUser",
         '--batch', '--skip-column-names',
         '--execute=SELECT CONCAT("migrations=", COUNT(*)) FROM migrations; SELECT CONCAT("users=", COUNT(*)) FROM users; SELECT CONCAT("posts=", COUNT(*)) FROM posts; SELECT CONCAT("comments=", COUNT(*)) FROM comments; SELECT CONCAT("services=", COUNT(*)) FROM service_listings; SELECT CONCAT("reservations=", COUNT(*)) FROM reservations; SELECT CONCAT("payments=", COUNT(*)) FROM payments;'
-    ) $databaseHost $databaseUser $databasePassword $DatabaseName
+    ) -DatabaseHost $databaseHost `
+        -DatabaseHostIpv4 $databaseHostIpv4 `
+        -DatabaseUser $databaseUser `
+        -DatabasePassword $databasePassword `
+        -Database $DatabaseName
 
     Set-WebAppSettings @(
         "APP_VERSION=$ImageTag",
@@ -811,7 +895,7 @@ try {
                 )
             }
 
-            Invoke-MySqlContainer @(
+            Invoke-MySqlContainer -Command @(
                 'mysql',
                 '--ssl-mode=REQUIRED',
                 '--connect-timeout=15',
@@ -819,7 +903,12 @@ try {
                 "--user=$databaseUser",
                 "--database=$DatabaseName",
                 "--execute=source /backup/$databaseRollbackFileName"
-            ) $databaseHost $databaseUser $databasePassword $DatabaseName $databaseRollbackDirectory
+            ) -DatabaseHost $databaseHost `
+                -DatabaseHostIpv4 $databaseHostIpv4 `
+                -DatabaseUser $databaseUser `
+                -DatabasePassword $databasePassword `
+                -Database $DatabaseName `
+                -MountedBackupDirectory $databaseRollbackDirectory
         } catch {
             $databaseRollbackFailed = $true
             Write-Warning 'Automatic database rollback failed. The verified backup was retained for manual recovery.'
