@@ -81,9 +81,25 @@ assert.match(ci, /npm ci --ignore-scripts/)
 assert.match(ci, /\.\/node_modules\/\.bin\/playwright install --with-deps chromium/)
 assert.doesNotMatch(ci, /\bnpx\s+playwright\b/u)
 
-const startupPreflight = startup.indexOf('run-production-preflight.sh')
-const startupMigration = startup.indexOf('YAZOO_RUN_MIGRATIONS')
-assert.ok(startupPreflight >= 0 && startupPreflight < startupMigration)
+const showcaseBranch = startup.indexOf('if [ "${YAZOO_RUN_SHOWCASE_BOOTSTRAP:-false}" = "true" ]')
+const showcaseMigration = startup.indexOf('su-exec www-data php artisan yazoo:migrate-production', showcaseBranch)
+const showcaseBootstrap = startup.indexOf('su-exec www-data php artisan yazoo:bootstrap-azure-showcase', showcaseMigration)
+const showcasePreflight = startup.indexOf('sh /var/www/html/scripts/run-production-preflight.sh', showcaseBootstrap)
+assert.ok(
+  showcaseBranch >= 0
+    && showcaseMigration > showcaseBranch
+    && showcaseBootstrap > showcaseMigration
+    && showcasePreflight > showcaseBootstrap,
+  'showcase startup must migrate, bootstrap idempotently, then run the production preflight',
+)
+
+const normalBranch = startup.indexOf('else\n    sh /var/www/html/scripts/run-production-preflight.sh', showcasePreflight)
+const normalPreflight = startup.indexOf('sh /var/www/html/scripts/run-production-preflight.sh', normalBranch)
+const normalMigration = startup.indexOf('su-exec www-data php artisan yazoo:migrate-production', normalPreflight)
+assert.ok(
+  normalBranch >= 0 && normalPreflight >= normalBranch && normalMigration > normalPreflight,
+  'normal startup must run the production preflight before optional migrations',
+)
 
 const setupGuard = setup.indexOf('AllowCreateResources')
 const setupCreate = setup.indexOf('"group", "create"')

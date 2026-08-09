@@ -34,6 +34,13 @@ class AccountDeletionMySqlConcurrencyTest extends TestCase
             'operations.account_deletion_retry_max_attempts' => 5,
             'operations.account_deletion_processing_lease_seconds' => 60,
         ]);
+
+        // These tests intentionally avoid a wrapping database transaction so
+        // that their child processes can observe committed fixtures. Isolate
+        // the explicitly disposable database between test methods instead.
+        DB::table('jobs')->delete();
+        DataDeletionRequest::query()->delete();
+        User::query()->delete();
     }
 
     public function test_two_workers_recover_one_expired_pre_anonymization_lease_once(): void
