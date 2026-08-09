@@ -399,7 +399,7 @@ $repoDigestsJson = Invoke-NativeCommand docker @(
     'image', 'inspect', $showcaseImage,
     '--format', '{{json .RepoDigests}}'
 ) -Capture
-$repoDigests = @($repoDigestsJson | ConvertFrom-Json)
+$repoDigests = @($repoDigestsJson | ConvertFrom-Json | ForEach-Object { $_ })
 $deployImage = $repoDigests | Where-Object { $_ -like "$DockerHubRepository@sha256:*" } | Select-Object -First 1
 if (-not $deployImage) {
     throw 'Docker Hub push completed but no immutable repository digest could be resolved.'
@@ -441,7 +441,7 @@ $databaseNamesJson = Invoke-NativeCommand az @(
     '--output', 'json',
     '--only-show-errors'
 ) -Capture
-$databaseNames = @($databaseNamesJson | ConvertFrom-Json)
+$databaseNames = @($databaseNamesJson | ConvertFrom-Json | ForEach-Object { $_ })
 if ($DatabaseName -notin $databaseNames) {
     throw "The approved database '$DatabaseName' does not currently exist."
 }
@@ -453,7 +453,7 @@ $settingsJson = Invoke-NativeCommand az @(
     '--output', 'json',
     '--only-show-errors'
 ) -Capture
-$settings = @($settingsJson | ConvertFrom-Json)
+$settings = @($settingsJson | ConvertFrom-Json | ForEach-Object { $_ })
 $databaseHost = Get-AppSetting $settings 'DB_HOST'
 $database = Get-AppSetting $settings 'DB_DATABASE'
 $databaseUser = Get-AppSetting $settings 'DB_USERNAME'
@@ -707,7 +707,7 @@ try {
             '--output', 'json',
             '--only-show-errors'
         ) -Capture
-        $currentDatabases = @($currentDatabasesJson | ConvertFrom-Json)
+        $currentDatabases = @($currentDatabasesJson | ConvertFrom-Json | ForEach-Object { $_ })
         if ($DatabaseName -notin $currentDatabases) {
             Invoke-NativeCommand az @(
                 'mysql', 'flexible-server', 'db', 'create',
@@ -791,7 +791,7 @@ if ($PublishLatest) {
         'image', 'inspect', $latestImage,
         '--format', '{{json .RepoDigests}}'
     ) -Capture
-    $latestRepoDigests = @($latestRepoDigestsJson | ConvertFrom-Json)
+    $latestRepoDigests = @($latestRepoDigestsJson | ConvertFrom-Json | ForEach-Object { $_ })
     if ($deployImage -notin $latestRepoDigests) {
         throw 'The published latest tag does not resolve to the verified deployment digest.'
     }
