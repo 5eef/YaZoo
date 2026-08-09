@@ -12,6 +12,7 @@ param(
     [string] $ImageTag = '',
     [string] $BackupDirectory = '',
     [string] $ExistingValidatedBaseImage = '',
+    [string] $RollbackImage = '',
     [switch] $PublishLatest,
     [switch] $Execute
 )
@@ -277,6 +278,11 @@ if ($Execute -and $Confirmation -cne $expectedConfirmation) {
     throw "Confirmation must be exactly '$expectedConfirmation'."
 }
 
+$normalizedRollbackImage = $RollbackImage -replace '^DOCKER\|', ''
+if ($normalizedRollbackImage -and $normalizedRollbackImage -notmatch '^5eef/yazoo-api(?::[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}|@sha256:[0-9a-f]{64})$') {
+    throw 'RollbackImage must be a tag or digest from the approved 5eef/yazoo-api repository.'
+}
+
 $resolvedImagesPath = (Resolve-Path -LiteralPath $ImagesPath).Path
 $pngFiles = @(Get-ChildItem -LiteralPath $resolvedImagesPath -File -Filter '*.png')
 if ($pngFiles.Count -lt 21) {
@@ -317,6 +323,7 @@ Write-Host "  Subscription: $SubscriptionId"
 Write-Host "  Target: $ResourceGroup/$ServerName/$DatabaseName -> $WebAppName"
 Write-Host "  Media: PRESERVED"
 Write-Host "  Image: $showcaseImage"
+Write-Host "  Rollback image override: $(if ($normalizedRollbackImage) { $normalizedRollbackImage } else { '<current Azure image>' })"
 Write-Host "  Publish latest after verified deployment: $PublishLatest"
 Write-Host "  Backup directory: $BackupDirectory"
 
@@ -482,6 +489,12 @@ $previousImage = Invoke-NativeCommand az @(
 ) -Capture
 if (-not $previousImage) {
     throw 'Unable to capture the current Web App image for rollback.'
+}
+if ($normalizedRollbackImage) {
+    if (-not (Test-DockerManifestExists $normalizedRollbackImage)) {
+        throw "The explicit rollback image does not exist on Docker Hub: $normalizedRollbackImage"
+    }
+    $previousImage = $normalizedRollbackImage
 }
 
 $managedSettingNames = @(
