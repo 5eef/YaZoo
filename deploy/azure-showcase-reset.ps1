@@ -14,6 +14,7 @@ param(
     [string] $ExistingValidatedBaseImage = '',
     [string] $RollbackImage = '',
     [string] $RollbackBackupFile = '',
+    [string] $PublicIp = '',
     [switch] $PublishLatest,
     [switch] $Execute
 )
@@ -132,6 +133,48 @@ function Protect-LocalDirectory {
     )
     $acl.AddAccessRule($rule)
     $directory.SetAccessControl($acl)
+}
+
+function ConvertTo-ValidatedPublicIpv4 {
+    param([Parameter(Mandatory)][string] $Candidate)
+
+    $trimmedCandidate = $Candidate.Trim()
+    $parsedAddress = $null
+    $isIpv4 = [Net.IPAddress]::TryParse($trimmedCandidate, [ref] $parsedAddress) -and
+        $parsedAddress.AddressFamily -eq [Net.Sockets.AddressFamily]::InterNetwork -and
+        $parsedAddress.ToString() -ceq $trimmedCandidate
+
+    if (-not $isIpv4) {
+        throw 'PublicIp must be a canonical IPv4 address such as 203.0.113.10.'
+    }
+
+    return $trimmedCandidate
+}
+
+function Resolve-PublicIpv4 {
+    param([string] $ExplicitIp = '')
+
+    if ($ExplicitIp) {
+        return ConvertTo-ValidatedPublicIpv4 $ExplicitIp
+    }
+
+    $providers = @(
+        'https://api.ipify.org',
+        'https://checkip.amazonaws.com',
+        'https://icanhazip.com',
+        'https://ifconfig.me/ip'
+    )
+
+    foreach ($provider in $providers) {
+        try {
+            $candidate = [string] (Invoke-RestMethod -Uri $provider -TimeoutSec 10)
+            return ConvertTo-ValidatedPublicIpv4 $candidate
+        } catch {
+            Write-Warning "Unable to resolve the public IPv4 address through $provider; trying the next provider."
+        }
+    }
+
+    throw 'Unable to resolve the public IPv4 address automatically. Re-run with -PublicIp <your-current-public-IPv4>.'
 }
 
 function Get-AppSetting {
@@ -287,6 +330,10 @@ if ($Execute -and $Confirmation -cne $expectedConfirmation) {
     throw "Confirmation must be exactly '$expectedConfirmation'."
 }
 
+if ($PublicIp) {
+    $PublicIp = ConvertTo-ValidatedPublicIpv4 $PublicIp
+}
+
 $normalizedRollbackImage = $RollbackImage -replace '^DOCKER\|', ''
 if ($normalizedRollbackImage -and $normalizedRollbackImage -notmatch '^5eef/yazoo-api(?::[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}|@sha256:[0-9a-f]{64})$') {
     throw 'RollbackImage must be a tag or digest from the approved 5eef/yazoo-api repository.'
@@ -351,6 +398,7 @@ Write-Host "  Rollback image override: $(if ($normalizedRollbackImage) { $normal
 Write-Host "  Rollback backup override: $(if ($resolvedRollbackBackupFile) { $resolvedRollbackBackupFile } else { '<backup created by this run>' })"
 Write-Host "  Publish latest after verified deployment: $PublishLatest"
 Write-Host "  Backup directory: $BackupDirectory"
+Write-Host "  Public IP source: $(if ($PublicIp) { 'explicit validated value' } else { 'automatic HTTPS fallback providers' })"
 
 if (-not $Execute) {
     Write-Host 'DRY RUN ONLY: no image push, Azure mutation, database deletion or file creation was performed.'
@@ -553,10 +601,7 @@ $backupFileName = "yazoo-azure-before-showcase-reset-$timestamp.sql"
 $backupFile = Join-Path $BackupDirectory $backupFileName
 $credentialFile = Join-Path $BackupDirectory "yazoo-showcase-credentials-$timestamp.txt"
 $firewallRuleName = "yazoo-showcase-reset-$timestamp"
-$publicIp = (Invoke-RestMethod -Uri 'https://api.ipify.org' -TimeoutSec 20).Trim()
-if ($publicIp -notmatch '^(?:\d{1,3}\.){3}\d{1,3}$') {
-    throw 'Unable to resolve a valid IPv4 address for the temporary MySQL firewall rule.'
-}
+$publicIp = Resolve-PublicIpv4 $PublicIp
 
 $showcasePasswordBytes = New-Object byte[] 24
 $randomGenerator = [Security.Cryptography.RandomNumberGenerator]::Create()
