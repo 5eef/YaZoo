@@ -13,6 +13,7 @@ param(
     [string] $BackupDirectory = '',
     [string] $ExistingValidatedBaseImage = '',
     [string] $RollbackImage = '',
+    [string] $RollbackBackupFile = '',
     [switch] $PublishLatest,
     [switch] $Execute
 )
@@ -318,12 +319,28 @@ if (-not $BackupDirectory) {
     $BackupDirectory = Join-Path $localAppData 'Temp\YaZoo-showcase-reset'
 }
 
+$resolvedRollbackBackupFile = ''
+if ($RollbackBackupFile) {
+    $resolvedRollbackBackupFile = (Resolve-Path -LiteralPath $RollbackBackupFile).Path
+    $backupRoot = [IO.Path]::GetFullPath($BackupDirectory).TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
+    if (-not $resolvedRollbackBackupFile.StartsWith($backupRoot, [StringComparison]::OrdinalIgnoreCase)) {
+        throw 'RollbackBackupFile must be inside the protected YaZoo showcase backup directory.'
+    }
+    if ([IO.Path]::GetFileName($resolvedRollbackBackupFile) -notmatch '^yazoo-azure-before-showcase-reset-[0-9]{8}-[0-9]{6}\.sql$') {
+        throw 'RollbackBackupFile does not match the guarded YaZoo backup filename format.'
+    }
+    if ((Get-Item -LiteralPath $resolvedRollbackBackupFile).Length -lt 1024) {
+        throw 'RollbackBackupFile is unexpectedly small.'
+    }
+}
+
 Write-Host 'Azure YaZoo showcase reset plan:'
 Write-Host "  Subscription: $SubscriptionId"
 Write-Host "  Target: $ResourceGroup/$ServerName/$DatabaseName -> $WebAppName"
 Write-Host "  Media: PRESERVED"
 Write-Host "  Image: $showcaseImage"
 Write-Host "  Rollback image override: $(if ($normalizedRollbackImage) { $normalizedRollbackImage } else { '<current Azure image>' })"
+Write-Host "  Rollback backup override: $(if ($resolvedRollbackBackupFile) { $resolvedRollbackBackupFile } else { '<backup created by this run>' })"
 Write-Host "  Publish latest after verified deployment: $PublishLatest"
 Write-Host "  Backup directory: $BackupDirectory"
 
@@ -513,10 +530,12 @@ $managedSettingNames = @(
     'YAZOO_SHOWCASE_MFA_RECOVERY_CODES'
 )
 $originalManagedSettings = @{}
-foreach ($name in $managedSettingNames) {
-    $value = Get-AppSetting $settings $name
-    if ($null -ne $value) {
-        $originalManagedSettings[$name] = $value
+if (-not $resolvedRollbackBackupFile) {
+    foreach ($name in $managedSettingNames) {
+        $value = Get-AppSetting $settings $name
+        if ($null -ne $value) {
+            $originalManagedSettings[$name] = $value
+        }
     }
 }
 
@@ -711,7 +730,10 @@ try {
     Write-Warning "Showcase reset failed: $($_.Exception.Message)"
 
     $databaseRollbackFailed = $false
-    if ($databaseDeleted -and (Test-Path -LiteralPath $backupFile)) {
+    $databaseRollbackFile = if ($resolvedRollbackBackupFile) { $resolvedRollbackBackupFile } else { $backupFile }
+    $databaseRollbackDirectory = Split-Path -Parent $databaseRollbackFile
+    $databaseRollbackFileName = Split-Path -Leaf $databaseRollbackFile
+    if ($databaseDeleted -and (Test-Path -LiteralPath $databaseRollbackFile)) {
         try {
             Write-Warning 'Attempting automatic database rollback from the verified logical backup.'
             $currentDatabasesJson = Invoke-NativeCommand az @(
@@ -743,8 +765,8 @@ try {
                 "--host=$databaseHost",
                 "--user=$databaseUser",
                 "--database=$DatabaseName",
-                "--execute=source /backup/$backupFileName"
-            ) $databaseHost $databaseUser $databasePassword $DatabaseName $BackupDirectory
+                "--execute=source /backup/$databaseRollbackFileName"
+            ) $databaseHost $databaseUser $databasePassword $DatabaseName $databaseRollbackDirectory
         } catch {
             $databaseRollbackFailed = $true
             Write-Warning 'Automatic database rollback failed. The verified backup was retained for manual recovery.'
@@ -771,7 +793,7 @@ try {
     }
 
     if ($databaseRollbackFailed) {
-        Write-Warning "Database recovery still requires attention. Backup retained at: $backupFile"
+        Write-Warning "Database recovery still requires attention. Backup retained at: $databaseRollbackFile"
     }
 
     throw
