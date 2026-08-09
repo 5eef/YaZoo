@@ -153,6 +153,10 @@ jobs:
         working-directory: backend
         run: composer install --no-interaction --prefer-dist --no-progress
 
+      - name: Migrate disposable MySQL concurrency database
+        working-directory: backend
+        run: php artisan migrate --force --no-interaction
+
       - name: Run real MySQL account-deletion concurrency tests
         working-directory: backend
         run: ./vendor/bin/phpunit tests/Integration/AccountDeletionMySqlConcurrencyTest.php

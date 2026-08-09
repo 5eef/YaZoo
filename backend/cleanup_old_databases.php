@@ -9,9 +9,7 @@ const YAZOO_CLEANUP_CONFIRMATION = 'DROP_LEGACY_YAZOO_DATABASES';
 const YAZOO_LEGACY_MYSQL_DATABASE = 'yazoo2';
 const YAZOO_LEGACY_MONGO_DATABASE = 'yazoo_media';
 
-class YazooCleanupGuardException extends RuntimeException
-{
-}
+class YazooCleanupGuardException extends RuntimeException {}
 
 /**
  * Database identifiers cannot be bound as prepared-statement parameters.

@@ -127,5 +127,4 @@ class MonitoringController extends Controller
             $this->validatePayloadShape($value, $path.'.'.$key, $depth + 1, $totalItems);
         }
     }
-
 }

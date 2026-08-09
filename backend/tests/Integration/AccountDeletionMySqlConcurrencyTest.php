@@ -4,7 +4,6 @@ namespace Tests\Integration;
 
 use App\Models\DataDeletionRequest;
 use App\Models\User;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -13,8 +12,6 @@ use Tests\TestCase;
 
 class AccountDeletionMySqlConcurrencyTest extends TestCase
 {
-    use DatabaseMigrations;
-
     private string $cachePrefix;
 
     protected function setUp(): void
@@ -95,6 +92,7 @@ class AccountDeletionMySqlConcurrencyTest extends TestCase
 
     public function test_two_dispatchers_create_one_unique_database_job(): void
     {
+        $jobsBefore = DB::table('jobs')->count();
         $admin = User::factory()->admin()->create();
         $user = User::factory()->create();
         $request = DataDeletionRequest::query()->create([
@@ -111,11 +109,12 @@ class AccountDeletionMySqlConcurrencyTest extends TestCase
 
         $this->runConcurrently('dispatch', $request->id, $admin->id);
 
-        $this->assertSame(1, DB::table('jobs')->count());
+        $this->assertSame($jobsBefore + 1, DB::table('jobs')->count());
     }
 
     public function test_recent_lease_is_not_recovered_and_exhausted_lease_is_terminal(): void
     {
+        $jobsBefore = DB::table('jobs')->count();
         $admin = User::factory()->admin()->create();
         $recentUser = User::factory()->create();
         $recent = DataDeletionRequest::query()->create([
@@ -138,7 +137,7 @@ class AccountDeletionMySqlConcurrencyTest extends TestCase
 
         $this->runConcurrently('dispatch', $recent->id, $admin->id);
 
-        $this->assertSame(0, DB::table('jobs')->count());
+        $this->assertSame($jobsBefore, DB::table('jobs')->count());
         $this->assertSame('processing', $recent->fresh()->status);
         $this->assertSame(1, $recent->fresh()->processing_attempts);
         $this->assertSame('failed', $exhausted->fresh()->status);
