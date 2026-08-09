@@ -178,6 +178,10 @@ jobs:
         shell: pwsh
         run: ./scripts/test-azure-script-guards.ps1
 
+      - name: Test Azure showcase reset guards
+        shell: pwsh
+        run: ./scripts/test-azure-showcase-reset.ps1
+
       - name: Test production preflight startup gate
         run: sh backend/tests/scripts/production-preflight-gate.sh
 

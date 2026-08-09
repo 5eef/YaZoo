@@ -871,6 +871,7 @@ try {
         '--ssl-mode=REQUIRED',
         "--host=$databaseHost",
         "--user=$databaseUser",
+        "--database=$DatabaseName",
         '--batch', '--skip-column-names',
         "--execute=$showcaseVerificationSql"
     ) -DatabaseHost $databaseHost `
