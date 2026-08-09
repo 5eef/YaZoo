@@ -159,7 +159,7 @@ jobs:
 
       - name: Run real MySQL account-deletion concurrency tests
         working-directory: backend
-        run: ./vendor/bin/phpunit tests/Integration/AccountDeletionMySqlConcurrencyTest.php
+        run: ./vendor/bin/phpunit --fail-on-skipped tests/Integration/AccountDeletionMySqlConcurrencyTest.php
 
   container-and-secrets:
     runs-on: ubuntu-latest

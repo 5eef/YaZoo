@@ -18,7 +18,12 @@ class AccountDeletionMySqlConcurrencyTest extends TestCase
     {
         parent::setUp();
 
-        if (config('database.default') !== 'mysql' || env('YAZOO_MYSQL_CONCURRENCY_TEST') !== 'true') {
+        $concurrencyTestEnabled = filter_var(
+            env('YAZOO_MYSQL_CONCURRENCY_TEST', false),
+            FILTER_VALIDATE_BOOL,
+        );
+
+        if (config('database.default') !== 'mysql' || ! $concurrencyTestEnabled) {
             $this->markTestSkipped('Requires the explicitly enabled disposable MySQL concurrency environment.');
         }
 
