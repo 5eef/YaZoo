@@ -12,6 +12,7 @@ param(
     [string] $ImageTag = '',
     [string] $BackupDirectory = '',
     [string] $ExistingValidatedBaseImage = '',
+    [switch] $PublishLatest,
     [switch] $Execute
 )
 
@@ -295,8 +296,12 @@ if (-not $ImageTag) {
     $ImageTag = 'showcase-{0}-{1}' -f (Get-Date -Format 'yyyyMMdd-HHmmss'), $gitCommit.Substring(0, 7)
 }
 
-if ($ImageTag -notmatch '^showcase-[0-9]{8}-[0-9]{6}-[0-9a-f]{7,40}$') {
+if ($ImageTag -notmatch '^showcase-[0-9]{8}-[0-9]{6}-([0-9a-f]{7,40})$') {
     throw 'ImageTag must match showcase-YYYYMMDD-HHMMSS-<7-to-40-lowercase-git-sha>.'
+}
+$imageTagCommit = $Matches[1]
+if (-not $gitCommit.StartsWith($imageTagCommit, [StringComparison]::Ordinal)) {
+    throw 'ImageTag Git SHA must identify the current local HEAD.'
 }
 
 $baseImage = if ($ExistingValidatedBaseImage) { $ExistingValidatedBaseImage } else { "yazoo-api-base:$ImageTag" }
@@ -312,6 +317,7 @@ Write-Host "  Subscription: $SubscriptionId"
 Write-Host "  Target: $ResourceGroup/$ServerName/$DatabaseName -> $WebAppName"
 Write-Host "  Media: PRESERVED"
 Write-Host "  Image: $showcaseImage"
+Write-Host "  Publish latest after verified deployment: $PublishLatest"
 Write-Host "  Backup directory: $BackupDirectory"
 
 if (-not $Execute) {
@@ -773,4 +779,22 @@ if (-not $deploymentSucceeded) {
 }
 if ($firewallCleanupFailed) {
     throw "Showcase reset succeeded, but temporary firewall cleanup failed: $firewallRuleName"
+}
+
+if ($PublishLatest) {
+    $latestImage = "${DockerHubRepository}:latest"
+    Invoke-NativeCommand docker @('tag', $showcaseImage, $latestImage)
+    Invoke-NativeCommand docker @('push', '--quiet', $latestImage)
+    Invoke-NativeCommand docker @('pull', '--quiet', $latestImage)
+
+    $latestRepoDigestsJson = Invoke-NativeCommand docker @(
+        'image', 'inspect', $latestImage,
+        '--format', '{{json .RepoDigests}}'
+    ) -Capture
+    $latestRepoDigests = @($latestRepoDigestsJson | ConvertFrom-Json)
+    if ($deployImage -notin $latestRepoDigests) {
+        throw 'The published latest tag does not resolve to the verified deployment digest.'
+    }
+
+    Write-Host "Docker Hub latest now resolves to the verified deployment digest: $deployImage"
 }
