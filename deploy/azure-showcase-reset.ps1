@@ -155,29 +155,81 @@ function ConvertTo-ValidatedIpv4 {
 }
 
 function Resolve-PublicIpv4 {
-    param([string] $ExplicitIp = '')
-
-    if ($ExplicitIp) {
-        return ConvertTo-ValidatedIpv4 $ExplicitIp -Label 'PublicIp'
-    }
-
-    $providers = @(
-        'https://api.ipify.org',
-        'https://checkip.amazonaws.com',
-        'https://icanhazip.com',
-        'https://ifconfig.me/ip'
+    param(
+        [string] $ExplicitIp = '',
+        [string] $ContainerImage = ''
     )
 
-    foreach ($provider in $providers) {
+    $validatedExplicitIp = ''
+    if ($ExplicitIp) {
+        $validatedExplicitIp = ConvertTo-ValidatedIpv4 $ExplicitIp -Label 'PublicIp'
+    }
+
+    $detectedIp = ''
+    if ($ContainerImage) {
+        $containerProbe = @'
+$providers = [
+    'https://checkip.amazonaws.com',
+    'https://api.ipify.org',
+    'https://icanhazip.com',
+];
+$context = stream_context_create(['http' => ['timeout' => 10]]);
+foreach ($providers as $provider) {
+    $value = @file_get_contents($provider, false, $context);
+    $value = $value === false ? '' : trim($value);
+    if (filter_var($value, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false) {
+        echo $value;
+        exit(0);
+    }
+}
+exit(2);
+'@
         try {
-            $candidate = [string] (Invoke-RestMethod -Uri $provider -TimeoutSec 10)
-            return ConvertTo-ValidatedIpv4 $candidate -Label 'Resolved public IP address'
+            $candidate = Invoke-NativeCommand docker @(
+                'run', '--rm',
+                '--entrypoint', 'php',
+                $ContainerImage,
+                '-r', $containerProbe
+            ) -Capture
+            $detectedIp = ConvertTo-ValidatedIpv4 $candidate -Label 'Container public IP address'
         } catch {
-            Write-Warning "Unable to resolve the public IPv4 address through $provider; trying the next provider."
+            Write-Warning 'Unable to detect the public IPv4 address from the Docker network; trying host HTTPS providers.'
         }
     }
 
-    throw 'Unable to resolve the public IPv4 address automatically. Re-run with -PublicIp <your-current-public-IPv4>.'
+    if (-not $detectedIp) {
+        $providers = @(
+            'https://checkip.amazonaws.com',
+            'https://api.ipify.org',
+            'https://icanhazip.com',
+            'https://ifconfig.me/ip'
+        )
+
+        foreach ($provider in $providers) {
+            try {
+                $candidate = [string] (Invoke-RestMethod -Uri $provider -TimeoutSec 10)
+                $detectedIp = ConvertTo-ValidatedIpv4 $candidate -Label 'Resolved public IP address'
+                break
+            } catch {
+                Write-Warning "Unable to resolve the public IPv4 address through $provider; trying the next provider."
+            }
+        }
+    }
+
+    if ($detectedIp -and $validatedExplicitIp -and $detectedIp -cne $validatedExplicitIp) {
+        throw "PublicIp does not match the current Docker egress IPv4 address. Remove -PublicIp to use automatic detection. No Azure mutation was attempted."
+    }
+
+    if ($detectedIp) {
+        return $detectedIp
+    }
+
+    if ($validatedExplicitIp) {
+        Write-Warning 'Automatic public IPv4 detection was unavailable; using the explicitly supplied value. The MySQL preflight remains mandatory.'
+        return $validatedExplicitIp
+    }
+
+    throw 'Unable to resolve the public IPv4 address automatically. Re-run only after network access to an HTTPS IP provider is available.'
 }
 
 function Resolve-HostIpv4 {
@@ -475,7 +527,7 @@ Write-Host "  Rollback image override: $(if ($normalizedRollbackImage) { $normal
 Write-Host "  Rollback backup override: $(if ($resolvedRollbackBackupFile) { $resolvedRollbackBackupFile } else { '<backup created by this run>' })"
 Write-Host "  Publish latest after verified deployment: $PublishLatest"
 Write-Host "  Backup directory: $BackupDirectory"
-Write-Host "  Public IP source: $(if ($PublicIp) { 'explicit validated value' } else { 'automatic HTTPS fallback providers' })"
+Write-Host "  Public IP source: $(if ($PublicIp) { 'explicit value verified against Docker egress' } else { 'automatic Docker egress detection' })"
 
 if (-not $Execute) {
     Write-Host 'DRY RUN ONLY: no image push, Azure mutation, database deletion or file creation was performed.'
@@ -517,6 +569,8 @@ Invoke-NativeCommand docker @(
     '--file', 'backend/Dockerfile.showcase',
     '.'
 )
+
+$publicIp = Resolve-PublicIpv4 -ExplicitIp $PublicIp -ContainerImage $showcaseImage
 
 if (Test-DockerManifestExists $showcaseImage) {
     throw "The Docker Hub tag already exists and will not be overwritten: $showcaseImage"
@@ -678,7 +732,6 @@ $backupFileName = "yazoo-azure-before-showcase-reset-$timestamp.sql"
 $backupFile = Join-Path $BackupDirectory $backupFileName
 $credentialFile = Join-Path $BackupDirectory "yazoo-showcase-credentials-$timestamp.txt"
 $firewallRuleName = "yazoo-showcase-reset-$timestamp"
-$publicIp = Resolve-PublicIpv4 $PublicIp
 $databaseHostIpv4 = Resolve-HostIpv4 $databaseHost
 
 $showcasePasswordBytes = New-Object byte[] 24
