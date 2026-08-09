@@ -14,6 +14,7 @@ use App\Notifications\ReservationApprovedNotification;
 use App\Notifications\ReservationCompletedNotification;
 use App\Notifications\ReservationRequestedNotification;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class DemoContentSeeder extends Seeder
 {
@@ -22,7 +23,7 @@ class DemoContentSeeder extends Seeder
      */
     public function run(): void
     {
-        $admin = User::factory()->admin()->create([
+        $admin = $this->createUser([
             'name' => 'Admin YaZoo',
             'email' => 'admin@yazoo.ma',
             'phone' => '+212600000001',
@@ -30,9 +31,9 @@ class DemoContentSeeder extends Seeder
             'city' => 'Casablanca',
             'bio' => 'Administration de la plateforme YaZoo.',
             'avatar' => 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=80',
-        ]);
+        ], isAdmin: true);
 
-        $sellerAnimal = User::factory()->create([
+        $sellerAnimal = $this->createUser([
             'name' => 'Sara Adoption',
             'email' => 'sara.adoption@yazoo.ma',
             'phone' => '+212600000002',
@@ -42,7 +43,7 @@ class DemoContentSeeder extends Seeder
             'avatar' => 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=400&q=80',
         ]);
 
-        $sellerProduct = User::factory()->create([
+        $sellerProduct = $this->createUser([
             'name' => 'Youssef Boutique',
             'email' => 'youssef.shop@yazoo.ma',
             'phone' => '+212600000003',
@@ -52,7 +53,7 @@ class DemoContentSeeder extends Seeder
             'avatar' => 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80',
         ]);
 
-        $buyer = User::factory()->create([
+        $buyer = $this->createUser([
             'name' => 'Imane Client',
             'email' => 'imane.client@yazoo.ma',
             'phone' => '+212600000004',
@@ -62,7 +63,7 @@ class DemoContentSeeder extends Seeder
             'avatar' => 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
         ]);
 
-        $communityLead = User::factory()->create([
+        $communityLead = $this->createUser([
             'name' => 'Nadia Communaute',
             'email' => 'nadia.community@yazoo.ma',
             'phone' => '+212600000005',
@@ -72,7 +73,7 @@ class DemoContentSeeder extends Seeder
             'avatar' => 'https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=400&q=80',
         ]);
 
-        $guestMember = User::factory()->create([
+        $guestMember = $this->createUser([
             'name' => 'Hamza Membre',
             'email' => 'hamza.member@yazoo.ma',
             'phone' => '+212600000006',
@@ -323,5 +324,26 @@ class DemoContentSeeder extends Seeder
         $sellerAnimal->notify(new ReservationRequestedNotification($pendingAnimalReservation));
         $communityLead->notify(new ReservationApprovedNotification($approvedProductReservation));
         $buyer->notify(new ReservationCompletedNotification($completedProductReservation));
+    }
+
+    /**
+     * Create deterministic demo users without loading development-only Faker.
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    private function createUser(array $attributes, bool $isAdmin = false): User
+    {
+        $user = new User;
+        $user->forceFill(array_merge([
+            'email_verified_at' => now(),
+            'phone_verified_at' => now(),
+            'preferred_locale' => 'fr',
+            'is_admin' => $isAdmin,
+            'password' => Hash::make('password'),
+            'remember_token' => null,
+        ], $attributes));
+        $user->save();
+
+        return $user;
     }
 }

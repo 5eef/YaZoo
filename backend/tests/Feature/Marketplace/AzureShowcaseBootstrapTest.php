@@ -103,6 +103,16 @@ class AzureShowcaseBootstrapTest extends TestCase
         $this->assertNull(Cache::store('database')->get('yazoo_showcase_bootstrap_v1'));
     }
 
+    public function test_showcase_seeders_do_not_require_development_only_faker(): void
+    {
+        foreach (['DemoContentSeeder.php', 'MarketplaceTestSeeder.php'] as $seeder) {
+            $source = File::get(database_path('seeders/'.$seeder));
+
+            $this->assertStringNotContainsString('::factory(', $source, $seeder);
+            $this->assertStringNotContainsString('fake()', $source, $seeder);
+        }
+    }
+
     private function writeImages(): void
     {
         $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', true);

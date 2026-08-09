@@ -697,34 +697,45 @@ try {
 } catch {
     Write-Warning "Showcase reset failed: $($_.Exception.Message)"
 
+    $databaseRollbackFailed = $false
     if ($databaseDeleted -and (Test-Path -LiteralPath $backupFile)) {
-        Write-Warning 'Attempting automatic database rollback from the verified logical backup.'
-        $currentDatabasesJson = Invoke-NativeCommand az @(
-            'mysql', 'flexible-server', 'db', 'list',
-            '--resource-group', $ResourceGroup,
-            '--server-name', $ServerName,
-            '--query', '[].name',
-            '--output', 'json',
-            '--only-show-errors'
-        ) -Capture
-        $currentDatabases = @($currentDatabasesJson | ConvertFrom-Json | ForEach-Object { $_ })
-        if ($DatabaseName -notin $currentDatabases) {
-            Invoke-NativeCommand az @(
-                'mysql', 'flexible-server', 'db', 'create',
+        try {
+            Write-Warning 'Attempting automatic database rollback from the verified logical backup.'
+            $currentDatabasesJson = Invoke-NativeCommand az @(
+                'mysql', 'flexible-server', 'db', 'list',
                 '--resource-group', $ResourceGroup,
                 '--server-name', $ServerName,
-                '--database-name', $DatabaseName,
-                '--charset', 'utf8mb4',
-                '--collation', 'utf8mb4_unicode_ci',
-                '--only-show-errors',
-                '--output', 'none'
-            )
-        }
+                '--query', '[].name',
+                '--output', 'json',
+                '--only-show-errors'
+            ) -Capture
+            $currentDatabases = @($currentDatabasesJson | ConvertFrom-Json | ForEach-Object { $_ })
+            if ($DatabaseName -notin $currentDatabases) {
+                Invoke-NativeCommand az @(
+                    'mysql', 'flexible-server', 'db', 'create',
+                    '--resource-group', $ResourceGroup,
+                    '--server-name', $ServerName,
+                    '--database-name', $DatabaseName,
+                    '--charset', 'utf8mb4',
+                    '--collation', 'utf8mb4_unicode_ci',
+                    '--only-show-errors',
+                    '--output', 'none'
+                )
+            }
 
-        Invoke-MySqlContainer @(
-            'sh', '-c',
-            'mysql --ssl-mode=REQUIRED --host="$YAZOO_MYSQL_HOST" --user="$YAZOO_MYSQL_USER" "$YAZOO_MYSQL_DATABASE" < "/backup/' + $backupFileName + '"'
-        ) $databaseHost $databaseUser $databasePassword $DatabaseName $BackupDirectory
+            Invoke-MySqlContainer @(
+                'mysql',
+                '--ssl-mode=REQUIRED',
+                '--connect-timeout=15',
+                "--host=$databaseHost",
+                "--user=$databaseUser",
+                "--database=$DatabaseName",
+                "--execute=source /backup/$backupFileName"
+            ) $databaseHost $databaseUser $databasePassword $DatabaseName $BackupDirectory
+        } catch {
+            $databaseRollbackFailed = $true
+            Write-Warning 'Automatic database rollback failed. The verified backup was retained for manual recovery.'
+        }
     }
 
     try {
@@ -744,6 +755,10 @@ try {
         $appStopped = $false
     } catch {
         Write-Warning 'Automatic application rollback also failed. Keep the backup and inspect Azure logs before any further mutation.'
+    }
+
+    if ($databaseRollbackFailed) {
+        Write-Warning "Database recovery still requires attention. Backup retained at: $backupFile"
     }
 
     throw
