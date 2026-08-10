@@ -45,11 +45,12 @@ if [ "${YAZOO_RUN_SHOWCASE_BOOTSTRAP:-false}" = "true" ]; then
 
     sh /var/www/html/scripts/run-production-preflight.sh
 else
-    sh /var/www/html/scripts/run-production-preflight.sh
-
     if [ "${YAZOO_RUN_MIGRATIONS:-false}" = "true" ]; then
+        sh /var/www/html/scripts/run-production-preflight.sh --configuration-only
         su-exec www-data php artisan yazoo:migrate-production
     fi
+
+    sh /var/www/html/scripts/run-production-preflight.sh
 
     if [ "${YAZOO_RESET_RUNTIME_STATE:-false}" = "true" ]; then
         su-exec www-data php artisan cache:clear

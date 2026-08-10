@@ -183,6 +183,41 @@ class OperationsReadinessTest extends TestCase
             ->assertExitCode(0);
     }
 
+    public function test_production_configuration_preflight_does_not_require_the_application_schema(): void
+    {
+        config([
+            'app.key' => 'base64:test-key',
+            'legal.legal_status' => 'Configuration de test',
+            'legal.address' => 'Adresse de test',
+            'legal.ice' => 'ICE-TEST',
+            'legal.privacy_contact_email' => 'privacy@yazoo.test',
+            'services.contact.recipient' => 'contact@yazoo.test',
+            'mail.default' => 'smtp',
+            'mail.mailers.smtp.host' => 'smtp.yazoo.test',
+            'mail.mailers.smtp.username' => 'smtp-user',
+            'mail.mailers.smtp.password' => 'smtp-password',
+            'mail.from.address' => 'noreply@yazoo.test',
+            'services.sms.driver' => 'disabled',
+            'queue.default' => 'redis',
+            'operations.run_queue_worker' => true,
+            'operations.run_scheduler' => true,
+            'operations.account_deletion_unique_lock_store' => 'redis',
+            'operations.account_deletion_retry_max_attempts' => 5,
+            'operations.account_deletion_processing_lease_seconds' => 900,
+            'operations.app_service_storage_enabled' => true,
+            'operations.persistent_storage_path' => '/home/site/yazoo-storage',
+            'payments.providers.cmi.enabled' => false,
+            'auth.admin_bootstrap.enabled' => false,
+            'auth.admin_mfa.enforced' => true,
+        ]);
+
+        $this->assertDatabaseCount('users', 0);
+
+        $this->artisan('yazoo:preflight-production', ['--configuration-only' => true])
+            ->expectsOutput('Production configuration preflight passed.')
+            ->assertExitCode(0);
+    }
+
     public function test_production_preflight_fails_without_an_active_administrator(): void
     {
         config([

@@ -3,6 +3,7 @@ set -eu
 
 app_environment="${APP_ENV:-local}"
 preflight_enabled="${YAZOO_RUN_PRODUCTION_PREFLIGHT:-false}"
+preflight_mode="${1:-full}"
 
 if [ "$app_environment" != "production" ]; then
     echo "Production preflight skipped outside production."
@@ -14,5 +15,17 @@ if [ "$preflight_enabled" != "true" ]; then
     exit 0
 fi
 
-echo "Running production preflight."
-su-exec www-data php artisan yazoo:preflight-production
+case "$preflight_mode" in
+    full)
+        echo "Running production preflight."
+        su-exec www-data php artisan yazoo:preflight-production
+        ;;
+    --configuration-only)
+        echo "Running production configuration preflight."
+        su-exec www-data php artisan yazoo:preflight-production --configuration-only
+        ;;
+    *)
+        echo "Unsupported production preflight mode: $preflight_mode" >&2
+        exit 64
+        ;;
+esac

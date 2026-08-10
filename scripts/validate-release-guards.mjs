@@ -98,12 +98,25 @@ assert.ok(
   'showcase startup must migrate, bootstrap idempotently, then run the production preflight',
 )
 
-const normalBranch = startup.indexOf('else\n    sh /var/www/html/scripts/run-production-preflight.sh', showcasePreflight)
-const normalPreflight = startup.indexOf('sh /var/www/html/scripts/run-production-preflight.sh', normalBranch)
-const normalMigration = startup.indexOf('su-exec www-data php artisan yazoo:migrate-production', normalPreflight)
+const normalBranch = startup.indexOf('else\n    if [ "${YAZOO_RUN_MIGRATIONS:-false}" = "true" ]', showcasePreflight)
+const normalConfigurationPreflight = startup.indexOf(
+  'sh /var/www/html/scripts/run-production-preflight.sh --configuration-only',
+  normalBranch,
+)
+const normalMigration = startup.indexOf(
+  'su-exec www-data php artisan yazoo:migrate-production',
+  normalConfigurationPreflight,
+)
+const normalFullPreflight = startup.indexOf(
+  'sh /var/www/html/scripts/run-production-preflight.sh',
+  normalMigration,
+)
 assert.ok(
-  normalBranch >= 0 && normalPreflight >= normalBranch && normalMigration > normalPreflight,
-  'normal startup must run the production preflight before optional migrations',
+  normalBranch >= 0
+    && normalConfigurationPreflight > normalBranch
+    && normalMigration > normalConfigurationPreflight
+    && normalFullPreflight > normalMigration,
+  'normal startup must validate configuration, migrate under lock, then validate the migrated database',
 )
 
 const setupGuard = setup.indexOf('AllowCreateResources')

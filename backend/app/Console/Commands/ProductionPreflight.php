@@ -10,13 +10,15 @@ use Illuminate\Console\Command;
 
 class ProductionPreflight extends Command
 {
-    protected $signature = 'yazoo:preflight-production';
+    protected $signature = 'yazoo:preflight-production
+        {--configuration-only : Validate production configuration without querying application tables}';
 
     protected $description = 'Fail when required production configuration or operational processes are missing.';
 
     public function handle(): int
     {
         $failures = [];
+        $configurationOnly = (bool) $this->option('configuration-only');
 
         $this->requireValue($failures, 'APP_KEY', config('app.key'));
         $this->requireValue($failures, 'LEGAL_ENTITY_NAME', config('legal.entity_name'));
@@ -122,6 +124,8 @@ class ProductionPreflight extends Command
         }
 
         if (
+            ! $configurationOnly
+            &&
             ! User::query()
                 ->where('is_admin', true)
                 ->whereNull('banned_at')
@@ -133,7 +137,7 @@ class ProductionPreflight extends Command
 
         if (! (bool) config('auth.admin_mfa.enforced')) {
             $failures[] = 'ADMIN_MFA_ENFORCED must be true in production.';
-        } elseif (! User::query()
+        } elseif (! $configurationOnly && ! User::query()
             ->where('is_admin', true)
             ->whereNotNull('admin_mfa_confirmed_at')
             ->whereNotNull('admin_mfa_recovery_codes')
@@ -152,7 +156,9 @@ class ProductionPreflight extends Command
             return self::FAILURE;
         }
 
-        $this->info('Production preflight passed.');
+        $this->info($configurationOnly
+            ? 'Production configuration preflight passed.'
+            : 'Production preflight passed.');
 
         return self::SUCCESS;
     }

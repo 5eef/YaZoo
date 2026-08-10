@@ -25,6 +25,7 @@ run_gate() {
     app_environment="$2"
     enabled="$3"
     fake_status="$4"
+    mode="${5:-full}"
     output_file="$test_root/output"
 
     : > "$invocation_log"
@@ -34,7 +35,7 @@ run_gate() {
         PREFLIGHT_FAKE_EXIT_CODE="$fake_status" \
         APP_ENV="$app_environment" \
         YAZOO_RUN_PRODUCTION_PREFLIGHT="$enabled" \
-        sh "$gate" > "$output_file" 2>&1
+        sh "$gate" "$mode" > "$output_file" 2>&1
     actual_status=$?
     set -e
 
@@ -51,6 +52,13 @@ grep -Fxq 'www-data php artisan yazoo:preflight-production' "$invocation_log"
 
 run_gate 23 production true 23
 grep -Fxq 'www-data php artisan yazoo:preflight-production' "$invocation_log"
+
+run_gate 0 production true 0 --configuration-only
+grep -Fxq 'www-data php artisan yazoo:preflight-production --configuration-only' "$invocation_log"
+
+run_gate 64 production true 0 --unsupported
+test ! -s "$invocation_log"
+grep -Fq 'Unsupported production preflight mode' "$test_root/output"
 
 run_gate 0 local true 23
 test ! -s "$invocation_log"
