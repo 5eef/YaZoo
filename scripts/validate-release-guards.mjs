@@ -40,6 +40,11 @@ assert.doesNotMatch(
 assert.match(deploy, /MYSQL_SERVER: \$\{\{ vars\.AZURE_MYSQL_SERVER_NAME \}\}/)
 assert.match(deploy, /YAZOO_RUN_PRODUCTION_PREFLIGHT=true/)
 assert.match(deploy, /Production deployment is allowed only from refs\/heads\/main/)
+assert.match(deploy, /id-token:\s*write/u)
+assert.match(deploy, /client-id:\s*\$\{\{ vars\.AZURE_CLIENT_ID \}\}/u)
+assert.match(deploy, /tenant-id:\s*\$\{\{ vars\.AZURE_TENANT_ID \}\}/u)
+assert.match(deploy, /subscription-id:\s*\$\{\{ vars\.AZURE_SUBSCRIPTION_ID \}\}/u)
+assert.doesNotMatch(deploy, /AZURE_CREDENTIALS/u)
 
 const manualLatest = dockerHubPublish.indexOf('name: Publish latest aliases from main only')
 assert.ok(manualLatest >= 0, 'manual workflow needs a dedicated latest step')
