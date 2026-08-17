@@ -16,7 +16,7 @@ import {
   formatProductStatus,
 } from '../features/marketplace/marketplaceUtils'
 import { useI18n } from '../hooks/useI18n'
-import { formatDate } from '../utils/formatDate'
+import { formatCurrency, formatDate } from '../utils/formatDate'
 import { getErrorMessage } from '../utils/getErrorMessage'
 
 function ProductDetailPage() {
@@ -201,7 +201,7 @@ function ProductDetailPage() {
           </div>
 
           <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
-            <HeroStatCard label={t('common.price')} value={`${product.price} MAD`} />
+            <HeroStatCard label={t('common.price')} value={formatCurrency(product.price)} />
             <HeroStatCard label={t('common.stock')} value={product.stock} />
             <HeroStatCard label={t('common.city')} value={product.location || t('common.notProvided')} />
           </div>
@@ -249,7 +249,7 @@ function ProductDetailPage() {
                 {t('common.price')}
               </p>
               <p className="mt-2 text-2xl font-semibold text-stone-950">
-                {product.price} MAD
+                {formatCurrency(product.price)}
               </p>
             </div>
 
@@ -424,11 +424,11 @@ function ProductDetailPage() {
                     ) : null}
 
                     <div className="rounded-[20px] bg-violet-50 px-4 py-3 text-sm text-violet-900">
-                      {t('marketplace.estimatedTotal')}: {formatProductReservationTotal(
+                      {t('marketplace.estimatedTotal')}: {formatCurrency(formatProductReservationTotal(
                         product,
                         reservationForm.quantity,
                         reservationForm.delivery_method,
-                      )} MAD
+                      ))}
                     </div>
 
                     <label className="block">

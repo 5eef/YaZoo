@@ -19,6 +19,12 @@ import { subscribeToPrivateChannel } from '../lib/realtime'
 import { asArray, extractDataArray, extractDataObject } from '../utils/apiData'
 import { formatDate } from '../utils/formatDate'
 import { getErrorMessage } from '../utils/getErrorMessage'
+import {
+  appendUniqueMessage,
+  filterMessageConversations as filterConversations,
+  sortMessageConversations as sortConversations,
+  upsertMessageConversation as upsertConversation,
+} from '../utils/messages'
 
 const defaultConversationForm = {
   body: '',
@@ -961,62 +967,6 @@ function SearchState({ children }) {
       {children}
     </div>
   )
-}
-
-function sortConversations(items) {
-  return [...asArray(items)].sort(
-    (firstConversation, secondConversation) =>
-      new Date(secondConversation.updatedAt ?? 0).getTime() -
-      new Date(firstConversation.updatedAt ?? 0).getTime(),
-  )
-}
-
-function upsertConversation(currentConversations, nextConversation) {
-  if (!nextConversation?.id) {
-    return sortConversations(currentConversations)
-  }
-
-  const remainingConversations = asArray(currentConversations).filter(
-    (conversation) => conversation.id !== nextConversation.id,
-  )
-
-  return sortConversations([nextConversation, ...remainingConversations])
-}
-
-function appendUniqueMessage(messages, nextMessage) {
-  const safeMessages = asArray(messages)
-
-  if (!nextMessage?.id || safeMessages.some((message) => message.id === nextMessage.id)) {
-    return safeMessages
-  }
-
-  return [...safeMessages, nextMessage]
-}
-
-function filterConversations(conversations, searchTerm) {
-  const safeConversations = asArray(conversations)
-
-  if (!searchTerm) {
-    return safeConversations
-  }
-
-  const normalizedSearch = normalizeSearchText(searchTerm)
-
-  return safeConversations.filter((conversation) =>
-    [
-      conversation.participant?.name,
-      conversation.participant?.email,
-      conversation.latestMessage?.body,
-      conversation.updatedAt,
-    ].some((value) => normalizeSearchText(value).includes(normalizedSearch)),
-  )
-}
-
-function normalizeSearchText(value) {
-  return String(value ?? '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
 }
 
 export default MessagesPage

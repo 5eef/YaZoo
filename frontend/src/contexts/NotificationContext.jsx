@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import PropTypes from 'prop-types'
 
 import { getUnreadNotificationsCountRequest } from '../api/notifications'
@@ -35,6 +35,10 @@ export function NotificationProvider({ children }) {
       return unreadCount
     }
   }, [isAuthenticated, unreadCount])
+
+  const clearLatestNotification = useCallback(() => {
+    setLatestNotification(null)
+  }, [])
 
   useEffect(() => {
     if (!realtimeEnabled) {
@@ -111,18 +115,28 @@ export function NotificationProvider({ children }) {
     }
   }, [isAuthenticated, isBootstrapping, realtimeStatus])
 
+  const value = useMemo(
+    () => ({
+      unreadCount,
+      latestNotification: isAuthenticated ? latestNotification : null,
+      refreshUnreadCount,
+      setUnreadCount,
+      clearLatestNotification,
+      realtimeStatus,
+      isRealtimeEnabled: realtimeEnabled,
+    }),
+    [
+      clearLatestNotification,
+      isAuthenticated,
+      latestNotification,
+      realtimeStatus,
+      refreshUnreadCount,
+      unreadCount,
+    ],
+  )
+
   return (
-    <NotificationContext.Provider
-      value={{
-        unreadCount,
-        latestNotification: isAuthenticated ? latestNotification : null,
-        refreshUnreadCount,
-        setUnreadCount,
-        clearLatestNotification: () => setLatestNotification(null),
-        realtimeStatus,
-        isRealtimeEnabled: realtimeEnabled,
-      }}
-    >
+    <NotificationContext.Provider value={value}>
       {children}
     </NotificationContext.Provider>
   )

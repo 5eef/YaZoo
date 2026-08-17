@@ -1,7 +1,7 @@
 import { useI18n } from '../../hooks/useI18n'
 import { LOCALE_LABELS } from '../../lib/i18n'
 
-function LanguageSwitcher({ className = '', compact = false, onLocaleChange }) {
+function LanguageSwitcher({ className = '', compact = false, disabled = false, onLocaleChange }) {
   const { dir, locale, setLocale, t } = useI18n()
 
   const options = [
@@ -30,11 +30,12 @@ function LanguageSwitcher({ className = '', compact = false, onLocaleChange }) {
             key={option.value}
             type="button"
             onClick={() => (onLocaleChange ? onLocaleChange(option.value) : setLocale(option.value))}
+            disabled={disabled}
             className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold transition ${
               active
                 ? 'bg-[linear-gradient(135deg,#7c3aed,#a855f7,#c4b5fd)] text-white shadow-[0_10px_20px_rgba(124,58,237,0.14)]'
                 : 'text-stone-600 hover:bg-violet-50 hover:text-violet-900 dark:text-violet-100 dark:hover:bg-violet-400/15 dark:hover:text-white'
-            }`}
+            } disabled:cursor-wait disabled:opacity-60`}
             aria-label={option.ariaLabel}
             aria-pressed={active}
             title={option.ariaLabel}

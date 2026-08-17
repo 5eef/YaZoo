@@ -11,6 +11,17 @@ return [
     'queue_heartbeat_ttl_seconds' => (int) env('YAZOO_QUEUE_HEARTBEAT_TTL_SECONDS', 180),
     'scheduler_heartbeat_ttl_seconds' => (int) env('YAZOO_SCHEDULER_HEARTBEAT_TTL_SECONDS', 180),
     'migration_lock_seconds' => (int) env('YAZOO_MIGRATION_LOCK_SECONDS', 1800),
+    'require_expected_database' => filter_var(
+        env('YAZOO_REQUIRE_EXPECTED_DATABASE', env('APP_ENV') === 'production'),
+        FILTER_VALIDATE_BOOL,
+    ),
+    'expected_database_host' => env('YAZOO_EXPECTED_DB_HOST'),
+    'expected_database_port' => env('YAZOO_EXPECTED_DB_PORT'),
+    'expected_database_name' => env('YAZOO_EXPECTED_DB_NAME'),
+    'protected_database_names' => array_values(array_filter(array_map(
+        'trim',
+        explode(',', (string) env('YAZOO_PROTECTED_DB_NAMES', '')),
+    ))),
     'account_deletion_retry_max_attempts' => (int) env('YAZOO_ACCOUNT_DELETION_RETRY_MAX_ATTEMPTS', 5),
     'account_deletion_retry_batch_size' => (int) env('YAZOO_ACCOUNT_DELETION_RETRY_BATCH_SIZE', 25),
     'account_deletion_processing_lease_seconds' => (int) env('YAZOO_ACCOUNT_DELETION_PROCESSING_LEASE_SECONDS', 900),

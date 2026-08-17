@@ -58,6 +58,7 @@ COPY --from=vendor /app/vendor ./vendor
 COPY backend/ ./
 COPY LICENSE /licenses/YaZoo-LICENSE
 COPY backend/php-upload.ini /usr/local/etc/php/conf.d/yazoo-upload.ini
+COPY backend/nginx.conf /etc/nginx/http.d/default.conf
 
 RUN set -eux; \
     composer dump-autoload --optimize; \
@@ -68,7 +69,7 @@ RUN set -eux; \
         storage/framework/views \
         storage/logs \
         bootstrap/cache; \
-    chown -R www-data:www-data storage bootstrap/cache
+    chown -R www-data:www-data storage bootstrap/cache /var/www/html
 
 COPY backend/startup.sh /usr/local/bin/yazoo-startup
 COPY backend/docker-entrypoint.sh /usr/local/bin/yazoo-entrypoint

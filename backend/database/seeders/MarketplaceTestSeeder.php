@@ -77,8 +77,7 @@ class MarketplaceTestSeeder extends Seeder
         bool $dryRun = false,
         ?string $failAfter = null,
         ?string $showcaseConfirmation = null,
-    ): array
-    {
+    ): array {
         $this->stats = [];
         $this->storageBackup = [];
         $this->assertSafeEnvironment($showcaseConfirmation);

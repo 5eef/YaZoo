@@ -65,6 +65,8 @@ L'environnement GitHub `production` doit contenir:
 - `AZURE_BACKEND_URL` et `AZURE_FRONTEND_URL`;
 - `AZURE_MYSQL_SERVER_NAME`, dont la valeur existante doit etre verifiee par
   l'operateur.
+- `AZURE_DATABASE2_HOST`, `AZURE_DATABASE2_PORT` et `AZURE_DATABASE2_NAME`;
+  le nom `yazoo` est refusé car il désigne DATABASE #1 protégée.
 
 Cet environnement doit avoir une approbation manuelle requise et une restriction
 de branche. Ce reglage est externe au depot. Sans protection d'environnement, un

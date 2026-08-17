@@ -13,6 +13,7 @@ import Button from '../components/ui/Button'
 import { useI18n } from '../hooks/useI18n'
 import { extractDataArray } from '../utils/apiData'
 import { getErrorMessage } from '../utils/getErrorMessage'
+import { formatDateOnly } from '../utils/formatDate'
 
 const CONSENT_TYPES = ['sms_otp', 'marketing', 'geolocation', 'cookies_analytics']
 
@@ -132,6 +133,7 @@ function PrivacySettingsPage() {
               <ConsentPreference
                 key={type}
                 type={type}
+                locale={locale}
                 checked={Boolean(latestByType.get(type)?.accepted)}
                 lastUpdated={latestByType.get(type)?.createdAt}
                 onChange={handleConsentChange}
@@ -187,7 +189,7 @@ PrivacyPanel.propTypes = {
   title: PropTypes.string,
 }
 
-function ConsentPreference({ checked, lastUpdated, onChange, t, type }) {
+function ConsentPreference({ checked, lastUpdated, locale, onChange, t, type }) {
   return (
     <label className="flex min-w-0 gap-3 rounded-[22px] border border-violet-100 bg-violet-50/65 p-4 dark:border-violet-300/14 dark:bg-white/8">
       <input
@@ -204,7 +206,7 @@ function ConsentPreference({ checked, lastUpdated, onChange, t, type }) {
           {t(`privacy.settings.consentDescriptions.${type}`)}
         </span>
         <span className="mt-2 block text-[11px] font-medium text-violet-700 dark:text-violet-200">
-          {lastUpdated ? t('privacy.settings.lastUpdated', { date: new Date(lastUpdated).toLocaleDateString() }) : t('privacy.settings.neverSet')}
+          {lastUpdated ? t('privacy.settings.lastUpdated', { date: formatDateOnly(lastUpdated, locale) }) : t('privacy.settings.neverSet')}
         </span>
       </span>
     </label>
@@ -214,6 +216,7 @@ function ConsentPreference({ checked, lastUpdated, onChange, t, type }) {
 ConsentPreference.propTypes = {
   checked: PropTypes.bool,
   lastUpdated: PropTypes.string,
+  locale: PropTypes.string,
   onChange: PropTypes.func,
   t: PropTypes.func,
   type: PropTypes.string,

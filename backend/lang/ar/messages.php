@@ -141,4 +141,8 @@ return [
     'security' => [
         'https_required' => 'HTTPS مطلوب.',
     ],
+    'api_errors' => [
+        'invalid_transition' => 'هذا الانتقال بين الحالات غير مسموح به.',
+        'request_failed' => 'تعذرت معالجة الطلب.',
+    ],
 ];

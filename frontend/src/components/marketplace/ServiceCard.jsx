@@ -3,6 +3,7 @@ import PropTypes from 'prop-types'
 
 import { createReservationRequest } from '../../api/reservations'
 import { useI18n } from '../../hooks/useI18n'
+import { formatCurrency } from '../../utils/formatDate'
 import ReportButton from '../reports/ReportButton'
 import Button from '../ui/Button'
 import { FavoriteButton, Info, LinkButton, ManualPaymentBadges, RatingSummary, SellerTrustBadges, TrustBadge } from './MarketplaceCommon'
@@ -49,7 +50,7 @@ function ServiceCard({ service, onReserved }) {
           </p>
         </div>
         <span className="rounded-full bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-900 dark:bg-white/10 dark:text-violet-50">
-          {service.price ? `${service.price} MAD` : t('services.negotiable')}
+          {service.price ? formatCurrency(service.price) : t('services.negotiable')}
         </span>
       </div>
 

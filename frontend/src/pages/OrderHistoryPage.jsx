@@ -5,7 +5,7 @@ import { getOrdersHistoryRequest } from '../api/reservations'
 import Avatar from '../components/ui/Avatar'
 import { useI18n } from '../hooks/useI18n'
 import { asArray } from '../utils/apiData'
-import { formatDate } from '../utils/formatDate'
+import { formatCurrency, formatDate } from '../utils/formatDate'
 import { getErrorMessage } from '../utils/getErrorMessage'
 
 function OrderHistoryPage() {
@@ -344,11 +344,7 @@ function formatPaymentStatus(status, t) {
 }
 
 function formatPrice(value) {
-  if (!value) {
-    return '0 MAD'
-  }
-
-  return `${value} MAD`
+  return formatCurrency(value)
 }
 
 function filterOrders(orders, searchTerm) {

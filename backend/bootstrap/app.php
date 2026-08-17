@@ -1,5 +1,6 @@
 <?php
 
+use App\Exceptions\ApiProblemException;
 use App\Http\Controllers\HealthController;
 use App\Http\Middleware\EnsureAccountCanMutate;
 use App\Http\Middleware\EnsureAdminMfaVerified;
@@ -20,6 +21,9 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request as HttpRequest;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withCommands()
@@ -99,18 +103,65 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(function (AuthenticationException $exception, $request) {
             if ($request->is('api/*')) {
                 return response()->json([
+                    'error' => 'auth.unauthenticated',
                     'message' => 'Unauthenticated.',
                 ], 401);
             }
         });
 
-        $exceptions->report(function (Throwable $exception): void {
-            Log::channel((string) config('logging.monitoring_channel', 'observability'))
-                ->error($exception->getMessage(), [
-                    'exception' => $exception::class,
-                    'file' => $exception->getFile(),
-                    'line' => $exception->getLine(),
-                    'trace' => $exception->getTraceAsString(),
-                ]);
+        $exceptions->render(function (ValidationException $exception, $request) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'error' => 'validation.failed',
+                    'message' => $exception->getMessage(),
+                    'errors' => $exception->errors(),
+                ], $exception->status);
+            }
         });
+
+        $exceptions->render(function (HttpExceptionInterface $exception, $request) {
+            if (! $request->is('api/*')) {
+                return null;
+            }
+
+            $status = $exception->getStatusCode();
+            $error = $exception instanceof ApiProblemException
+                ? $exception->errorCode
+                : match ($status) {
+                    401 => 'auth.unauthenticated',
+                    403 => 'authorization.forbidden',
+                    404 => 'resource.not_found',
+                    405 => 'request.method_not_allowed',
+                    409 => 'request.conflict',
+                    419 => 'security.csrf_invalid',
+                    422 => 'validation.failed',
+                    423 => 'auth.additional_verification_required',
+                    429 => 'rate_limit.exceeded',
+                    default => $status >= 500 ? 'server.internal' : 'request.failed',
+                };
+            $message = trim($exception->getMessage());
+
+            return response()->json([
+                'error' => $error,
+                'message' => $message !== ''
+                    ? $message
+                    : (Response::$statusTexts[$status] ?? __('messages.api_errors.request_failed')),
+            ], $status, $exception->getHeaders());
+        });
+
+        $exceptions->report(function (Throwable $exception): void {
+            $context = [
+                'exception' => $exception::class,
+                'route' => request()->route()?->getName(),
+                'method' => request()->method(),
+            ];
+
+            if (! app()->isProduction()) {
+                $context['file'] = $exception->getFile();
+                $context['line'] = $exception->getLine();
+            }
+
+            Log::channel((string) config('logging.monitoring_channel', 'observability'))
+                ->error('Unhandled application exception.', $context);
+        })->stop();
     })->create();

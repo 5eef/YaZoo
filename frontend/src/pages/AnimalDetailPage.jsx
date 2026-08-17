@@ -21,7 +21,7 @@ import {
 } from '../features/marketplace/marketplaceUtils'
 import { getAnimalComplianceBadgeTypes } from '../features/marketplace/animalCompliance'
 import { useI18n } from '../hooks/useI18n'
-import { formatDate } from '../utils/formatDate'
+import { formatCurrency, formatDate } from '../utils/formatDate'
 import { getErrorMessage } from '../utils/getErrorMessage'
 
 function AnimalDetailPage() {
@@ -212,7 +212,7 @@ function AnimalDetailPage() {
           <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
             <HeroStatCard
               label={t('marketplace.estimatedPrice')}
-              value={animal.isForAdoption ? t('animals.adoption') : `${animal.price ?? 0} MAD`}
+              value={animal.isForAdoption ? t('animals.adoption') : formatCurrency(animal.price)}
             />
             <HeroStatCard label={t('common.city')} value={animal.location || t('common.notProvided')} />
             <HeroStatCard label={t('common.published')} value={formatDate(animal.createdAt)} />
@@ -261,7 +261,7 @@ function AnimalDetailPage() {
                 {t('common.price')}
               </p>
               <p className="mt-2 text-2xl font-semibold text-stone-950">
-                {animal.isForAdoption ? t('animals.adoption') : `${animal.price ?? 0} MAD`}
+                {animal.isForAdoption ? t('animals.adoption') : formatCurrency(animal.price)}
               </p>
             </div>
 
@@ -428,7 +428,7 @@ function AnimalDetailPage() {
                     ) : null}
 
                     <div className="rounded-[20px] bg-violet-50 px-4 py-3 text-sm text-violet-900">
-                      {t('marketplace.estimatedTotal')}: {formatAnimalReservationTotal(animal, reservationForm.delivery_method)} MAD
+                      {t('marketplace.estimatedTotal')}: {formatCurrency(formatAnimalReservationTotal(animal, reservationForm.delivery_method))}
                     </div>
 
                     <label className="block">

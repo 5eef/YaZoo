@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Contracts\MediaScanner;
 use App\Models\User;
 use App\Support\AccountDeletionRetryPolicy;
+use App\Support\DatabaseTargetGuard;
 use App\Support\Sms\SmsSender;
 use Illuminate\Console\Command;
 
@@ -15,10 +16,12 @@ class ProductionPreflight extends Command
 
     protected $description = 'Fail when required production configuration or operational processes are missing.';
 
-    public function handle(): int
+    public function handle(DatabaseTargetGuard $databaseTargetGuard): int
     {
         $failures = [];
         $configurationOnly = (bool) $this->option('configuration-only');
+
+        array_push($failures, ...$databaseTargetGuard->failures());
 
         $this->requireValue($failures, 'APP_KEY', config('app.key'));
         $this->requireValue($failures, 'LEGAL_ENTITY_NAME', config('legal.entity_name'));

@@ -141,4 +141,8 @@ return [
     'security' => [
         'https_required' => 'HTTPS is required.',
     ],
+    'api_errors' => [
+        'invalid_transition' => 'This state transition is not allowed.',
+        'request_failed' => 'The request could not be processed.',
+    ],
 ];

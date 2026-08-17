@@ -9,10 +9,11 @@ const read = (relativePath) => fs.readFileSync(path.join(repositoryRoot, relativ
 const deploy = read('.github/workflows/deploy.yml')
 const dockerHubPublish = read('.github/workflows/dockerhub-publish.yml')
 const ci = read('.github/workflows/ci.yml')
+const codeql = read('.github/workflows/codeql.yml')
 const startup = read('backend/startup.sh')
 const setup = read('deploy/azure-setup.ps1')
 const initialConfiguration = read('deploy/azure-dockerhub-deploy.ps1')
-const workflowContents = [ci, deploy, dockerHubPublish]
+const workflowContents = [ci, deploy, dockerHubPublish, codeql]
 
 const immutablePush = deploy.indexOf('name: Push immutable SHA images')
 const mysqlValidation = deploy.indexOf('name: Validate MySQL backup and restore readiness')
@@ -87,8 +88,8 @@ assert.match(ci, /\.\/node_modules\/\.bin\/playwright install --with-deps chromi
 assert.doesNotMatch(ci, /\bnpx\s+playwright\b/u)
 
 const showcaseBranch = startup.indexOf('if [ "${YAZOO_RUN_SHOWCASE_BOOTSTRAP:-false}" = "true" ]')
-const showcaseMigration = startup.indexOf('su-exec www-data php artisan yazoo:migrate-production', showcaseBranch)
-const showcaseBootstrap = startup.indexOf('su-exec www-data php artisan yazoo:bootstrap-azure-showcase', showcaseMigration)
+const showcaseMigration = startup.indexOf('php artisan yazoo:migrate-production', showcaseBranch)
+const showcaseBootstrap = startup.indexOf('php artisan yazoo:bootstrap-azure-showcase', showcaseMigration)
 const showcasePreflight = startup.indexOf('sh /var/www/html/scripts/run-production-preflight.sh', showcaseBootstrap)
 assert.ok(
   showcaseBranch >= 0
@@ -104,7 +105,7 @@ const normalConfigurationPreflight = startup.indexOf(
   normalBranch,
 )
 const normalMigration = startup.indexOf(
-  'su-exec www-data php artisan yazoo:migrate-production',
+  'php artisan yazoo:migrate-production',
   normalConfigurationPreflight,
 )
 const normalFullPreflight = startup.indexOf(

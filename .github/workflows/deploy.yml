@@ -16,6 +16,8 @@ concurrency:
 jobs:
   required-ci:
     uses: ./.github/workflows/ci.yml
+    with:
+      build_containers: false
     secrets:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
@@ -33,6 +35,9 @@ jobs:
       BACKEND_URL: ${{ vars.AZURE_BACKEND_URL }}
       FRONTEND_URL: ${{ vars.AZURE_FRONTEND_URL }}
       MYSQL_SERVER: ${{ vars.AZURE_MYSQL_SERVER_NAME }}
+      EXPECTED_DB_HOST: ${{ vars.AZURE_DATABASE2_HOST }}
+      EXPECTED_DB_PORT: ${{ vars.AZURE_DATABASE2_PORT }}
+      EXPECTED_DB_NAME: ${{ vars.AZURE_DATABASE2_NAME }}
       BACKEND_IMAGE: 5eef/yazoo-api:${{ github.sha }}
       FRONTEND_IMAGE: 5eef/yazoo-frontend:${{ github.sha }}
 
@@ -78,12 +83,16 @@ jobs:
       - name: Validate Azure deployment configuration
         run: |
           set -euo pipefail
-          for value in RESOURCE_GROUP BACKEND_WEBAPP FRONTEND_WEBAPP BACKEND_URL FRONTEND_URL MYSQL_SERVER; do
+          for value in RESOURCE_GROUP BACKEND_WEBAPP FRONTEND_WEBAPP BACKEND_URL FRONTEND_URL MYSQL_SERVER EXPECTED_DB_HOST EXPECTED_DB_PORT EXPECTED_DB_NAME; do
             if [ -z "${!value}" ]; then
               echo "::error::$value is not configured for the production environment."
               exit 1
             fi
           done
+          if [ "$EXPECTED_DB_NAME" = "yazoo" ]; then
+            echo "::error::DATABASE #1 (yazoo) is protected and cannot be a release target."
+            exit 1
+          fi
 
       - name: Require persistent App Service media storage
         run: |
@@ -135,12 +144,18 @@ jobs:
           backend_previous="${backend_previous#DOCKER|}"
           frontend_previous="${frontend_previous#DOCKER|}"
           backend_version_previous="$(az webapp config appsettings list --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP" --query "[?name=='APP_VERSION'].value | [0]" -o tsv)"
+          backend_db_host_previous="$(az webapp config appsettings list --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP" --query "[?name=='DB_HOST'].value | [0]" -o tsv)"
+          backend_db_port_previous="$(az webapp config appsettings list --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP" --query "[?name=='DB_PORT'].value | [0]" -o tsv)"
+          backend_db_name_previous="$(az webapp config appsettings list --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP" --query "[?name=='DB_DATABASE'].value | [0]" -o tsv)"
           test -n "$backend_previous"
           test -n "$frontend_previous"
           {
             echo "backend=$backend_previous"
             echo "frontend=$frontend_previous"
             echo "backend_version=${backend_version_previous:-local}"
+            echo "db_host=$backend_db_host_previous"
+            echo "db_port=${backend_db_port_previous:-3306}"
+            echo "db_name=$backend_db_name_previous"
           } >> "$GITHUB_OUTPUT"
 
       - name: Deploy exact SHA with one locked startup migration
@@ -164,7 +179,11 @@ jobs:
 
           az webapp stop --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP"
           az webapp config appsettings set --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP" \
-            --settings "APP_VERSION=${GITHUB_SHA}" "YAZOO_RUN_PRODUCTION_PREFLIGHT=true" "YAZOO_RUN_MIGRATIONS=true" --output none
+            --settings "APP_VERSION=${GITHUB_SHA}" "YAZOO_RUN_PRODUCTION_PREFLIGHT=true" "YAZOO_RUN_MIGRATIONS=true" \
+              "DB_HOST=${EXPECTED_DB_HOST}" "DB_PORT=${EXPECTED_DB_PORT}" "DB_DATABASE=${EXPECTED_DB_NAME}" \
+              "YAZOO_REQUIRE_EXPECTED_DATABASE=true" "YAZOO_EXPECTED_DB_HOST=${EXPECTED_DB_HOST}" \
+              "YAZOO_EXPECTED_DB_PORT=${EXPECTED_DB_PORT}" "YAZOO_EXPECTED_DB_NAME=${EXPECTED_DB_NAME}" \
+              "YAZOO_PROTECTED_DB_NAMES=yazoo" --output none
           az webapp config container set --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP" \
             --docker-custom-image-name "$BACKEND_IMAGE" --docker-registry-server-url https://index.docker.io --output none
           az webapp start --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP"
@@ -185,6 +204,8 @@ jobs:
 
           az webapp config container set --resource-group "$RESOURCE_GROUP" --name "$FRONTEND_WEBAPP" \
             --docker-custom-image-name "$FRONTEND_IMAGE" --docker-registry-server-url https://index.docker.io --output none
+          az webapp config appsettings set --resource-group "$RESOURCE_GROUP" --name "$FRONTEND_WEBAPP" \
+            --settings "WEBSITES_PORT=8080" --output none
           az webapp restart --resource-group "$RESOURCE_GROUP" --name "$FRONTEND_WEBAPP"
 
           for _attempt in $(seq 1 20); do
@@ -216,7 +237,9 @@ jobs:
           az webapp config container set --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP" \
             --docker-custom-image-name "${{ steps.previous.outputs.backend }}" --docker-registry-server-url https://index.docker.io --output none
           az webapp config appsettings set --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP" \
-            --settings "APP_VERSION=${{ steps.previous.outputs.backend_version }}" "YAZOO_RUN_PRODUCTION_PREFLIGHT=true" "YAZOO_RUN_MIGRATIONS=false" --output none
+            --settings "APP_VERSION=${{ steps.previous.outputs.backend_version }}" "YAZOO_RUN_PRODUCTION_PREFLIGHT=true" "YAZOO_RUN_MIGRATIONS=false" \
+              "DB_HOST=${{ steps.previous.outputs.db_host }}" "DB_PORT=${{ steps.previous.outputs.db_port }}" \
+              "DB_DATABASE=${{ steps.previous.outputs.db_name }}" "YAZOO_REQUIRE_EXPECTED_DATABASE=false" --output none
           az webapp config container set --resource-group "$RESOURCE_GROUP" --name "$FRONTEND_WEBAPP" \
             --docker-custom-image-name "${{ steps.previous.outputs.frontend }}" --docker-registry-server-url https://index.docker.io --output none
           az webapp restart --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP"

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exceptions\ApiProblemException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Veterinarian\StoreAppointmentRequest;
 use App\Http\Requests\Veterinarian\StoreAvailabilitySlotRequest;
@@ -78,9 +79,27 @@ class VeterinarianAppointmentController extends Controller
 
     public function destroyAvailability(Request $request, VeterinarianAvailabilitySlot $slot): JsonResponse
     {
-        abort_unless($request->user()->id === $slot->veterinarian->user_id || $request->user()->is_admin, 403);
-        abort_if($slot->appointments()->whereIn('status', VeterinarianAppointment::ACTIVE_STATUSES)->exists(), 422);
-        $slot->delete();
+        DB::transaction(function () use ($request, $slot): void {
+            $lockedSlot = VeterinarianAvailabilitySlot::query()
+                ->with('veterinarian:id,user_id')
+                ->whereKey($slot->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            abort_unless(
+                $request->user()->id === $lockedSlot->veterinarian->user_id || $request->user()->is_admin,
+                403,
+            );
+            if ($lockedSlot->appointments()->whereIn('status', VeterinarianAppointment::ACTIVE_STATUSES)->exists()) {
+                throw new ApiProblemException(
+                    422,
+                    'veterinarian.availability_slot_in_use',
+                    __('messages.appointments.slot_unavailable'),
+                );
+            }
+
+            $lockedSlot->delete();
+        }, 3);
 
         return response()->json(status: 204);
     }
@@ -152,26 +171,45 @@ class VeterinarianAppointmentController extends Controller
 
     public function updateStatus(UpdateAppointmentStatusRequest $request, VeterinarianAppointment $appointment): VeterinarianAppointmentResource
     {
-        $appointment->load('veterinarian');
-        $this->authorize('update', $appointment);
         $next = $request->validated('status');
-        $isVet = $request->user()->is_admin || $request->user()->id === $appointment->veterinarian->user_id;
-        $allowed = match ($next) {
-            'confirmed', 'rejected' => $isVet && $appointment->status === 'pending',
-            'completed' => $isVet && $appointment->status === 'confirmed' && $appointment->ends_at->isPast(),
-            'cancelled' => in_array($appointment->status, VeterinarianAppointment::ACTIVE_STATUSES, true)
-                && ($isVet || $request->user()->id === $appointment->client_id),
-            default => false,
-        };
-        abort_unless($allowed, 422);
+        [$appointment, $isVet] = DB::transaction(function () use ($request, $appointment, $next): array {
+            $lockedAppointment = VeterinarianAppointment::query()
+                ->with(['veterinarian.user', 'client'])
+                ->whereKey($appointment->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        $appointment->update([
-            'status' => $next,
-            'status_note' => $request->validated('note'),
-            'status_changed_by' => $request->user()->id,
-            'status_changed_at' => now(),
-        ]);
+            $this->authorize('update', $lockedAppointment);
+            $isVet = $request->user()->is_admin
+                || $request->user()->id === $lockedAppointment->veterinarian->user_id;
+            $allowed = match ($next) {
+                'confirmed', 'rejected' => $isVet && $lockedAppointment->status === 'pending',
+                'completed' => $isVet
+                    && $lockedAppointment->status === 'confirmed'
+                    && $lockedAppointment->ends_at->isPast(),
+                'cancelled' => in_array($lockedAppointment->status, VeterinarianAppointment::ACTIVE_STATUSES, true)
+                    && ($isVet || $request->user()->id === $lockedAppointment->client_id),
+                default => false,
+            };
+            if (! $allowed) {
+                throw new ApiProblemException(
+                    422,
+                    'veterinarian.appointment_invalid_transition',
+                    __('messages.api_errors.invalid_transition'),
+                );
+            }
 
+            $lockedAppointment->update([
+                'status' => $next,
+                'status_note' => $request->validated('note'),
+                'status_changed_by' => $request->user()->id,
+                'status_changed_at' => now(),
+            ]);
+
+            return [$lockedAppointment, $isVet];
+        }, 3);
+
+        // This runs only after the database transaction has committed.
         $recipient = $isVet ? $appointment->client : $appointment->veterinarian->user;
         $recipient->notify(new VeterinarianAppointmentNotification($appointment, $next));
 

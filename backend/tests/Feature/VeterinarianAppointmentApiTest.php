@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use App\Models\Veterinarian;
 use App\Models\VeterinarianAppointment;
+use App\Models\VeterinarianAvailabilitySlot;
 use App\Notifications\VeterinarianAppointmentNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -81,7 +82,8 @@ class VeterinarianAppointmentApiTest extends TestCase
         Sanctum::actingAs($client);
         $this->patchJson("/api/veterinarian-appointments/{$appointment->id}/status", [
             'status' => 'confirmed',
-        ])->assertUnprocessable();
+        ])->assertUnprocessable()
+            ->assertJsonPath('error', 'veterinarian.appointment_invalid_transition');
 
         Sanctum::actingAs($vetUser);
         $this->patchJson("/api/veterinarian-appointments/{$appointment->id}/status", [
@@ -124,6 +126,34 @@ class VeterinarianAppointmentApiTest extends TestCase
         ])->assertCreated();
         $this->postJson("/api/veterinarian-appointments/{$appointment->id}/review", ['rating' => 4])
             ->assertForbidden();
+    }
+
+    public function test_availability_with_an_active_appointment_cannot_be_deleted(): void
+    {
+        [$vetUser, $veterinarian] = $this->veterinarian();
+        $client = User::factory()->create();
+        $slot = VeterinarianAvailabilitySlot::query()->create([
+            'veterinarian_id' => $veterinarian->id,
+            'starts_at' => now()->addDay(),
+            'ends_at' => now()->addDay()->addHour(),
+            'is_available' => true,
+        ]);
+        VeterinarianAppointment::query()->create([
+            'veterinarian_id' => $veterinarian->id,
+            'availability_slot_id' => $slot->id,
+            'client_id' => $client->id,
+            'animal_type' => 'chat',
+            'reason' => 'Consultation',
+            'starts_at' => $slot->starts_at,
+            'ends_at' => $slot->ends_at,
+            'status' => 'pending',
+        ]);
+
+        Sanctum::actingAs($vetUser);
+        $this->deleteJson("/api/veterinarian-availability/{$slot->id}")
+            ->assertUnprocessable();
+
+        $this->assertDatabaseHas('veterinarian_availability_slots', ['id' => $slot->id]);
     }
 
     /** @return array{User, Veterinarian} */

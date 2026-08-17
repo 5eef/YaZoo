@@ -17,6 +17,11 @@
 sonar-hotspots.json
 sonar-issues.json
 
+# Local CI/deployment diagnostics
+/ci-summary.txt
+/deploy-summary.txt
+/backend/storage/framework/manual-*.ps1
+
 # Local point-in-time audit reports
 /AUDIT_COMPLET_YAZOO_STARTUP_INDH_2026.md
 

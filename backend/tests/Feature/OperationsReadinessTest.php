@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Jobs\QueueHeartbeat;
 use App\Models\User;
+use App\Support\DatabaseTargetGuard;
 use App\Support\OperationsSchedule;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Console\Scheduling\Schedule;
@@ -71,6 +72,66 @@ class OperationsReadinessTest extends TestCase
         } finally {
             $lock->release();
         }
+    }
+
+    public function test_production_migration_command_refuses_a_protected_database_target(): void
+    {
+        config([
+            'operations.run_migrations' => true,
+            'operations.require_expected_database' => true,
+            'operations.expected_database_host' => 'database2.test',
+            'operations.expected_database_port' => '3307',
+            'operations.expected_database_name' => 'yazoo_database2',
+            'operations.protected_database_names' => [':memory:'],
+            'database.connections.sqlite.host' => 'database1.test',
+            'database.connections.sqlite.port' => '3306',
+        ]);
+
+        $this->artisan('yazoo:migrate-production')
+            ->expectsOutput('Configured database is protected from deployment migrations.')
+            ->expectsOutput('Configured database host does not match YAZOO_EXPECTED_DB_HOST.')
+            ->expectsOutput('Configured database name does not match YAZOO_EXPECTED_DB_NAME.')
+            ->assertExitCode(1);
+    }
+
+    public function test_production_configuration_preflight_accepts_the_exact_expected_database_target(): void
+    {
+        config([
+            'operations.require_expected_database' => true,
+            'operations.expected_database_host' => 'database2.test',
+            'operations.expected_database_port' => '3306',
+            'operations.expected_database_name' => ':memory:',
+            'operations.protected_database_names' => ['yazoo'],
+            'database.connections.sqlite.host' => 'DATABASE2.TEST.',
+            'database.connections.sqlite.port' => '3306',
+            'database.connections.sqlite.database' => ':memory:',
+        ]);
+
+        $guard = app(DatabaseTargetGuard::class);
+
+        $this->assertSame([], $guard->failures());
+    }
+
+    public function test_database_target_verification_prints_only_non_sensitive_connection_fields(): void
+    {
+        config([
+            'operations.require_expected_database' => true,
+            'operations.expected_database_host' => 'database2.test',
+            'operations.expected_database_port' => '3306',
+            'operations.expected_database_name' => ':memory:',
+            'operations.protected_database_names' => ['yazoo'],
+            'database.connections.sqlite.host' => 'database2.test',
+            'database.connections.sqlite.port' => '3306',
+            'database.connections.sqlite.password' => 'must-not-be-printed',
+        ]);
+
+        $this->artisan('yazoo:verify-database-target')
+            ->expectsOutput('connection=sqlite')
+            ->expectsOutput('host=database2.test')
+            ->expectsOutput('port=3306')
+            ->expectsOutput('database=:memory:')
+            ->doesntExpectOutputToContain('must-not-be-printed')
+            ->assertExitCode(0);
     }
 
     public function test_production_migration_command_runs_once_and_releases_its_lock(): void

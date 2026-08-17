@@ -19,6 +19,11 @@ sonar-issues.json
 **/storage/framework/cache/*
 **/storage/framework/sessions/*
 **/storage/framework/views/*
+**/storage/framework/testing/*
+backend/storage/framework/testing
+backend/storage
+backend/storage/
+backend/storage/**
 backend/database/database.sqlite
 backend/.phpunit.result.cache
 backend/curl-cookie-jar.txt

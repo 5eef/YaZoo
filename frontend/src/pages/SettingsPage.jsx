@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router'
 import PropTypes from 'prop-types'
 
@@ -8,16 +9,28 @@ import { updateProfileRequest } from '../api/profile'
 import { useAuth } from '../hooks/useAuth'
 import { useI18n } from '../hooks/useI18n'
 import { useTheme } from '../hooks/useTheme'
+import { useToast } from '../hooks/useToast'
+import { getErrorMessage } from '../utils/getErrorMessage'
 
 function SettingsPage() {
   const { logout, setUser, user } = useAuth()
-  const { setLocale, t } = useI18n()
+  const { locale, setLocale, t } = useI18n()
   const { theme, resolvedTheme, setTheme } = useTheme()
+  const { showErrorToast, showSuccessToast } = useToast()
+  const [failedLocale, setFailedLocale] = useState(null)
+  const [isSavingLocale, setIsSavingLocale] = useState(false)
 
   const handleLocaleChange = async (nextLocale) => {
+    if (isSavingLocale || nextLocale === locale) {
+      return
+    }
+
+    const previousLocale = locale
+    const previousUser = user
     setLocale(nextLocale)
 
     if (!user?.id) {
+      setFailedLocale(null)
       return
     }
 
@@ -25,6 +38,7 @@ function SettingsPage() {
       currentUser ? { ...currentUser, preferredLocale: nextLocale } : currentUser
     ))
 
+    setIsSavingLocale(true)
     try {
       await updateProfileRequest(user.id, {
         name: user.name ?? 'Utilisateur',
@@ -34,8 +48,15 @@ function SettingsPage() {
         bio: user.bio ?? '',
         preferred_locale: nextLocale,
       })
-    } catch {
-      // Keep the local preference responsive even if the profile save is temporarily unavailable.
+      setFailedLocale(null)
+      showSuccessToast(t('settings.languageSaved'))
+    } catch (error) {
+      setLocale(previousLocale)
+      setUser(previousUser)
+      setFailedLocale(nextLocale)
+      showErrorToast(getErrorMessage(error, t('settings.languageSaveFailed')))
+    } finally {
+      setIsSavingLocale(false)
     }
   }
 
@@ -69,7 +90,17 @@ function SettingsPage() {
 
       <div className="grid min-w-0 gap-4 lg:grid-cols-2 lg:gap-5">
         <SettingsCard title={t('common.language')} description={t('settings.languageDescription')}>
-          <LanguageSwitcher onLocaleChange={handleLocaleChange} />
+          <LanguageSwitcher disabled={isSavingLocale} onLocaleChange={handleLocaleChange} />
+          {failedLocale ? (
+            <button
+              type="button"
+              className="mt-3 rounded-full border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 dark:border-rose-300/25 dark:text-rose-200 dark:hover:bg-rose-400/10"
+              onClick={() => handleLocaleChange(failedLocale)}
+              disabled={isSavingLocale}
+            >
+              {t('settings.retryLanguageSave')}
+            </button>
+          ) : null}
         </SettingsCard>
 
         <SettingsCard

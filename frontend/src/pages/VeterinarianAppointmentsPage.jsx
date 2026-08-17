@@ -12,6 +12,7 @@ import {
 import Button from '../components/ui/Button'
 import { useI18n } from '../hooks/useI18n'
 import { getErrorMessage } from '../utils/getErrorMessage'
+import { formatDate } from '../utils/formatDate'
 
 function VeterinarianAppointmentsPage() {
   const { t, locale } = useI18n()
@@ -105,7 +106,7 @@ function VeterinarianAppointmentsPage() {
           <label className="text-sm text-stone-700 dark:text-violet-100">{t('vetAppointments.slot')}
             <select required value={selection} onChange={(event) => setSelection(event.target.value)} className="mt-2 w-full rounded-2xl border border-violet-200 bg-white px-4 py-3 dark:bg-stone-950">
               <option value="">{t('vetAppointments.choose')}</option>
-              {slots.map((slot) => <option key={slot.id} value={slot.id}>{new Date(slot.startsAt).toLocaleString(locale)}</option>)}
+              {slots.map((slot) => <option key={slot.id} value={slot.id}>{formatDate(slot.startsAt, locale)}</option>)}
             </select>
           </label>
           <label className="text-sm text-stone-700 dark:text-violet-100">{t('vetAppointments.animalType')}
@@ -131,7 +132,7 @@ function VeterinarianAppointmentsPage() {
         {appointments.map((appointment) => (
           <article key={appointment.id} className="rounded-[26px] border border-white/80 bg-white/90 p-5 dark:border-violet-300/15 dark:bg-white/8">
             <h2 className="font-semibold text-stone-950 dark:text-white">{appointment.veterinarianName}</h2>
-            <p className="mt-2 text-sm text-stone-600 dark:text-violet-100/75">{new Date(appointment.startsAt).toLocaleString(locale)} · {appointment.animalType}</p>
+            <p className="mt-2 text-sm text-stone-600 dark:text-violet-100/75">{formatDate(appointment.startsAt, locale)} · {appointment.animalType}</p>
             <p className="mt-1 text-sm text-stone-700 dark:text-violet-100">{appointment.reason}</p>
             <p className="mt-2 text-xs font-semibold uppercase text-violet-700">{t(`vetAppointments.status.${appointment.status}`)}</p>
             <div className="mt-3 flex flex-wrap gap-2">

@@ -20,7 +20,7 @@ import Avatar from '../components/ui/Avatar'
 import Button from '../components/ui/Button'
 import { useAuth } from '../hooks/useAuth'
 import { useI18n } from '../hooks/useI18n'
-import { formatDate } from '../utils/formatDate'
+import { formatCurrency, formatDate } from '../utils/formatDate'
 import { getErrorMessage } from '../utils/getErrorMessage'
 
 const moderationTabs = [
@@ -676,7 +676,7 @@ function buildMeta(type, item, t) {
     return [
       { label: t('admin.moderation.meta.category'), value: formatAnimalCategory(item.category, t) },
       { label: t('admin.moderation.meta.status'), value: formatListingStatus(item.listingStatus, t) },
-      { label: t('admin.moderation.meta.mode'), value: item.isForAdoption ? t('marketplace.adoption') : `${item.price ?? 0} MAD` },
+      { label: t('admin.moderation.meta.mode'), value: item.isForAdoption ? t('marketplace.adoption') : formatCurrency(item.price) },
       { label: t('admin.moderation.meta.location'), value: item.location || t('common.notProvided') },
     ]
   }
@@ -686,7 +686,7 @@ function buildMeta(type, item, t) {
       { label: t('admin.moderation.meta.category'), value: formatProductCategory(item.category, t) },
       { label: t('admin.moderation.meta.status'), value: formatListingStatus(item.listingStatus, t) },
       { label: t('admin.moderation.meta.condition'), value: item.conditionStatus === 'used' ? t('products.labels.used') : t('products.labels.new') },
-      { label: t('admin.moderation.meta.price'), value: `${item.price ?? 0} MAD` },
+      { label: t('admin.moderation.meta.price'), value: formatCurrency(item.price) },
     ]
   }
 
@@ -715,7 +715,7 @@ function buildDeleteLabel(type, item, t) {
       { label: t('admin.moderation.meta.category'), value: item.category || t('common.notProvided') },
       { label: t('admin.moderation.meta.status'), value: item.listingStatus || t('common.notProvided') },
       { label: t('admin.moderation.meta.location'), value: item.location || t('common.notProvided') },
-      { label: t('admin.moderation.meta.price'), value: item.price === null || item.price === undefined ? t('common.notProvided') : `${item.price} MAD` },
+      { label: t('admin.moderation.meta.price'), value: item.price === null || item.price === undefined ? t('common.notProvided') : formatCurrency(item.price) },
     ]
   }
 

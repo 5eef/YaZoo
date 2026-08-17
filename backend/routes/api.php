@@ -72,6 +72,10 @@ Route::middleware([ForceJsonResponse::class, SetApiLocale::class, 'throttle:api'
     Route::get('/media/{fileId}', [MediaController::class, 'show'])
         ->where('fileId', '[A-Fa-f0-9]{24}');
 
+    Route::get('/media/private/{fileId}', [MediaController::class, 'showPrivate'])
+        ->where('fileId', '[A-Fa-f0-9]{24}')
+        ->middleware(['cookie_csrf', UseSanctumTokenFromCookie::class, 'auth:sanctum']);
+
     Route::post('/monitoring/frontend-error', [MonitoringController::class, 'store'])
         ->middleware('throttle:10,1');
 

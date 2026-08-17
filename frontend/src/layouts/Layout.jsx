@@ -31,7 +31,11 @@ import { asArray, extractDataArray, extractDataObject } from '../utils/apiData'
 import { formatDate } from '../utils/formatDate'
 import { formatBadgeCount } from '../utils/formatBadgeCount'
 import { getErrorMessage } from '../utils/getErrorMessage'
-import { sortMessageConversations } from '../utils/messages'
+import {
+  appendUniqueMessage as appendUniqueDockMessage,
+  sortMessageConversations,
+  upsertMessageConversation,
+} from '../utils/messages'
 import { OPEN_MESSAGE_DOCK_EVENT } from '../lib/messageDock'
 
 function Layout() {
@@ -276,7 +280,7 @@ function Layout() {
       }
 
       setActiveDockConversation(conversation)
-      setMessagePreview((current) => upsertConversationPreview(current, conversation))
+      setMessagePreview((current) => upsertMessageConversation(current, conversation).slice(0, 6))
       await Promise.allSettled([refreshUnreadMessagesCount(), refreshUnreadCount()])
     } catch (error) {
       setDockConversationError(getErrorMessage(error, t('messages.loadConversationError')))
@@ -301,12 +305,12 @@ function Layout() {
       latestMessage: message,
       latest_message: message,
     }))
-    setMessagePreview((current) => upsertConversationPreview(current, {
+    setMessagePreview((current) => upsertMessageConversation(current, {
       ...(conversationSummary ?? {}),
       id: conversationId,
       latestMessage: message,
       latest_message: message,
-    }))
+    }).slice(0, 6))
     await Promise.allSettled([refreshUnreadMessagesCount(), refreshUnreadCount()])
 
     return message
@@ -943,28 +947,6 @@ function upsertNotificationPreview(currentNotifications, nextNotification) {
   )
 
   return [nextNotification, ...remainingNotifications].slice(0, 8)
-}
-
-function upsertConversationPreview(currentConversations, nextConversation) {
-  if (!nextConversation?.id) {
-    return asArray(currentConversations)
-  }
-
-  const remainingConversations = asArray(currentConversations).filter(
-    (conversation) => conversation.id !== nextConversation.id,
-  )
-
-  return sortMessageConversations([nextConversation, ...remainingConversations]).slice(0, 6)
-}
-
-function appendUniqueDockMessage(messages, nextMessage) {
-  const safeMessages = asArray(messages)
-
-  if (!nextMessage?.id || safeMessages.some((message) => message.id === nextMessage.id)) {
-    return safeMessages
-  }
-
-  return [...safeMessages, nextMessage]
 }
 
 function InlinePill({ children, tone = 'stone' }) {

@@ -5,6 +5,7 @@ import { getReservationInvoiceRequest } from '../api/reservations'
 import Button from '../components/ui/Button'
 import { useI18n } from '../hooks/useI18n'
 import { getErrorMessage } from '../utils/getErrorMessage'
+import { formatCurrency, formatDateTime } from '../utils/formatDate'
 
 function InvoicePage() {
   const { t } = useI18n()
@@ -239,13 +240,7 @@ function LinkButton({ children, to, variant = 'primary', className = '' }) {
 }
 
 function formatInvoiceDate(value) {
-  return new Intl.DateTimeFormat('fr-FR', {
-    year: 'numeric',
-    month: 'long',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(value))
+  return formatDateTime(value)
 }
 
 function formatPaymentMethod(method, t) {
@@ -272,11 +267,7 @@ function formatReservationKind(kind, t) {
 }
 
 function formatPrice(value) {
-  if (!value) {
-    return '0 MAD'
-  }
-
-  return `${value} MAD`
+  return formatCurrency(value)
 }
 
 export default InvoicePage

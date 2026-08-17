@@ -7,7 +7,6 @@
   "display": "standalone",
   "background_color": "#fffaff",
   "theme_color": "#7c3aed",
-  "orientation": "portrait-primary",
   "icons": [
     {
       "src": "/icon-192.png",
@@ -28,7 +27,5 @@
       "purpose": "maskable"
     }
   ],
-  "categories": ["social", "lifestyle", "utilities"],
-  "lang": "fr",
-  "dir": "ltr"
+  "categories": ["social", "lifestyle", "utilities"]
 }

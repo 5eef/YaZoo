@@ -6,6 +6,7 @@ import { globalSearchRequest } from '../api/search'
 import Avatar from '../components/ui/Avatar'
 import Button from '../components/ui/Button'
 import { useI18n } from '../hooks/useI18n'
+import { formatCurrency } from '../utils/formatDate'
 
 const SEARCH_TABS = ['all', 'users', 'communities', 'animals', 'products', 'posts', 'services', 'veterinarians']
 
@@ -265,7 +266,7 @@ function GenericResultCard({ item, t }) {
         </span>
         <span className="mt-2 flex flex-wrap items-center gap-2 text-xs text-violet-700 dark:text-violet-200">
           {item.city ? <span>{item.city}</span> : null}
-          {item.price !== null && item.price !== undefined ? <span dir="ltr">{item.price} MAD</span> : null}
+          {item.price !== null && item.price !== undefined ? <span dir="ltr">{formatCurrency(item.price)}</span> : null}
           {item.isForAdoption ? <span>{t('marketplace.adoption')}</span> : null}
         </span>
       </span>

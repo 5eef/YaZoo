@@ -16,7 +16,7 @@ import {
   uniqueUrls,
 } from '../../features/marketplace/marketplaceUtils'
 import { getAnimalComplianceBadgeTypes } from '../../features/marketplace/animalCompliance'
-import { formatDate } from '../../utils/formatDate'
+import { formatCurrency, formatDate } from '../../utils/formatDate'
 import { useI18n } from '../../hooks/useI18n'
 
 function AnimalCard({ animal, onDelete, onEdit }) {
@@ -49,7 +49,7 @@ function AnimalCard({ animal, onDelete, onEdit }) {
           </div>
 
           <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium ${animal.isForAdoption ? 'bg-violet-100 text-violet-800' : 'bg-[linear-gradient(135deg,#7c3aed,#a855f7)] text-white'}`}>
-            {animal.isForAdoption ? t('animals.adoption') : `${animal.price ?? 0} MAD`}
+            {animal.isForAdoption ? t('animals.adoption') : formatCurrency(animal.price)}
           </span>
         </div>
 

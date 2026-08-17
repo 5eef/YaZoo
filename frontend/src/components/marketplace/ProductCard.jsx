@@ -12,7 +12,7 @@ import {
   formatProductStatus,
   uniqueUrls,
 } from '../../features/marketplace/marketplaceUtils'
-import { formatDate } from '../../utils/formatDate'
+import { formatCurrency, formatDate } from '../../utils/formatDate'
 import { useI18n } from '../../hooks/useI18n'
 
 function ProductCard({ product, onDelete, onEdit }) {
@@ -45,7 +45,7 @@ function ProductCard({ product, onDelete, onEdit }) {
           </div>
 
           <span className="rounded-full bg-[linear-gradient(135deg,#7c3aed,#a855f7)] px-3 py-1 text-xs font-medium text-white">
-            {product.price} MAD
+            {formatCurrency(product.price)}
           </span>
         </div>
 

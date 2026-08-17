@@ -16,7 +16,7 @@ import Button from '../components/ui/Button'
 import SkeletonBlock from '../components/ui/SkeletonBlock'
 import { useI18n } from '../hooks/useI18n'
 import { asArray } from '../utils/apiData'
-import { formatDate } from '../utils/formatDate'
+import { formatCurrency, formatDate } from '../utils/formatDate'
 import { getErrorMessage } from '../utils/getErrorMessage'
 
 function ReservationsPage() {
@@ -844,11 +844,7 @@ function buildReservationNextAction(reservation, t) {
 }
 
 function formatPrice(value) {
-  if (!value) {
-    return '0 MAD'
-  }
-
-  return `${value} MAD`
+  return formatCurrency(value)
 }
 
 function filterReservations(reservations, searchTerm) {

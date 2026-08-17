@@ -2,6 +2,14 @@
 
 namespace Tests\Feature\Marketplace;
 
+use App\Models\Animal;
+use App\Models\Comment;
+use App\Models\Like;
+use App\Models\Payment;
+use App\Models\Post;
+use App\Models\Product;
+use App\Models\Reservation;
+use App\Models\ServiceListing;
 use App\Models\User;
 use Database\Seeders\MarketplaceTestSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -128,14 +136,14 @@ class AzureShowcaseBootstrapTest extends TestCase
     {
         return [
             'users' => User::query()->count(),
-            'posts' => \App\Models\Post::query()->count(),
-            'comments' => \App\Models\Comment::query()->count(),
-            'likes' => \App\Models\Like::query()->count(),
-            'animals' => \App\Models\Animal::query()->count(),
-            'products' => \App\Models\Product::query()->count(),
-            'services' => \App\Models\ServiceListing::query()->count(),
-            'reservations' => \App\Models\Reservation::query()->count(),
-            'payments' => \App\Models\Payment::query()->count(),
+            'posts' => Post::query()->count(),
+            'comments' => Comment::query()->count(),
+            'likes' => Like::query()->count(),
+            'animals' => Animal::query()->count(),
+            'products' => Product::query()->count(),
+            'services' => ServiceListing::query()->count(),
+            'reservations' => Reservation::query()->count(),
+            'payments' => Payment::query()->count(),
         ];
     }
 }

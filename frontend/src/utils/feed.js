@@ -1,4 +1,5 @@
 import { asArray } from './apiData'
+import { formatCurrency } from './formatDate'
 
 export function buildStoryRowItems(storyGroups, user, t) {
   const safeStoryGroups = asArray(storyGroups)
@@ -148,7 +149,7 @@ export function buildMarketplaceHighlights(animals, products, userId, options = 
       id: animal.id,
       kind: 'animal',
       title: animal.name,
-      priceLabel: animal.isForAdoption ? options.t?.('animals.adoption') ?? 'Adoption' : `${animal.price ?? 0} MAD`,
+      priceLabel: animal.isForAdoption ? options.t?.('animals.adoption') ?? 'Adoption' : formatCurrency(animal.price),
       location: animal.location,
       createdAt: animal.createdAt,
       href: `/marketplace/animals/${animal.id}`,
@@ -160,7 +161,7 @@ export function buildMarketplaceHighlights(animals, products, userId, options = 
       id: product.id,
       kind: 'product',
       title: product.name,
-      priceLabel: `${product.price ?? 0} MAD`,
+      priceLabel: formatCurrency(product.price),
       location: product.location,
       createdAt: product.createdAt,
       href: `/marketplace/products/${product.id}`,

@@ -35,7 +35,7 @@ git reflog expire --expire=now --all
 git gc --prune=now --aggressive
 ```
 
-Apres purge, changer tous les secrets dans Azure/GitHub/local: `APP_KEY`, `DB_PASSWORD`, `DB_ROOT_PASSWORD`, `JWT_SECRET`, mots de passe Redis/MySQL et tokens tiers. Ne jamais reutiliser les anciennes valeurs.
+Apres purge, changer tous les secrets dans Azure/GitHub/local: `APP_KEY`, `DB_PASSWORD`, `DB_ROOT_PASSWORD`, mots de passe Redis/MySQL et tokens tiers. Ne jamais reutiliser les anciennes valeurs.
 
 Generer une nouvelle cle Laravel:
 
@@ -50,13 +50,8 @@ Headers et HTTPS sont actifs via:
 - `backend\app\Http\Middleware\SecurityHeaders.php`
 - `APP_FORCE_HTTPS=true` en production
 
-Package secure headers optionnel demande par l'audit:
-
-```powershell
-cd "C:\Users\seef7\OneDrive\Desktop\YaZoo\backend"
-composer require bepsvpt/secure-headers
-php artisan vendor:publish --provider="Bepsvpt\SecureHeaders\SecureHeadersServiceProvider"
-```
+La CSP est appliquée à la fois par le middleware Laravel et les configurations
+Nginx afin de rester présente si l'un des reverse proxies change.
 
 ## Backend Laravel
 
@@ -210,9 +205,11 @@ Workflow: `.github\workflows\deploy.yml`
 
 Secrets GitHub requis:
 
-- `AZURE_CREDENTIALS`
 - `DOCKERHUB_USERNAME`
 - `DOCKERHUB_TOKEN`
+
+L'authentification Azure utilise OIDC, sans secret `AZURE_CREDENTIALS`, via les
+variables `AZURE_CLIENT_ID`, `AZURE_TENANT_ID` et `AZURE_SUBSCRIPTION_ID`.
 
 Variables de l'environnement GitHub `production`:
 
@@ -222,6 +219,9 @@ Variables de l'environnement GitHub `production`:
 - `AZURE_BACKEND_URL`
 - `AZURE_FRONTEND_URL`
 - `AZURE_MYSQL_SERVER_NAME`
+- `AZURE_DATABASE2_HOST`
+- `AZURE_DATABASE2_PORT`
+- `AZURE_DATABASE2_NAME`
 
 L'environnement GitHub `production` doit exiger une approbation humaine avant le
 job `build-and-deploy` et limiter les branches autorisees. GitHub ne versionne pas

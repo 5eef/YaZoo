@@ -47,8 +47,14 @@ LABEL org.opencontainers.image.title="YaZoo Frontend" \
 COPY infra/nginx/frontend.conf /etc/nginx/templates/default.conf.template
 COPY --from=build /app/frontend/dist /usr/share/nginx/html
 COPY LICENSE /usr/share/nginx/html/LICENSE.txt
-RUN printf '{"version":"%s"}\n' "$APP_VERSION" > /usr/share/nginx/html/version.json
+RUN set -eux; \
+    printf '{"version":"%s"}\n' "$APP_VERSION" > /usr/share/nginx/html/version.json; \
+    sed -i 's/listen  *80;/listen 8080;/' /etc/nginx/templates/default.conf.template; \
+    sed -i 's!^[[:space:]]*pid[[:space:]].*;!pid /tmp/nginx.pid;!' /etc/nginx/nginx.conf; \
+    chown -R nginx:nginx /etc/nginx/conf.d /var/cache/nginx /usr/share/nginx/html
 
-EXPOSE 80
+USER nginx
+
+EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD wget -qO- http://127.0.0.1/ >/dev/null || exit 1
+    CMD wget -qO- http://127.0.0.1:8080/ >/dev/null || exit 1

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+>
+    <testsuites>
+        <testsuite name="Safe Database 2 integration">
+            <file>tests/Integration/Database2CompatibilityTest.php</file>
+            <file>tests/Integration/VeterinarianAppointmentMySqlConcurrencyTest.php</file>
+            <file>tests/Integration/ReservationPaymentMySqlIntegrationTest.php</file>
+        </testsuite>
+    </testsuites>
+    <source>
+        <include>
+            <directory>app</directory>
+        </include>
+    </source>
+    <php>
+        <env name="APP_ENV" value="database2" force="true"/>
+        <env name="APP_LOCALE" value="fr" force="true"/>
+        <env name="APP_FALLBACK_LOCALE" value="fr" force="true"/>
+        <env name="BCRYPT_ROUNDS" value="4"/>
+        <env name="CACHE_STORE" value="array"/>
+        <env name="MAIL_MAILER" value="array"/>
+        <env name="MEDIA_STORAGE_DRIVER" value="filesystem"/>
+        <env name="MEDIA_FILESYSTEM_DISK" value="public"/>
+        <env name="PULSE_ENABLED" value="false"/>
+        <env name="QUEUE_CONNECTION" value="sync"/>
+        <env name="SESSION_DRIVER" value="array"/>
+        <env name="TELESCOPE_ENABLED" value="false"/>
+        <env name="YAZOO_MYSQL_CONCURRENCY_TEST" value="true" force="true"/>
+    </php>
+</phpunit>

@@ -1,26 +1,6 @@
 #!/bin/sh
 set -e
 
-mkdir -p /var/lib/nginx/tmp /var/log/nginx /run/nginx storage/app storage/app/private
-
-if [ -d /home/site ]; then
-    mkdir -p /home/site/yazoo-storage/app/public /home/site/yazoo-storage/app/private
-    rm -rf storage/app/public
-    ln -s /home/site/yazoo-storage/app/public storage/app/public
-    rm -rf storage/app/private
-    ln -s /home/site/yazoo-storage/app/private storage/app/private
-else
-    mkdir -p storage/app/public storage/app/private
-fi
-
-chown -R nginx:nginx /var/lib/nginx /var/log/nginx /run/nginx
-chown -R www-data:www-data storage bootstrap/cache
-
-if [ -d /home/site/yazoo-storage ]; then
-    chown -R www-data:www-data /home/site/yazoo-storage
-fi
-cp /var/www/html/nginx.conf /etc/nginx/http.d/default.conf
-
 if [ "${YAZOO_RUN_SHOWCASE_BOOTSTRAP:-false}" = "true" ]; then
     if [ "${YAZOO_RUN_MIGRATIONS:-false}" != "true" ]; then
         echo "YAZOO_RUN_MIGRATIONS=true is required for showcase bootstrap." >&2
@@ -32,14 +12,14 @@ if [ "${YAZOO_RUN_SHOWCASE_BOOTSTRAP:-false}" = "true" ]; then
         exit 1
     fi
 
-    su-exec www-data php artisan yazoo:migrate-production
+    php artisan yazoo:migrate-production
 
     if [ "${YAZOO_RESET_RUNTIME_STATE:-false}" = "true" ]; then
-        su-exec www-data php artisan cache:clear
-        su-exec www-data php artisan queue:clear "${QUEUE_CONNECTION:-redis}" --force
+        php artisan cache:clear
+        php artisan queue:clear "${QUEUE_CONNECTION:-redis}" --force
     fi
 
-    su-exec www-data php artisan yazoo:bootstrap-azure-showcase \
+    php artisan yazoo:bootstrap-azure-showcase \
         --images="${YAZOO_SHOWCASE_IMAGES_PATH:-/opt/yazoo-showcase-images}" \
         --confirmation="${YAZOO_SHOWCASE_CONFIRMATION}"
 
@@ -47,19 +27,19 @@ if [ "${YAZOO_RUN_SHOWCASE_BOOTSTRAP:-false}" = "true" ]; then
 else
     if [ "${YAZOO_RUN_MIGRATIONS:-false}" = "true" ]; then
         sh /var/www/html/scripts/run-production-preflight.sh --configuration-only
-        su-exec www-data php artisan yazoo:migrate-production
+        php artisan yazoo:migrate-production
     fi
 
     sh /var/www/html/scripts/run-production-preflight.sh
 
     if [ "${YAZOO_RESET_RUNTIME_STATE:-false}" = "true" ]; then
-        su-exec www-data php artisan cache:clear
-        su-exec www-data php artisan queue:clear "${QUEUE_CONNECTION:-redis}" --force
+        php artisan cache:clear
+        php artisan queue:clear "${QUEUE_CONNECTION:-redis}" --force
     fi
 fi
 
 if [ "${YAZOO_RUNTIME_OPTIMIZE:-true}" = "true" ]; then
-    su-exec www-data php artisan optimize
+    php artisan optimize
 fi
 
 managed_pids=""
@@ -117,11 +97,11 @@ check_managed_process() {
 trap 'shutdown_managed_processes 143' TERM INT
 
 if [ "${YAZOO_RUN_SCHEDULER:-false}" = "true" ]; then
-    start_managed_process scheduler su-exec www-data php artisan schedule:work
+    start_managed_process scheduler php artisan schedule:work
 fi
 
 if [ "${YAZOO_RUN_QUEUE_WORKER:-false}" = "true" ]; then
-    start_managed_process queue su-exec www-data php artisan queue:work "${QUEUE_CONNECTION:-redis}" --sleep="${YAZOO_QUEUE_SLEEP:-1}" --tries="${YAZOO_QUEUE_TRIES:-3}" --backoff="${YAZOO_QUEUE_BACKOFF:-5}" --timeout="${YAZOO_QUEUE_TIMEOUT:-90}" --memory="${YAZOO_QUEUE_MEMORY:-256}"
+    start_managed_process queue php artisan queue:work "${QUEUE_CONNECTION:-redis}" --sleep="${YAZOO_QUEUE_SLEEP:-1}" --tries="${YAZOO_QUEUE_TRIES:-3}" --backoff="${YAZOO_QUEUE_BACKOFF:-5}" --timeout="${YAZOO_QUEUE_TIMEOUT:-90}" --memory="${YAZOO_QUEUE_MEMORY:-256}"
 fi
 
 start_managed_process php_fpm php-fpm -F

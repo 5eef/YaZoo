@@ -1,10 +1,14 @@
 name: CI
 
 on:
-  push:
-    branches: [main]
   pull_request:
   workflow_call:
+    inputs:
+      build_containers:
+        description: Build and scan containers in this reusable run
+        required: false
+        default: true
+        type: boolean
     secrets:
       SONAR_TOKEN:
         required: false
@@ -157,9 +161,9 @@ jobs:
         working-directory: backend
         run: php artisan migrate --force --no-interaction
 
-      - name: Run real MySQL account-deletion concurrency tests
+      - name: Run real MySQL concurrency tests
         working-directory: backend
-        run: ./vendor/bin/phpunit --fail-on-skipped tests/Integration/AccountDeletionMySqlConcurrencyTest.php
+        run: ./vendor/bin/phpunit --fail-on-skipped tests/Integration/AccountDeletionMySqlConcurrencyTest.php tests/Integration/VeterinarianAppointmentMySqlConcurrencyTest.php tests/Integration/Database2CompatibilityTest.php tests/Integration/ReservationPaymentMySqlIntegrationTest.php
 
   container-and-secrets:
     runs-on: ubuntu-latest
@@ -202,10 +206,42 @@ jobs:
         run: docker compose config --quiet
 
       - name: Build backend container
+        if: github.event_name != 'workflow_call' || inputs.build_containers
         run: docker build --build-arg APP_VERSION="${GITHUB_SHA}" -f backend/Dockerfile -t yazoo-api:ci .
 
       - name: Build frontend container
+        if: github.event_name != 'workflow_call' || inputs.build_containers
         run: docker build --build-arg APP_VERSION="${GITHUB_SHA}" -f frontend/Dockerfile -t yazoo-frontend:ci .
+
+      - name: Generate CycloneDX SBOMs with Syft
+        if: github.event_name != 'workflow_call' || inputs.build_containers
+        run: |
+          mkdir -p security-artifacts
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/security-artifacts:/out" \
+            anchore/syft@sha256:1288ea4c8b38767b4e620c1e312c8cb26b6e887a99b4f07ab6cd19fc6f225026 \
+            yazoo-api:ci -o cyclonedx-json=/out/yazoo-api.cdx.json
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/security-artifacts:/out" \
+            anchore/syft@sha256:1288ea4c8b38767b4e620c1e312c8cb26b6e887a99b4f07ab6cd19fc6f225026 \
+            yazoo-frontend:ci -o cyclonedx-json=/out/yazoo-frontend.cdx.json
+
+      - name: Scan release images with Trivy
+        if: github.event_name != 'workflow_call' || inputs.build_containers
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy@sha256:cffe3f5161a47a6823fbd23d985795b3ed72a4c806da4c4df16266c02accdd6f \
+            image --ignore-unfixed --severity CRITICAL,HIGH --exit-code 1 yazoo-api:ci
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy@sha256:cffe3f5161a47a6823fbd23d985795b3ed72a4c806da4c4df16266c02accdd6f \
+            image --ignore-unfixed --severity CRITICAL,HIGH --exit-code 1 yazoo-frontend:ci
+
+      - name: Upload SBOM artifacts
+        if: github.event_name != 'workflow_call' || inputs.build_containers
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-sboms-${{ github.sha }}
+          path: security-artifacts/*.cdx.json
+          if-no-files-found: error
+          retention-days: 30
 
       - name: Scan repository for secrets
         uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
