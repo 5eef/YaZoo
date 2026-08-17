@@ -13,9 +13,22 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
+cat > "$fake_bin/id" <<'EOF'
+#!/bin/sh
+printf '%s\n' "${PREFLIGHT_FAKE_UID:-1000}"
+EOF
+chmod +x "$fake_bin/id"
+
+cat > "$fake_bin/php" <<'EOF'
+#!/bin/sh
+printf 'php %s\n' "$*" >> "$PREFLIGHT_INVOCATION_LOG"
+exit "${PREFLIGHT_FAKE_EXIT_CODE:-0}"
+EOF
+chmod +x "$fake_bin/php"
+
 cat > "$fake_bin/su-exec" <<'EOF'
 #!/bin/sh
-printf '%s\n' "$*" >> "$PREFLIGHT_INVOCATION_LOG"
+printf 'su-exec %s\n' "$*" >> "$PREFLIGHT_INVOCATION_LOG"
 exit "${PREFLIGHT_FAKE_EXIT_CODE:-0}"
 EOF
 chmod +x "$fake_bin/su-exec"
@@ -26,6 +39,7 @@ run_gate() {
     enabled="$3"
     fake_status="$4"
     mode="${5:-full}"
+    fake_uid="${6:-1000}"
     output_file="$test_root/output"
 
     : > "$invocation_log"
@@ -33,6 +47,7 @@ run_gate() {
     PATH="$fake_bin:$PATH" \
         PREFLIGHT_INVOCATION_LOG="$invocation_log" \
         PREFLIGHT_FAKE_EXIT_CODE="$fake_status" \
+        PREFLIGHT_FAKE_UID="$fake_uid" \
         APP_ENV="$app_environment" \
         YAZOO_RUN_PRODUCTION_PREFLIGHT="$enabled" \
         sh "$gate" "$mode" > "$output_file" 2>&1
@@ -48,13 +63,16 @@ run_gate() {
 }
 
 run_gate 0 production true 0
-grep -Fxq 'www-data php artisan yazoo:preflight-production' "$invocation_log"
+grep -Fxq 'php artisan yazoo:preflight-production' "$invocation_log"
 
 run_gate 23 production true 23
-grep -Fxq 'www-data php artisan yazoo:preflight-production' "$invocation_log"
+grep -Fxq 'php artisan yazoo:preflight-production' "$invocation_log"
 
 run_gate 0 production true 0 --configuration-only
-grep -Fxq 'www-data php artisan yazoo:preflight-production --configuration-only' "$invocation_log"
+grep -Fxq 'php artisan yazoo:preflight-production --configuration-only' "$invocation_log"
+
+run_gate 0 production true 0 full 0
+grep -Fxq 'su-exec www-data php artisan yazoo:preflight-production' "$invocation_log"
 
 run_gate 64 production true 0 --unsupported
 test ! -s "$invocation_log"

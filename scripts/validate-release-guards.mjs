@@ -39,6 +39,9 @@ assert.doesNotMatch(
   'latest must not be pushed before rollout',
 )
 assert.match(deploy, /MYSQL_SERVER: \$\{\{ vars\.AZURE_MYSQL_SERVER_NAME \}\}/)
+assert.match(deploy, /\.fullyQualifiedDomainName \/\/ empty/)
+assert.match(deploy, /az mysql flexible-server db show/)
+assert.match(deploy, /--database-name "\$EXPECTED_DB_NAME"/)
 assert.match(deploy, /YAZOO_RUN_PRODUCTION_PREFLIGHT=true/)
 assert.match(deploy, /Production deployment is allowed only from refs\/heads\/main/)
 assert.match(deploy, /id-token:\s*write/u)
