@@ -52,6 +52,50 @@ jobs:
             echo "::error::Production deployment is allowed only from refs/heads/main."
             exit 1
           fi
+
+      - name: Validate guarded DB2 administrator bootstrap secrets
+        shell: bash
+        env:
+          RELEASE_ADMIN_NAME: ${{ secrets.YAZOO_RELEASE_ADMIN_NAME }}
+          RELEASE_ADMIN_EMAIL: ${{ secrets.YAZOO_RELEASE_ADMIN_EMAIL }}
+          RELEASE_ADMIN_PASSWORD: ${{ secrets.YAZOO_RELEASE_ADMIN_PASSWORD }}
+          RELEASE_ADMIN_MFA_SECRET: ${{ secrets.YAZOO_RELEASE_ADMIN_MFA_SECRET }}
+          RELEASE_ADMIN_MFA_RECOVERY_CODES: ${{ secrets.YAZOO_RELEASE_ADMIN_MFA_RECOVERY_CODES }}
+        run: |
+          set -euo pipefail
+          for secret_name in RELEASE_ADMIN_NAME RELEASE_ADMIN_EMAIL RELEASE_ADMIN_PASSWORD RELEASE_ADMIN_MFA_SECRET RELEASE_ADMIN_MFA_RECOVERY_CODES; do
+            if [ -z "${!secret_name}" ]; then
+              echo "::error::GitHub production secret ${secret_name} is required for the guarded DB2 administrator bootstrap."
+              exit 1
+            fi
+          done
+          if ! [[ "$RELEASE_ADMIN_EMAIL" =~ ^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$ ]]; then
+            echo "::error::The release administrator email secret is invalid."
+            exit 1
+          fi
+          if [ "${#RELEASE_ADMIN_PASSWORD}" -lt 16 ] \
+            || ! [[ "$RELEASE_ADMIN_PASSWORD" =~ [[:lower:]] ]] \
+            || ! [[ "$RELEASE_ADMIN_PASSWORD" =~ [[:upper:]] ]] \
+            || ! [[ "$RELEASE_ADMIN_PASSWORD" =~ [[:digit:]] ]] \
+            || [[ "$RELEASE_ADMIN_PASSWORD" =~ ^[[:alnum:]]+$ ]]; then
+            echo "::error::The release administrator password secret does not satisfy the production policy."
+            exit 1
+          fi
+          if ! [[ "$RELEASE_ADMIN_MFA_SECRET" =~ ^[A-Z2-7]{32,64}$ ]]; then
+            echo "::error::The release administrator MFA secret must be a 32-64 character Base32 value."
+            exit 1
+          fi
+          IFS=',' read -r -a recovery_codes <<< "$RELEASE_ADMIN_MFA_RECOVERY_CODES"
+          if [ "${#recovery_codes[@]}" -ne 8 ]; then
+            echo "::error::Exactly eight release administrator recovery codes are required."
+            exit 1
+          fi
+          for recovery_code in "${recovery_codes[@]}"; do
+            if ! [[ "$recovery_code" =~ ^[A-F0-9]{10}$ ]]; then
+              echo "::error::Release administrator recovery codes must use the expected format."
+              exit 1
+            fi
+          done
           if ! [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]; then
             echo "::error::Production deployment requires the exact 40-character Git SHA."
             exit 1
@@ -68,6 +112,9 @@ jobs:
             -t "${BACKEND_IMAGE}" .
           docker build --build-arg APP_VERSION="${GITHUB_SHA}" -f frontend/Dockerfile \
             -t "${FRONTEND_IMAGE}" .
+
+      - name: Smoke-test immutable images before publication
+        run: sh scripts/smoke-test-release-images.sh "${BACKEND_IMAGE}" "${FRONTEND_IMAGE}"
 
       - name: Push immutable SHA images
         run: |
@@ -175,9 +222,20 @@ jobs:
             echo "db_name=$backend_db_name_previous"
           } >> "$GITHUB_OUTPUT"
 
+      - name: Enable bounded container deployment diagnostics
+        run: |
+          az webapp log config --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP" \
+            --docker-container-logging filesystem --output none
+
       - name: Deploy exact SHA with one locked startup migration
         id: rollout
         continue-on-error: true
+        env:
+          RELEASE_ADMIN_NAME: ${{ secrets.YAZOO_RELEASE_ADMIN_NAME }}
+          RELEASE_ADMIN_EMAIL: ${{ secrets.YAZOO_RELEASE_ADMIN_EMAIL }}
+          RELEASE_ADMIN_PASSWORD: ${{ secrets.YAZOO_RELEASE_ADMIN_PASSWORD }}
+          RELEASE_ADMIN_MFA_SECRET: ${{ secrets.YAZOO_RELEASE_ADMIN_MFA_SECRET }}
+          RELEASE_ADMIN_MFA_RECOVERY_CODES: ${{ secrets.YAZOO_RELEASE_ADMIN_MFA_RECOVERY_CODES }}
         run: |
           set -euo pipefail
 
@@ -207,6 +265,12 @@ jobs:
           az webapp stop --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP"
           az webapp config appsettings set --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP" \
             --settings "APP_VERSION=${GITHUB_SHA}" "YAZOO_RUN_PRODUCTION_PREFLIGHT=true" "YAZOO_RUN_MIGRATIONS=true" \
+              "YAZOO_RUN_RELEASE_ADMIN_BOOTSTRAP=true" "YAZOO_RELEASE_ADMIN_BOOTSTRAP_ENABLED=true" \
+              "YAZOO_RELEASE_ADMIN_BOOTSTRAP_CONFIRMATION=${EXPECTED_DB_HOST}/${EXPECTED_DB_NAME}" \
+              "YAZOO_RELEASE_ADMIN_NAME=${RELEASE_ADMIN_NAME}" "YAZOO_RELEASE_ADMIN_EMAIL=${RELEASE_ADMIN_EMAIL}" \
+              "YAZOO_RELEASE_ADMIN_PASSWORD=${RELEASE_ADMIN_PASSWORD}" \
+              "YAZOO_RELEASE_ADMIN_MFA_SECRET=${RELEASE_ADMIN_MFA_SECRET}" \
+              "YAZOO_RELEASE_ADMIN_MFA_RECOVERY_CODES=${RELEASE_ADMIN_MFA_RECOVERY_CODES}" \
               "DB_HOST=${EXPECTED_DB_HOST}" "DB_PORT=${EXPECTED_DB_PORT}" "DB_DATABASE=${EXPECTED_DB_NAME}" \
               "YAZOO_REQUIRE_EXPECTED_DATABASE=true" "YAZOO_EXPECTED_DB_HOST=${EXPECTED_DB_HOST}" \
               "YAZOO_EXPECTED_DB_PORT=${EXPECTED_DB_PORT}" "YAZOO_EXPECTED_DB_NAME=${EXPECTED_DB_NAME}" \
@@ -217,15 +281,22 @@ jobs:
 
           if ! wait_backend; then
             echo "::error::Backend migration, health, or SHA verification failed."
+            timeout 30s az webapp log tail --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP" || true
             exit 1
           fi
 
           az webapp config appsettings set --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP" \
-            --settings "APP_VERSION=${GITHUB_SHA}" "YAZOO_RUN_PRODUCTION_PREFLIGHT=true" "YAZOO_RUN_MIGRATIONS=false" --output none
+            --settings "APP_VERSION=${GITHUB_SHA}" "YAZOO_RUN_PRODUCTION_PREFLIGHT=true" "YAZOO_RUN_MIGRATIONS=false" \
+              "YAZOO_RUN_RELEASE_ADMIN_BOOTSTRAP=false" "YAZOO_RELEASE_ADMIN_BOOTSTRAP_ENABLED=false" --output none
+          az webapp config appsettings delete --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP" \
+            --setting-names YAZOO_RELEASE_ADMIN_BOOTSTRAP_CONFIRMATION YAZOO_RELEASE_ADMIN_NAME \
+              YAZOO_RELEASE_ADMIN_EMAIL YAZOO_RELEASE_ADMIN_PASSWORD YAZOO_RELEASE_ADMIN_MFA_SECRET \
+              YAZOO_RELEASE_ADMIN_MFA_RECOVERY_CODES --output none
           az webapp restart --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP"
 
           if ! wait_backend; then
             echo "::error::Backend failed after disabling startup migrations."
+            timeout 30s az webapp log tail --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP" || true
             exit 1
           fi
 
@@ -267,10 +338,15 @@ jobs:
         id: rollback
         run: |
           set -euo pipefail
+          az webapp config appsettings delete --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP" \
+            --setting-names YAZOO_RELEASE_ADMIN_BOOTSTRAP_CONFIRMATION YAZOO_RELEASE_ADMIN_NAME \
+              YAZOO_RELEASE_ADMIN_EMAIL YAZOO_RELEASE_ADMIN_PASSWORD YAZOO_RELEASE_ADMIN_MFA_SECRET \
+              YAZOO_RELEASE_ADMIN_MFA_RECOVERY_CODES --output none
           az webapp config container set --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP" \
             --docker-custom-image-name "${{ steps.previous.outputs.backend }}" --docker-registry-server-url https://index.docker.io --output none
           az webapp config appsettings set --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP" \
             --settings "APP_VERSION=${{ steps.previous.outputs.backend_version }}" "YAZOO_RUN_PRODUCTION_PREFLIGHT=true" "YAZOO_RUN_MIGRATIONS=false" \
+              "YAZOO_RUN_RELEASE_ADMIN_BOOTSTRAP=false" "YAZOO_RELEASE_ADMIN_BOOTSTRAP_ENABLED=false" \
               "DB_HOST=${{ steps.previous.outputs.db_host }}" "DB_PORT=${{ steps.previous.outputs.db_port }}" \
               "DB_DATABASE=${{ steps.previous.outputs.db_name }}" "YAZOO_REQUIRE_EXPECTED_DATABASE=false" --output none
           az webapp config container set --resource-group "$RESOURCE_GROUP" --name "$FRONTEND_WEBAPP" \

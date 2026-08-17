@@ -17,6 +17,11 @@ fi
 
 chown -R www-data:www-data /var/lib/nginx /var/log/nginx /run/nginx storage bootstrap/cache
 
+# Docker creates stdout/stderr pipes for root. Nginx and PHP-FPM reopen these
+# paths while starting, so the non-root runtime user needs write permission.
+# This changes only the container log pipes, never application files or data.
+chmod a+w /dev/stdout /dev/stderr
+
 if [ -d /home/site/yazoo-storage ]; then
     chown -R www-data:www-data /home/site/yazoo-storage
 fi

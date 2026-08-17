@@ -36,7 +36,6 @@ RUN set -eux; \
         icu-libs \
         libzip \
         nginx \
-        supervisor \
         su-exec; \
     apk add --no-cache --virtual .build-deps \
         $PHPIZE_DEPS \
@@ -52,7 +51,8 @@ RUN set -eux; \
         zip; \
     pecl install redis-6.3.0 mongodb-2.3.3; \
     docker-php-ext-enable redis mongodb opcache; \
-    apk del .build-deps
+    apk del .build-deps; \
+    sed -i '/^user[[:space:]]/d' /etc/nginx/nginx.conf
 
 COPY --from=vendor /app/vendor ./vendor
 COPY backend/ ./

@@ -22,6 +22,18 @@ return [
         'trim',
         explode(',', (string) env('YAZOO_PROTECTED_DB_NAMES', '')),
     ))),
+    'release_admin_bootstrap_enabled' => filter_var(
+        env('YAZOO_RELEASE_ADMIN_BOOTSTRAP_ENABLED', false),
+        FILTER_VALIDATE_BOOL,
+    ),
+    'release_admin_bootstrap_confirmation' => env('YAZOO_RELEASE_ADMIN_BOOTSTRAP_CONFIRMATION'),
+    'release_admin' => [
+        'name' => env('YAZOO_RELEASE_ADMIN_NAME'),
+        'email' => env('YAZOO_RELEASE_ADMIN_EMAIL'),
+        'password' => env('YAZOO_RELEASE_ADMIN_PASSWORD'),
+        'mfa_secret' => env('YAZOO_RELEASE_ADMIN_MFA_SECRET'),
+        'mfa_recovery_codes' => env('YAZOO_RELEASE_ADMIN_MFA_RECOVERY_CODES'),
+    ],
     'account_deletion_retry_max_attempts' => (int) env('YAZOO_ACCOUNT_DELETION_RETRY_MAX_ATTEMPTS', 5),
     'account_deletion_retry_batch_size' => (int) env('YAZOO_ACCOUNT_DELETION_RETRY_BATCH_SIZE', 25),
     'account_deletion_processing_lease_seconds' => (int) env('YAZOO_ACCOUNT_DELETION_PROCESSING_LEASE_SECONDS', 900),

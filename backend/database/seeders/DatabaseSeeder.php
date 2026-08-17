@@ -13,7 +13,7 @@ class DatabaseSeeder extends Seeder
     {
         if (app()->isProduction()) {
             throw new \RuntimeException(
-                'Demo seeders are disabled in production. Use yazoo:create-admin interactively.',
+                'Demo seeders are disabled in production. Use the guarded yazoo:bootstrap-release-admin command for a new release database.',
             );
         }
 

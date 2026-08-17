@@ -38,9 +38,16 @@ class AccountDeletionMySqlConcurrencyTest extends TestCase
         // These tests intentionally avoid a wrapping database transaction so
         // that their child processes can observe committed fixtures. Isolate
         // the explicitly disposable database between test methods instead.
-        DB::table('jobs')->delete();
-        DataDeletionRequest::query()->delete();
-        User::query()->delete();
+        $this->clearDisposableFixtures();
+    }
+
+    protected function tearDown(): void
+    {
+        if (config('database.default') === 'mysql') {
+            $this->clearDisposableFixtures();
+        }
+
+        parent::tearDown();
     }
 
     public function test_two_workers_recover_one_expired_pre_anonymization_lease_once(): void
@@ -184,7 +191,11 @@ class AccountDeletionMySqlConcurrencyTest extends TestCase
 
             foreach ($processes as $process) {
                 $process->wait();
-                $this->assertSame(0, $process->getExitCode(), 'A concurrency worker exited unsuccessfully.');
+                $this->assertSame(0, $process->getExitCode(), sprintf(
+                    "A concurrency worker exited unsuccessfully.\nstdout: %s\nstderr: %s",
+                    trim($process->getOutput()),
+                    trim($process->getErrorOutput()),
+                ));
             }
         } finally {
             foreach (glob($barrier.DIRECTORY_SEPARATOR.'*') ?: [] as $temporaryFile) {
@@ -223,5 +234,12 @@ class AccountDeletionMySqlConcurrencyTest extends TestCase
             'YAZOO_ACCOUNT_DELETION_RETRY_MAX_ATTEMPTS' => '5',
             'YAZOO_ACCOUNT_DELETION_UNIQUE_LOCK_STORE' => 'redis',
         ];
+    }
+
+    private function clearDisposableFixtures(): void
+    {
+        DB::table('jobs')->delete();
+        DataDeletionRequest::query()->delete();
+        User::query()->delete();
     }
 }

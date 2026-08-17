@@ -1,6 +1,6 @@
 # Plan de déploiement Azure YaZoo — release DATABASE #2
 
-> **Status:** Approved
+> **Status:** Validated
 
 Mise à jour : 2026-08-14 (Africa/Casablanca)
 
@@ -98,21 +98,85 @@ DATABASE #2 et le déploiement. Elle interdit tout `DROP`, `migrate:fresh`,
   bloqué et traité comme incident.
 - DATABASE #2 est conservée pour diagnostic. DATABASE #1 reste inchangée.
 
+## Role Assignment Verification
+
+- Status: Verified for the existing non-IaC deployment.
+- Static source: `.github/workflows/deploy.yml`; no Bicep/Terraform role
+  assignment is present because this release reuses existing resources.
+- Deploying identity: `yazoo-github-actions`, federated only for
+  `repo:Seef590/YaZoo:environment:production` with the Azure token-exchange
+  audience.
+- Live least-privilege assignments confirmed:
+  - Website Contributor scoped to `yazoo-api`;
+  - Website Contributor scoped to `yazoo`;
+  - Reader scoped to `yazoo-mysql-0c2b09` for backup/database validation.
+- The workflow does not read Key Vault data-plane secrets and therefore does
+  not require a Key Vault data role.
+- Residual maintainability risk: RBAC is not declared as code. Exporting these
+  existing assignments to Bicep is recommended after the release, without
+  reprovisioning resources during this corrective rollout.
+- Subscription policy observed: `sys.regionrestriction`; the release creates
+  no resource and keeps the existing regions.
+
 ## Critères de validation
 
+- [x] All validation checks pass.
+  - [x] Azure CLI authentifié sur l'abonnement explicitement sélectionné `Azure for Students`.
+  - [x] Ressources App Service, MySQL et DATABASE #2 inspectées sans mutation de DATABASE #1.
+  - [x] Workflows GitHub validés par Actionlint et par les garde-fous de release.
+  - [x] Backend validé par Composer, Pint et PHPUnit.
+  - [x] Frontend validé par ESLint, TypeScript, Vitest, Vite et Playwright/axe.
+  - [x] Images backend/frontend construites et démarrées réellement en non-root.
+  - [x] Migrations et tests d'intégration exécutés sur MySQL 8 jetable, sans commande destructive.
+  - [x] Les cinq secrets GitHub du premier administrateur DB2 sont configurés par
+    le script garde-fou; son paquet de récupération DPAPI post-écriture est présent.
+  - [x] La validation Azure pré-déploiement est terminée.
+  - [ ] Le déploiement du SHA corrigé est terminé.
 - [ ] CI backend/frontend verte.
-- [ ] Pint vert.
-- [ ] Analyse statique exécutée ou blocage documenté.
-- [ ] Docker Compose valide et images construites.
-- [ ] Processus durables des images exécutés non-root.
-- [ ] DATABASE #1 prouvée protégée.
-- [ ] DATABASE #2 locale migrée sans commande destructive.
-- [ ] Concurrence MySQL réelle verte.
-- [ ] DATABASE #2 Azure créée/accessible sans modifier DATABASE #1.
-- [ ] Variables de cible GitHub/Azure exactes.
+- [x] Pint vert.
+- [x] Analyse statique exécutée ou blocage documenté.
+- [x] Docker Compose valide et images construites.
+- [x] Processus durables des images exécutés non-root.
+- [x] DATABASE #1 prouvée protégée.
+- [x] DATABASE #2 locale migrée sans commande destructive.
+- [x] Concurrence MySQL réelle verte.
+- [x] DATABASE #2 Azure créée/accessible sans modifier DATABASE #1.
+- [x] Variables de cible GitHub/Azure exactes.
 - [ ] Health checks, API, auth et parcours critiques vérifiés.
 - [ ] Plan de rollback documenté avec tags réels.
 
 Le plan passe à `Validated` uniquement après validation locale, validation Azure
 read-only et preuve de l'accès DATABASE #2. Il ne passe à `Deployed` qu'après
 les vérifications post-déploiement réelles.
+
+## Section 7: Validation Proof
+
+Horodatage de la preuve locale et Azure : `2026-08-17T12:06:49+01:00`.
+
+| Domaine | Commande/preuve | Résultat |
+| --- | --- | --- |
+| Composer | `composer validate --strict` | PASS |
+| Dépendances PHP | `composer audit` | Réseau Packagist bloqué localement; dernier job GitHub avant correction PASS, à relancer sur le nouveau SHA |
+| Format PHP | `vendor/bin/pint --test` | PASS |
+| Backend | `php artisan test --compact` | PASS — 383 tests, 2 080 assertions |
+| MySQL 8 jetable | `yazoo:migrate-production --force`, puis `migrate:status` | PASS — 60 migrations, cible distincte `127.0.0.1:13316/yazoo_release_validation` |
+| Intégration MySQL | PHPUnit des cinq suites DB2/concurrence/bootstrap | PASS — 10 tests, 62 assertions |
+| Frontend statique | ESLint, TypeScript, i18n et audit Tailwind | PASS — 1 964 clés identiques FR/AR/EN |
+| Frontend tests | Vitest avec couverture | PASS — 38 fichiers, 130 tests |
+| Frontend build | `npm run build` | PASS |
+| Frontend audit | `npm audit --omit=dev` | PASS — 0 vulnérabilité |
+| E2E/accessibilité | Playwright, axe, responsive, RTL, clair/sombre | PASS — 97 tests |
+| Workflows | Actionlint et `node scripts/validate-release-guards.mjs` | PASS |
+| Images | Builds backend/frontend + démarrage réel | PASS |
+| Runtime | `/health/live`, `/version.json`, inspection des processus | PASS — backend `www-data`, frontend UID 101, aucun processus root |
+| Démarrage production simulé | migrations → bootstrap admin MFA → preflight → queue/scheduler | PASS; stockage `/home/site` attendu absent uniquement hors Azure |
+| Azure App Services | état, HTTPS, health path et images précédentes après rollback | PASS — les deux sites sont Running |
+| Azure MySQL | état, version, sauvegarde/PITR et DB2 | PASS — Ready, MySQL 8.0.21, rétention 7 jours, `yazoo_azure_test` en `utf8mb4` |
+| OIDC/RBAC | credential fédéré et affectations live | PASS — subject production exact, deux Website Contributor ciblés, Reader MySQL ciblé |
+| Secrets admin DB2 | `scripts/configure-release-admin-secrets.ps1 -GenerateCredentials` | PASS — exécution propriétaire terminée; paquet DPAPI créé seulement après l’acceptation des cinq écritures GitHub |
+| CI/déploiement corrigé | nouveau commit/SHA | PENDING — interdit avant validation des secrets |
+
+La recette Azure CLI générique attend `infra/main.bicep`, absent de ce dépôt.
+La validation a donc utilisé le mécanisme réel existant (GitHub Actions,
+Azure CLI/OIDC, Docker Hub et deux App Services) sans inventer ni provisionner
+une nouvelle infrastructure.

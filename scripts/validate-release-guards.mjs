@@ -16,6 +16,8 @@ const initialConfiguration = read('deploy/azure-dockerhub-deploy.ps1')
 const workflowContents = [ci, deploy, dockerHubPublish, codeql]
 
 const immutablePush = deploy.indexOf('name: Push immutable SHA images')
+const imageSmoke = deploy.indexOf('name: Smoke-test immutable images before publication')
+const bootstrapSecretValidation = deploy.indexOf('name: Validate guarded DB2 administrator bootstrap secrets')
 const mysqlValidation = deploy.indexOf('name: Validate MySQL backup and restore readiness')
 const migrationEnable = deploy.indexOf('"YAZOO_RUN_MIGRATIONS=true"')
 const rollout = deploy.indexOf('name: Deploy exact SHA with one locked startup migration')
@@ -23,6 +25,8 @@ const latestPublish = deploy.indexOf('name: Publish last-known-good aliases')
 const firstAzureImageChange = deploy.indexOf('az webapp config container set')
 
 assert.ok(immutablePush >= 0, 'immutable SHA push step is required')
+assert.ok(bootstrapSecretValidation >= 0 && bootstrapSecretValidation < immutablePush, 'bootstrap secrets must be validated before image publication')
+assert.ok(imageSmoke >= 0 && imageSmoke < immutablePush, 'runtime smoke must pass before immutable images are pushed')
 assert.ok(mysqlValidation > immutablePush, 'MySQL validation must follow the immutable push')
 assert.ok(rollout > mysqlValidation, 'rollout must follow MySQL validation')
 assert.ok(migrationEnable > mysqlValidation, 'backup validation must run before migrations are enabled')
@@ -43,12 +47,19 @@ assert.match(deploy, /\.fullyQualifiedDomainName \/\/ empty/)
 assert.match(deploy, /az mysql flexible-server db show/)
 assert.match(deploy, /--database-name "\$EXPECTED_DB_NAME"/)
 assert.match(deploy, /YAZOO_RUN_PRODUCTION_PREFLIGHT=true/)
+assert.match(deploy, /YAZOO_RUN_RELEASE_ADMIN_BOOTSTRAP=true/)
+assert.match(deploy, /YAZOO_RELEASE_ADMIN_BOOTSTRAP_ENABLED=true/)
+assert.match(deploy, /secrets\.YAZOO_RELEASE_ADMIN_PASSWORD/)
+assert.match(deploy, /appsettings delete[\s\S]*YAZOO_RELEASE_ADMIN_PASSWORD/)
+assert.match(deploy, /timeout 30s az webapp log tail/)
 assert.match(deploy, /Production deployment is allowed only from refs\/heads\/main/)
 assert.match(deploy, /id-token:\s*write/u)
 assert.match(deploy, /client-id:\s*\$\{\{ vars\.AZURE_CLIENT_ID \}\}/u)
 assert.match(deploy, /tenant-id:\s*\$\{\{ vars\.AZURE_TENANT_ID \}\}/u)
 assert.match(deploy, /subscription-id:\s*\$\{\{ vars\.AZURE_SUBSCRIPTION_ID \}\}/u)
 assert.doesNotMatch(deploy, /AZURE_CREDENTIALS/u)
+assert.match(ci, /smoke-test-release-images\.sh yazoo-api:ci yazoo-frontend:ci/)
+assert.match(read('backend/docker-entrypoint.sh'), /chmod a\+w \/dev\/stdout \/dev\/stderr/)
 
 const manualLatest = dockerHubPublish.indexOf('name: Publish latest aliases from main only')
 assert.ok(manualLatest >= 0, 'manual workflow needs a dedicated latest step')
@@ -102,7 +113,7 @@ assert.ok(
   'showcase startup must migrate, bootstrap idempotently, then run the production preflight',
 )
 
-const normalBranch = startup.indexOf('else\n    if [ "${YAZOO_RUN_MIGRATIONS:-false}" = "true" ]', showcasePreflight)
+const normalBranch = startup.indexOf('else\n    if [ "${YAZOO_RUN_RELEASE_ADMIN_BOOTSTRAP:-false}" = "true" ]', showcasePreflight)
 const normalConfigurationPreflight = startup.indexOf(
   'sh /var/www/html/scripts/run-production-preflight.sh --configuration-only',
   normalBranch,
@@ -111,16 +122,21 @@ const normalMigration = startup.indexOf(
   'php artisan yazoo:migrate-production',
   normalConfigurationPreflight,
 )
+const normalAdminBootstrap = startup.indexOf(
+  'php artisan yazoo:bootstrap-release-admin',
+  normalMigration,
+)
 const normalFullPreflight = startup.indexOf(
   'sh /var/www/html/scripts/run-production-preflight.sh',
-  normalMigration,
+  normalAdminBootstrap,
 )
 assert.ok(
   normalBranch >= 0
     && normalConfigurationPreflight > normalBranch
     && normalMigration > normalConfigurationPreflight
-    && normalFullPreflight > normalMigration,
-  'normal startup must validate configuration, migrate under lock, then validate the migrated database',
+    && normalAdminBootstrap > normalMigration
+    && normalFullPreflight > normalAdminBootstrap,
+  'normal startup must validate configuration, migrate under lock, bootstrap the release admin, then validate the migrated database',
 )
 
 const setupGuard = setup.indexOf('AllowCreateResources')

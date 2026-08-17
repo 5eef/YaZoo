@@ -25,9 +25,24 @@ if [ "${YAZOO_RUN_SHOWCASE_BOOTSTRAP:-false}" = "true" ]; then
 
     sh /var/www/html/scripts/run-production-preflight.sh
 else
+    if [ "${YAZOO_RUN_RELEASE_ADMIN_BOOTSTRAP:-false}" = "true" ] && [ "${YAZOO_RUN_MIGRATIONS:-false}" != "true" ]; then
+        echo "YAZOO_RUN_MIGRATIONS=true is required for release administrator bootstrap." >&2
+        exit 1
+    fi
+
     if [ "${YAZOO_RUN_MIGRATIONS:-false}" = "true" ]; then
         sh /var/www/html/scripts/run-production-preflight.sh --configuration-only
         php artisan yazoo:migrate-production
+    fi
+
+    if [ "${YAZOO_RUN_RELEASE_ADMIN_BOOTSTRAP:-false}" = "true" ]; then
+        if [ -z "${YAZOO_RELEASE_ADMIN_BOOTSTRAP_CONFIRMATION:-}" ]; then
+            echo "YAZOO_RELEASE_ADMIN_BOOTSTRAP_CONFIRMATION is required for release administrator bootstrap." >&2
+            exit 1
+        fi
+
+        php artisan yazoo:bootstrap-release-admin \
+            --confirmation="${YAZOO_RELEASE_ADMIN_BOOTSTRAP_CONFIRMATION}"
     fi
 
     sh /var/www/html/scripts/run-production-preflight.sh
