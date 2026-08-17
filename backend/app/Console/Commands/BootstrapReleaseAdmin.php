@@ -128,7 +128,24 @@ class BootstrapReleaseAdmin extends Command
         }
 
         if ($admins->isNotEmpty()) {
-            throw new RuntimeException('An administrator exists but is not eligible for release; repair it manually.');
+            $matchingAdmin = $admins->firstWhere('email', $credentials['email']);
+            if ($admins->count() !== 1 || $matchingAdmin === null || $matchingAdmin->is_suspended || $matchingAdmin->banned_at !== null) {
+                throw new RuntimeException('An administrator exists but is not eligible for release; repair it manually.');
+            }
+
+            $matchingAdmin->forceFill([
+                'name' => $credentials['name'],
+                'password' => Hash::make($credentials['password']),
+                'email_verified_at' => $matchingAdmin->email_verified_at ?? now(),
+                'admin_mfa_secret' => $credentials['mfa_secret'],
+                'admin_mfa_recovery_codes' => array_map(
+                    static fn (string $code): string => Hash::make($code),
+                    $credentials['recovery_codes'],
+                ),
+                'admin_mfa_confirmed_at' => now(),
+            ])->save();
+
+            return true;
         }
 
         if (User::query()->where('email', $credentials['email'])->lockForUpdate()->first() !== null) {

@@ -56,6 +56,12 @@ securise; ils ne doivent pas apparaitre dans une ligne de commande ou un fichier
 Le chemin canonique des releases est `.github/workflows/deploy.yml`, avec SHA
 immuable, preflight, health checks et rollback.
 
+Pour la release DATABASE #2 autorisee, le backend embarque uniquement les
+fixtures marketplace suivies dans `backend/database/seeders/assets/marketplace`.
+Le bootstrap garde les copie dans le stockage App Service persistant et peuple
+`yazoo_azure_test` une seule fois. Il ne lit, ne migre et ne modifie jamais la
+base protegee `yazoo`.
+
 ## Garde-fous du workflow de production
 
 L'environnement GitHub `production` doit contenir:
@@ -67,6 +73,14 @@ L'environnement GitHub `production` doit contenir:
   l'operateur.
 - `AZURE_DATABASE2_HOST`, `AZURE_DATABASE2_PORT` et `AZURE_DATABASE2_NAME`;
   le nom `yazoo` est refusé car il désigne DATABASE #1 protégée.
+- les secrets administrateur, profil legal/SMTP et
+  `YAZOO_DATABASE2_TEST_ACCOUNT_PASSWORD`, configures sans les publier dans le
+  depot.
+
+En cas d'indisponibilite confirmee de l'API des secrets d'environnement, les
+scripts acceptent `-UseRepositoryScope`. Les secrets restent chiffres et sont
+accessibles au workflow via `secrets.*`, mais doivent etre redeplaces vers
+`production` lorsque l'API est retablie afin de retrouver la portee minimale.
 
 Cet environnement doit avoir une approbation manuelle requise et une restriction
 de branche. Ce reglage est externe au depot. Sans protection d'environnement, un

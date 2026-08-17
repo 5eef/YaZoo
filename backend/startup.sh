@@ -25,6 +25,11 @@ if [ "${YAZOO_RUN_SHOWCASE_BOOTSTRAP:-false}" = "true" ]; then
 
     sh /var/www/html/scripts/run-production-preflight.sh
 else
+    if [ "${YAZOO_RUN_DATABASE2_TEST_DATA_BOOTSTRAP:-false}" = "true" ] && [ "${YAZOO_RUN_MIGRATIONS:-false}" != "true" ]; then
+        echo "YAZOO_RUN_MIGRATIONS=true is required for DATABASE #2 test-data bootstrap." >&2
+        exit 1
+    fi
+
     if [ "${YAZOO_RUN_RELEASE_ADMIN_BOOTSTRAP:-false}" = "true" ] && [ "${YAZOO_RUN_MIGRATIONS:-false}" != "true" ]; then
         echo "YAZOO_RUN_MIGRATIONS=true is required for release administrator bootstrap." >&2
         exit 1
@@ -33,6 +38,16 @@ else
     if [ "${YAZOO_RUN_MIGRATIONS:-false}" = "true" ]; then
         sh /var/www/html/scripts/run-production-preflight.sh --configuration-only
         php artisan yazoo:migrate-production
+    fi
+
+    if [ "${YAZOO_RUN_DATABASE2_TEST_DATA_BOOTSTRAP:-false}" = "true" ]; then
+        if [ -z "${YAZOO_DATABASE2_TEST_DATA_BOOTSTRAP_CONFIRMATION:-}" ]; then
+            echo "YAZOO_DATABASE2_TEST_DATA_BOOTSTRAP_CONFIRMATION is required." >&2
+            exit 1
+        fi
+
+        php artisan yazoo:bootstrap-database2-test-data \
+            --confirmation="${YAZOO_DATABASE2_TEST_DATA_BOOTSTRAP_CONFIRMATION}"
     fi
 
     if [ "${YAZOO_RUN_RELEASE_ADMIN_BOOTSTRAP:-false}" = "true" ]; then

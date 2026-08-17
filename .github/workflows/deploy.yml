@@ -61,6 +61,7 @@ jobs:
           RELEASE_ADMIN_PASSWORD: ${{ secrets.YAZOO_RELEASE_ADMIN_PASSWORD }}
           RELEASE_ADMIN_MFA_SECRET: ${{ secrets.YAZOO_RELEASE_ADMIN_MFA_SECRET }}
           RELEASE_ADMIN_MFA_RECOVERY_CODES: ${{ secrets.YAZOO_RELEASE_ADMIN_MFA_RECOVERY_CODES }}
+          DATABASE2_TEST_ACCOUNT_PASSWORD: ${{ secrets.YAZOO_DATABASE2_TEST_ACCOUNT_PASSWORD }}
         run: |
           set -euo pipefail
           for secret_name in RELEASE_ADMIN_NAME RELEASE_ADMIN_EMAIL RELEASE_ADMIN_PASSWORD RELEASE_ADMIN_MFA_SECRET RELEASE_ADMIN_MFA_RECOVERY_CODES; do
@@ -69,8 +70,24 @@ jobs:
               exit 1
             fi
           done
+          if [ -z "$DATABASE2_TEST_ACCOUNT_PASSWORD" ]; then
+            echo "::error::YAZOO_DATABASE2_TEST_ACCOUNT_PASSWORD is required for the guarded DATABASE #2 test dataset."
+            exit 1
+          fi
+          if [ "${#DATABASE2_TEST_ACCOUNT_PASSWORD}" -lt 20 ] \
+            || ! [[ "$DATABASE2_TEST_ACCOUNT_PASSWORD" =~ [[:lower:]] ]] \
+            || ! [[ "$DATABASE2_TEST_ACCOUNT_PASSWORD" =~ [[:upper:]] ]] \
+            || ! [[ "$DATABASE2_TEST_ACCOUNT_PASSWORD" =~ [[:digit:]] ]] \
+            || [[ "$DATABASE2_TEST_ACCOUNT_PASSWORD" =~ ^[[:alnum:]]+$ ]]; then
+            echo "::error::The DATABASE #2 test account password does not satisfy the production policy."
+            exit 1
+          fi
           if ! [[ "$RELEASE_ADMIN_EMAIL" =~ ^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$ ]]; then
             echo "::error::The release administrator email secret is invalid."
+            exit 1
+          fi
+          if [ "${RELEASE_ADMIN_EMAIL,,}" != "bough.youssef@gmail.com" ]; then
+            echo "::error::The release administrator must match the administrator in the authorized local test dataset."
             exit 1
           fi
           if [ "${#RELEASE_ADMIN_PASSWORD}" -lt 16 ] \
@@ -98,6 +115,48 @@ jobs:
           done
           if ! [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]; then
             echo "::error::Production deployment requires the exact 40-character Git SHA."
+            exit 1
+          fi
+
+      - name: Validate production legal and mail secrets
+        shell: bash
+        env:
+          PRODUCTION_LEGAL_STATUS: ${{ secrets.YAZOO_PRODUCTION_LEGAL_STATUS }}
+          PRODUCTION_LEGAL_ADDRESS: ${{ secrets.YAZOO_PRODUCTION_LEGAL_ADDRESS }}
+          PRODUCTION_LEGAL_ICE: ${{ secrets.YAZOO_PRODUCTION_LEGAL_ICE }}
+          PRODUCTION_PRIVACY_CONTACT_EMAIL: ${{ secrets.YAZOO_PRODUCTION_PRIVACY_CONTACT_EMAIL }}
+          PRODUCTION_CONTACT_RECIPIENT: ${{ secrets.YAZOO_PRODUCTION_CONTACT_RECIPIENT }}
+          PRODUCTION_MAIL_HOST: ${{ secrets.YAZOO_PRODUCTION_MAIL_HOST }}
+          PRODUCTION_MAIL_PORT: ${{ secrets.YAZOO_PRODUCTION_MAIL_PORT }}
+          PRODUCTION_MAIL_USERNAME: ${{ secrets.YAZOO_PRODUCTION_MAIL_USERNAME }}
+          PRODUCTION_MAIL_PASSWORD: ${{ secrets.YAZOO_PRODUCTION_MAIL_PASSWORD }}
+          PRODUCTION_MAIL_FROM_ADDRESS: ${{ secrets.YAZOO_PRODUCTION_MAIL_FROM_ADDRESS }}
+        run: |
+          set -euo pipefail
+          for secret_name in \
+            PRODUCTION_LEGAL_STATUS PRODUCTION_LEGAL_ADDRESS PRODUCTION_LEGAL_ICE \
+            PRODUCTION_PRIVACY_CONTACT_EMAIL PRODUCTION_CONTACT_RECIPIENT \
+            PRODUCTION_MAIL_HOST PRODUCTION_MAIL_PORT PRODUCTION_MAIL_USERNAME \
+            PRODUCTION_MAIL_PASSWORD PRODUCTION_MAIL_FROM_ADDRESS; do
+            if [ -z "${!secret_name}" ]; then
+              echo "::error::GitHub production secret ${secret_name} is required by the production preflight."
+              exit 1
+            fi
+            if [[ "${!secret_name}" == *$'\n'* || "${!secret_name}" == *$'\r'* ]]; then
+              echo "::error::GitHub production secret ${secret_name} must be a single line."
+              exit 1
+            fi
+          done
+          for email_name in PRODUCTION_PRIVACY_CONTACT_EMAIL PRODUCTION_CONTACT_RECIPIENT PRODUCTION_MAIL_FROM_ADDRESS; do
+            if ! [[ "${!email_name}" =~ ^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$ ]]; then
+              echo "::error::GitHub production secret ${email_name} must be a valid email address."
+              exit 1
+            fi
+          done
+          if ! [[ "$PRODUCTION_MAIL_PORT" =~ ^[0-9]+$ ]] \
+            || [ "$PRODUCTION_MAIL_PORT" -lt 1 ] \
+            || [ "$PRODUCTION_MAIL_PORT" -gt 65535 ]; then
+            echo "::error::YAZOO_PRODUCTION_MAIL_PORT must be between 1 and 65535."
             exit 1
           fi
 
@@ -236,6 +295,17 @@ jobs:
           RELEASE_ADMIN_PASSWORD: ${{ secrets.YAZOO_RELEASE_ADMIN_PASSWORD }}
           RELEASE_ADMIN_MFA_SECRET: ${{ secrets.YAZOO_RELEASE_ADMIN_MFA_SECRET }}
           RELEASE_ADMIN_MFA_RECOVERY_CODES: ${{ secrets.YAZOO_RELEASE_ADMIN_MFA_RECOVERY_CODES }}
+          DATABASE2_TEST_ACCOUNT_PASSWORD: ${{ secrets.YAZOO_DATABASE2_TEST_ACCOUNT_PASSWORD }}
+          PRODUCTION_LEGAL_STATUS: ${{ secrets.YAZOO_PRODUCTION_LEGAL_STATUS }}
+          PRODUCTION_LEGAL_ADDRESS: ${{ secrets.YAZOO_PRODUCTION_LEGAL_ADDRESS }}
+          PRODUCTION_LEGAL_ICE: ${{ secrets.YAZOO_PRODUCTION_LEGAL_ICE }}
+          PRODUCTION_PRIVACY_CONTACT_EMAIL: ${{ secrets.YAZOO_PRODUCTION_PRIVACY_CONTACT_EMAIL }}
+          PRODUCTION_CONTACT_RECIPIENT: ${{ secrets.YAZOO_PRODUCTION_CONTACT_RECIPIENT }}
+          PRODUCTION_MAIL_HOST: ${{ secrets.YAZOO_PRODUCTION_MAIL_HOST }}
+          PRODUCTION_MAIL_PORT: ${{ secrets.YAZOO_PRODUCTION_MAIL_PORT }}
+          PRODUCTION_MAIL_USERNAME: ${{ secrets.YAZOO_PRODUCTION_MAIL_USERNAME }}
+          PRODUCTION_MAIL_PASSWORD: ${{ secrets.YAZOO_PRODUCTION_MAIL_PASSWORD }}
+          PRODUCTION_MAIL_FROM_ADDRESS: ${{ secrets.YAZOO_PRODUCTION_MAIL_FROM_ADDRESS }}
         run: |
           set -euo pipefail
 
@@ -265,12 +335,23 @@ jobs:
           az webapp stop --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP"
           az webapp config appsettings set --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP" \
             --settings "APP_VERSION=${GITHUB_SHA}" "YAZOO_RUN_PRODUCTION_PREFLIGHT=true" "YAZOO_RUN_MIGRATIONS=true" \
+              "YAZOO_RUN_DATABASE2_TEST_DATA_BOOTSTRAP=true" "YAZOO_DATABASE2_TEST_DATA_BOOTSTRAP_ENABLED=true" \
+              "YAZOO_DATABASE2_TEST_DATA_BOOTSTRAP_CONFIRMATION=${EXPECTED_DB_HOST}/${EXPECTED_DB_NAME}" \
+              "YAZOO_DATABASE2_TEST_ACCOUNT_PASSWORD=${DATABASE2_TEST_ACCOUNT_PASSWORD}" \
+              "YAZOO_DATABASE2_TEST_DATA_IMAGES_PATH=/var/www/html/database/seeders/assets/marketplace" \
               "YAZOO_RUN_RELEASE_ADMIN_BOOTSTRAP=true" "YAZOO_RELEASE_ADMIN_BOOTSTRAP_ENABLED=true" \
               "YAZOO_RELEASE_ADMIN_BOOTSTRAP_CONFIRMATION=${EXPECTED_DB_HOST}/${EXPECTED_DB_NAME}" \
               "YAZOO_RELEASE_ADMIN_NAME=${RELEASE_ADMIN_NAME}" "YAZOO_RELEASE_ADMIN_EMAIL=${RELEASE_ADMIN_EMAIL}" \
               "YAZOO_RELEASE_ADMIN_PASSWORD=${RELEASE_ADMIN_PASSWORD}" \
               "YAZOO_RELEASE_ADMIN_MFA_SECRET=${RELEASE_ADMIN_MFA_SECRET}" \
               "YAZOO_RELEASE_ADMIN_MFA_RECOVERY_CODES=${RELEASE_ADMIN_MFA_RECOVERY_CODES}" \
+              "LEGAL_STATUS=${PRODUCTION_LEGAL_STATUS}" "LEGAL_ADDRESS=${PRODUCTION_LEGAL_ADDRESS}" \
+              "LEGAL_ICE=${PRODUCTION_LEGAL_ICE}" "PRIVACY_CONTACT_EMAIL=${PRODUCTION_PRIVACY_CONTACT_EMAIL}" \
+              "CONTACT_RECIPIENT=${PRODUCTION_CONTACT_RECIPIENT}" "MAIL_MAILER=smtp" \
+              "MAIL_HOST=${PRODUCTION_MAIL_HOST}" "MAIL_PORT=${PRODUCTION_MAIL_PORT}" \
+              "MAIL_USERNAME=${PRODUCTION_MAIL_USERNAME}" "MAIL_PASSWORD=${PRODUCTION_MAIL_PASSWORD}" \
+              "MAIL_FROM_ADDRESS=${PRODUCTION_MAIL_FROM_ADDRESS}" "MAIL_FROM_NAME=YaZoo" \
+              "YAZOO_RUN_SCHEDULER=true" \
               "DB_HOST=${EXPECTED_DB_HOST}" "DB_PORT=${EXPECTED_DB_PORT}" "DB_DATABASE=${EXPECTED_DB_NAME}" \
               "YAZOO_REQUIRE_EXPECTED_DATABASE=true" "YAZOO_EXPECTED_DB_HOST=${EXPECTED_DB_HOST}" \
               "YAZOO_EXPECTED_DB_PORT=${EXPECTED_DB_PORT}" "YAZOO_EXPECTED_DB_NAME=${EXPECTED_DB_NAME}" \
@@ -287,9 +368,11 @@ jobs:
 
           az webapp config appsettings set --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP" \
             --settings "APP_VERSION=${GITHUB_SHA}" "YAZOO_RUN_PRODUCTION_PREFLIGHT=true" "YAZOO_RUN_MIGRATIONS=false" \
+              "YAZOO_RUN_DATABASE2_TEST_DATA_BOOTSTRAP=false" "YAZOO_DATABASE2_TEST_DATA_BOOTSTRAP_ENABLED=false" \
               "YAZOO_RUN_RELEASE_ADMIN_BOOTSTRAP=false" "YAZOO_RELEASE_ADMIN_BOOTSTRAP_ENABLED=false" --output none
           az webapp config appsettings delete --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP" \
-            --setting-names YAZOO_RELEASE_ADMIN_BOOTSTRAP_CONFIRMATION YAZOO_RELEASE_ADMIN_NAME \
+            --setting-names YAZOO_DATABASE2_TEST_DATA_BOOTSTRAP_CONFIRMATION YAZOO_DATABASE2_TEST_ACCOUNT_PASSWORD \
+              YAZOO_RELEASE_ADMIN_BOOTSTRAP_CONFIRMATION YAZOO_RELEASE_ADMIN_NAME \
               YAZOO_RELEASE_ADMIN_EMAIL YAZOO_RELEASE_ADMIN_PASSWORD YAZOO_RELEASE_ADMIN_MFA_SECRET \
               YAZOO_RELEASE_ADMIN_MFA_RECOVERY_CODES --output none
           az webapp restart --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP"
@@ -339,7 +422,8 @@ jobs:
         run: |
           set -euo pipefail
           az webapp config appsettings delete --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP" \
-            --setting-names YAZOO_RELEASE_ADMIN_BOOTSTRAP_CONFIRMATION YAZOO_RELEASE_ADMIN_NAME \
+            --setting-names YAZOO_DATABASE2_TEST_DATA_BOOTSTRAP_CONFIRMATION YAZOO_DATABASE2_TEST_ACCOUNT_PASSWORD \
+              YAZOO_RELEASE_ADMIN_BOOTSTRAP_CONFIRMATION YAZOO_RELEASE_ADMIN_NAME \
               YAZOO_RELEASE_ADMIN_EMAIL YAZOO_RELEASE_ADMIN_PASSWORD YAZOO_RELEASE_ADMIN_MFA_SECRET \
               YAZOO_RELEASE_ADMIN_MFA_RECOVERY_CODES --output none
           az webapp config container set --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP" \
@@ -347,6 +431,7 @@ jobs:
           az webapp config appsettings set --resource-group "$RESOURCE_GROUP" --name "$BACKEND_WEBAPP" \
             --settings "APP_VERSION=${{ steps.previous.outputs.backend_version }}" "YAZOO_RUN_PRODUCTION_PREFLIGHT=true" "YAZOO_RUN_MIGRATIONS=false" \
               "YAZOO_RUN_RELEASE_ADMIN_BOOTSTRAP=false" "YAZOO_RELEASE_ADMIN_BOOTSTRAP_ENABLED=false" \
+              "YAZOO_RUN_DATABASE2_TEST_DATA_BOOTSTRAP=false" "YAZOO_DATABASE2_TEST_DATA_BOOTSTRAP_ENABLED=false" \
               "DB_HOST=${{ steps.previous.outputs.db_host }}" "DB_PORT=${{ steps.previous.outputs.db_port }}" \
               "DB_DATABASE=${{ steps.previous.outputs.db_name }}" "YAZOO_REQUIRE_EXPECTED_DATABASE=false" --output none
           az webapp config container set --resource-group "$RESOURCE_GROUP" --name "$FRONTEND_WEBAPP" \

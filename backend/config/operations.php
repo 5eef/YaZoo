@@ -34,6 +34,18 @@ return [
         'mfa_secret' => env('YAZOO_RELEASE_ADMIN_MFA_SECRET'),
         'mfa_recovery_codes' => env('YAZOO_RELEASE_ADMIN_MFA_RECOVERY_CODES'),
     ],
+    'database2_test_data_bootstrap_enabled' => filter_var(
+        env('YAZOO_DATABASE2_TEST_DATA_BOOTSTRAP_ENABLED', false),
+        FILTER_VALIDATE_BOOL,
+    ),
+    'database2_test_data_bootstrap_confirmation' => env(
+        'YAZOO_DATABASE2_TEST_DATA_BOOTSTRAP_CONFIRMATION',
+    ),
+    'database2_test_account_password' => env('YAZOO_DATABASE2_TEST_ACCOUNT_PASSWORD'),
+    'database2_test_data_images_path' => env(
+        'YAZOO_DATABASE2_TEST_DATA_IMAGES_PATH',
+        database_path('seeders/assets/marketplace'),
+    ),
     'account_deletion_retry_max_attempts' => (int) env('YAZOO_ACCOUNT_DELETION_RETRY_MAX_ATTEMPTS', 5),
     'account_deletion_retry_batch_size' => (int) env('YAZOO_ACCOUNT_DELETION_RETRY_BATCH_SIZE', 25),
     'account_deletion_processing_lease_seconds' => (int) env('YAZOO_ACCOUNT_DELETION_PROCESSING_LEASE_SECONDS', 900),

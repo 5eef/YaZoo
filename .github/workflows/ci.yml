@@ -163,7 +163,7 @@ jobs:
 
       - name: Run real MySQL concurrency tests
         working-directory: backend
-        run: ./vendor/bin/phpunit --fail-on-skipped tests/Integration/AccountDeletionMySqlConcurrencyTest.php tests/Integration/VeterinarianAppointmentMySqlConcurrencyTest.php tests/Integration/Database2CompatibilityTest.php tests/Integration/ReservationPaymentMySqlIntegrationTest.php tests/Integration/ReleaseAdminBootstrapMySqlTest.php
+        run: ./vendor/bin/phpunit --fail-on-skipped tests/Integration/AccountDeletionMySqlConcurrencyTest.php tests/Integration/VeterinarianAppointmentMySqlConcurrencyTest.php tests/Integration/Database2CompatibilityTest.php tests/Integration/ReservationPaymentMySqlIntegrationTest.php tests/Integration/ReleaseAdminBootstrapMySqlTest.php tests/Feature/Marketplace/Database2TestDataBootstrapTest.php
 
   container-and-secrets:
     runs-on: ubuntu-latest

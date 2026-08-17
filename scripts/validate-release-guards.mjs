@@ -14,10 +14,25 @@ const startup = read('backend/startup.sh')
 const setup = read('deploy/azure-setup.ps1')
 const initialConfiguration = read('deploy/azure-dockerhub-deploy.ps1')
 const workflowContents = [ci, deploy, dockerHubPublish, codeql]
+const marketplaceAssetsDirectory = path.join(
+  repositoryRoot,
+  'backend/database/seeders/assets/marketplace',
+)
+const marketplaceAssets = fs.readdirSync(marketplaceAssetsDirectory)
+  .filter((file) => file.toLowerCase().endsWith('.png'))
+
+assert.equal(marketplaceAssets.length, 21, 'the DATABASE #2 release must package exactly 21 marketplace PNG fixtures')
+for (const asset of marketplaceAssets) {
+  assert.ok(
+    fs.statSync(path.join(marketplaceAssetsDirectory, asset)).size > 0,
+    `marketplace fixture must not be empty: ${asset}`,
+  )
+}
 
 const immutablePush = deploy.indexOf('name: Push immutable SHA images')
 const imageSmoke = deploy.indexOf('name: Smoke-test immutable images before publication')
 const bootstrapSecretValidation = deploy.indexOf('name: Validate guarded DB2 administrator bootstrap secrets')
+const productionProfileValidation = deploy.indexOf('name: Validate production legal and mail secrets')
 const mysqlValidation = deploy.indexOf('name: Validate MySQL backup and restore readiness')
 const migrationEnable = deploy.indexOf('"YAZOO_RUN_MIGRATIONS=true"')
 const rollout = deploy.indexOf('name: Deploy exact SHA with one locked startup migration')
@@ -26,6 +41,7 @@ const firstAzureImageChange = deploy.indexOf('az webapp config container set')
 
 assert.ok(immutablePush >= 0, 'immutable SHA push step is required')
 assert.ok(bootstrapSecretValidation >= 0 && bootstrapSecretValidation < immutablePush, 'bootstrap secrets must be validated before image publication')
+assert.ok(productionProfileValidation >= 0 && productionProfileValidation < immutablePush, 'production profile secrets must be validated before image publication')
 assert.ok(imageSmoke >= 0 && imageSmoke < immutablePush, 'runtime smoke must pass before immutable images are pushed')
 assert.ok(mysqlValidation > immutablePush, 'MySQL validation must follow the immutable push')
 assert.ok(rollout > mysqlValidation, 'rollout must follow MySQL validation')
@@ -48,9 +64,16 @@ assert.match(deploy, /az mysql flexible-server db show/)
 assert.match(deploy, /--database-name "\$EXPECTED_DB_NAME"/)
 assert.match(deploy, /YAZOO_RUN_PRODUCTION_PREFLIGHT=true/)
 assert.match(deploy, /YAZOO_RUN_RELEASE_ADMIN_BOOTSTRAP=true/)
+assert.match(deploy, /YAZOO_RUN_DATABASE2_TEST_DATA_BOOTSTRAP=true/)
+assert.match(deploy, /YAZOO_DATABASE2_TEST_DATA_BOOTSTRAP_ENABLED=true/)
+assert.match(deploy, /secrets\.YAZOO_DATABASE2_TEST_ACCOUNT_PASSWORD/)
 assert.match(deploy, /YAZOO_RELEASE_ADMIN_BOOTSTRAP_ENABLED=true/)
 assert.match(deploy, /secrets\.YAZOO_RELEASE_ADMIN_PASSWORD/)
+assert.match(deploy, /secrets\.YAZOO_PRODUCTION_MAIL_PASSWORD/)
+assert.match(deploy, /"MAIL_MAILER=smtp"/)
+assert.match(deploy, /"YAZOO_RUN_SCHEDULER=true"/)
 assert.match(deploy, /appsettings delete[\s\S]*YAZOO_RELEASE_ADMIN_PASSWORD/)
+assert.match(deploy, /appsettings delete[\s\S]*YAZOO_DATABASE2_TEST_ACCOUNT_PASSWORD/)
 assert.match(deploy, /timeout 30s az webapp log tail/)
 assert.match(deploy, /Production deployment is allowed only from refs\/heads\/main/)
 assert.match(deploy, /id-token:\s*write/u)
@@ -113,7 +136,7 @@ assert.ok(
   'showcase startup must migrate, bootstrap idempotently, then run the production preflight',
 )
 
-const normalBranch = startup.indexOf('else\n    if [ "${YAZOO_RUN_RELEASE_ADMIN_BOOTSTRAP:-false}" = "true" ]', showcasePreflight)
+const normalBranch = startup.indexOf('else\n    if [ "${YAZOO_RUN_DATABASE2_TEST_DATA_BOOTSTRAP:-false}" = "true" ]', showcasePreflight)
 const normalConfigurationPreflight = startup.indexOf(
   'sh /var/www/html/scripts/run-production-preflight.sh --configuration-only',
   normalBranch,
@@ -126,6 +149,10 @@ const normalAdminBootstrap = startup.indexOf(
   'php artisan yazoo:bootstrap-release-admin',
   normalMigration,
 )
+const normalDataBootstrap = startup.indexOf(
+  'php artisan yazoo:bootstrap-database2-test-data',
+  normalMigration,
+)
 const normalFullPreflight = startup.indexOf(
   'sh /var/www/html/scripts/run-production-preflight.sh',
   normalAdminBootstrap,
@@ -134,9 +161,10 @@ assert.ok(
   normalBranch >= 0
     && normalConfigurationPreflight > normalBranch
     && normalMigration > normalConfigurationPreflight
-    && normalAdminBootstrap > normalMigration
+    && normalDataBootstrap > normalMigration
+    && normalAdminBootstrap > normalDataBootstrap
     && normalFullPreflight > normalAdminBootstrap,
-  'normal startup must validate configuration, migrate under lock, bootstrap the release admin, then validate the migrated database',
+  'normal startup must validate configuration, migrate under lock, seed guarded DB2 test data, secure the release admin, then validate the migrated database',
 )
 
 const setupGuard = setup.indexOf('AllowCreateResources')

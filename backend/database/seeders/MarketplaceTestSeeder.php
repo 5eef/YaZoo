@@ -17,6 +17,7 @@ use App\Models\Veterinarian;
 use App\Models\VeterinarianAppointment;
 use App\Models\VeterinarianAppointmentReview;
 use App\Models\VeterinarianAvailabilitySlot;
+use App\Support\DatabaseTargetGuard;
 use App\Support\ShowcaseBootstrapGuard;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Seeder;
@@ -78,9 +79,46 @@ class MarketplaceTestSeeder extends Seeder
         ?string $failAfter = null,
         ?string $showcaseConfirmation = null,
     ): array {
+        $this->assertSafeEnvironment($showcaseConfirmation);
+
+        return $this->seedValidated($imagesPath, $dryRun, $failAfter);
+    }
+
+    /**
+     * Seed the guarded Azure DATABASE #2 target with the same marketplace data
+     * as the local demonstration database, while rotating non-admin passwords.
+     *
+     * @return array{dryRun: bool, images: array<int, array<string, mixed>>, stats: array<string, array{created: int, updated: int, unchanged: int}>}
+     */
+    public function seedDatabase2(
+        string $imagesPath,
+        string $confirmation,
+        string $accountPassword,
+        string $releaseAdminEmail,
+    ): array {
+        $this->assertSafeDatabase2Target($confirmation);
+
+        return $this->seedValidated(
+            $imagesPath,
+            false,
+            null,
+            $accountPassword,
+            strtolower(trim($releaseAdminEmail)),
+        );
+    }
+
+    /**
+     * @return array{dryRun: bool, images: array<int, array<string, mixed>>, stats: array<string, array{created: int, updated: int, unchanged: int}>}
+     */
+    private function seedValidated(
+        string $imagesPath,
+        bool $dryRun,
+        ?string $failAfter,
+        ?string $accountPassword = null,
+        ?string $releaseAdminEmail = null,
+    ): array {
         $this->stats = [];
         $this->storageBackup = [];
-        $this->assertSafeEnvironment($showcaseConfirmation);
         $this->validatedImages = $this->validateImages($imagesPath);
         $this->validatePdfTemplate();
 
@@ -89,11 +127,11 @@ class MarketplaceTestSeeder extends Seeder
         }
 
         try {
-            DB::transaction(function () use ($failAfter): void {
+            DB::transaction(function () use ($failAfter, $accountPassword, $releaseAdminEmail): void {
                 $this->copyDemoFiles();
                 $this->failAfter($failAfter, 'storage');
 
-                $users = $this->seedUsers();
+                $users = $this->seedUsers($accountPassword, $releaseAdminEmail);
                 $this->failAfter($failAfter, 'users');
 
                 $this->seedProfessionalVerifications($users);
@@ -114,6 +152,27 @@ class MarketplaceTestSeeder extends Seeder
         $this->storageBackup = [];
 
         return ['dryRun' => false, 'images' => array_values($this->validatedImages), 'stats' => $this->stats];
+    }
+
+    private function assertSafeDatabase2Target(string $confirmation): void
+    {
+        if (! app()->environment(['production', 'testing'])) {
+            throw new RuntimeException('Le bootstrap DATABASE #2 est reserve a la production et aux tests automatises.');
+        }
+
+        if (! (bool) config('operations.database2_test_data_bootstrap_enabled')) {
+            throw new RuntimeException('YAZOO_DATABASE2_TEST_DATA_BOOTSTRAP_ENABLED doit etre true.');
+        }
+
+        $failures = app(DatabaseTargetGuard::class)->failures();
+        if ($failures !== []) {
+            throw new RuntimeException(implode(' ', $failures));
+        }
+
+        $expected = trim((string) config('operations.database2_test_data_bootstrap_confirmation'));
+        if ($expected === '' || trim($confirmation) === '' || ! hash_equals($expected, trim($confirmation))) {
+            throw new RuntimeException('La confirmation DATABASE #2 du jeu de test est invalide.');
+        }
     }
 
     private function assertSafeEnvironment(?string $showcaseConfirmation): void
@@ -240,13 +299,17 @@ class MarketplaceTestSeeder extends Seeder
     }
 
     /** @return array<string, User> */
-    private function seedUsers(): array
+    private function seedUsers(?string $accountPassword = null, ?string $releaseAdminEmail = null): array
     {
         $users = [];
 
         foreach ($this->accounts() as $account) {
             $existing = User::query()->where('email', $account['email'])->first();
-            $password = $this->passwordForCity($account['city']);
+            $password = $accountPassword ?? $this->passwordForCity($account['city']);
+            $preserveReleaseAdminPassword = $existing
+                && $releaseAdminEmail !== null
+                && strtolower((string) $existing->email) === $releaseAdminEmail
+                && (bool) $existing->is_admin;
 
             $users[$account['email']] = $this->syncModel(User::class, ['email' => $account['email']], [
                 'name' => $account['name'],
@@ -265,9 +328,11 @@ class MarketplaceTestSeeder extends Seeder
                 'banned_reason' => null,
                 'google_id' => null,
                 'google_avatar' => null,
-                'password' => $existing && Hash::check($password, (string) $existing->password)
+                'password' => $preserveReleaseAdminPassword
                     ? $existing->password
-                    : Hash::make($password),
+                    : ($existing && Hash::check($password, (string) $existing->password)
+                    ? $existing->password
+                    : Hash::make($password)),
             ], 'users');
         }
 

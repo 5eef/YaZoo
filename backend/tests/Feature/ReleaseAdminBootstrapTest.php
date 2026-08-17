@@ -91,6 +91,27 @@ class ReleaseAdminBootstrapTest extends TestCase
         $this->assertFalse(User::query()->sole()->is_admin);
     }
 
+    public function test_it_secures_the_matching_seeded_admin_account(): void
+    {
+        $admin = User::factory()->create([
+            'email' => 'release-admin@yazoo.test',
+            'is_admin' => true,
+            'is_suspended' => false,
+            'banned_at' => null,
+            'admin_mfa_secret' => null,
+            'admin_mfa_recovery_codes' => null,
+            'admin_mfa_confirmed_at' => null,
+        ]);
+
+        $this->artisan('yazoo:bootstrap-release-admin', ['--confirmation' => self::CONFIRMATION])
+            ->assertExitCode(0);
+
+        $admin->refresh();
+        $this->assertTrue(Hash::check('Release-Password-2026!', $admin->password));
+        $this->assertNotNull($admin->admin_mfa_confirmed_at);
+        $this->assertCount(8, $admin->admin_mfa_recovery_codes);
+    }
+
     public function test_it_refuses_a_protected_database_target(): void
     {
         config([
