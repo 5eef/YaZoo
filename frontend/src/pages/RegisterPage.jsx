@@ -176,6 +176,8 @@ function RegisterPage() {
                 onChange={handleChange('password')}
                 placeholder={t('auth.passwordPlaceholder')}
                 autoComplete="new-password"
+                minLength={8}
+                required
                 showLabel={t('auth.showPassword')}
                 hideLabel={t('auth.hidePassword')}
               />
@@ -186,6 +188,8 @@ function RegisterPage() {
                 onChange={handleChange('password_confirmation')}
                 placeholder={t('auth.passwordPlaceholder')}
                 autoComplete="new-password"
+                minLength={8}
+                required
                 showLabel={t('auth.showPassword')}
                 hideLabel={t('auth.hidePassword')}
               />

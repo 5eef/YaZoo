@@ -2,6 +2,20 @@
 
 > **Status:** Validated
 
+## Amendement autorisé — 2026-08-18
+
+La demande utilisateur du 2026-08-18 remplace la protection historique de
+DATABASE #1 pour une opération unique et explicitement ciblée. Après preuve que
+`yazoo-api` utilise `DB_DATABASE=yazoo_azure_test` et
+`YAZOO_EXPECTED_DB_NAME=yazoo_azure_test`, la base logique Azure `yazoo` a été
+supprimée. Le serveur était `Ready` avec une rétention de sauvegarde de 7 jours
+avant l'opération; `yazoo_azure_test` est restée la seule base applicative.
+
+La release suivante conserve impérativement `yazoo_azure_test` comme cible.
+Toute mention plus bas indiquant que DATABASE #1 doit rester intacte décrit les
+passes des 14 et 17 août et est remplacée par cet amendement pour la passe du
+18 août.
+
 Mise à jour : 2026-08-14 (Africa/Casablanca)
 
 ## Objectif et autorisation
@@ -151,7 +165,25 @@ les vérifications post-déploiement réelles.
 
 ## Section 7: Validation Proof
 
-Horodatage de la preuve locale et Azure : `2026-08-17T12:06:49+01:00`.
+### Revalidation de la passe 2026-08-18
+
+Horodatage : `2026-08-18T11:22:00+01:00`.
+
+| Domaine | Commande/preuve | Résultat |
+| --- | --- | --- |
+| Backend | `composer validate --strict`, Pint, `php artisan test --compact` | PASS — 388 tests, 2 116 assertions |
+| Frontend | ESLint, TypeScript, audits i18n/Tailwind, Vitest, build Vite | PASS — 131 tests, 1 964 clés i18n, 309 modules |
+| Navigateur | `npm run test:e2e` | PASS — 97 scénarios responsive, RTL, thèmes et axe |
+| DATABASE #2 | `phpunit -c phpunit.database2-safe.xml` | PASS — 5 tests MySQL, 29 assertions |
+| Docker | `docker compose config --quiet`, builds `app` et `frontend` | PASS — images backend/frontend construites |
+| Release | `node scripts/validate-release-guards.mjs` | PASS |
+| Workflows | fichiers inchangés depuis la preuve Actionlint du 2026-08-17 | PASS hérité; relance `npx` locale bloquée avant exécution par le registre npm |
+| Azure cible | paramètres App Service, serveur MySQL et inventaire des bases | PASS — `yazoo_azure_test` active et seule base applicative |
+| Azure Policy | `az policy assignment list` | PASS — `sys.regionrestriction`, aucune ressource créée |
+| RBAC statique | workflow OIDC et scripts d'affectation inspectés | PASS — portées App Services/MySQL existantes, aucun changement IaC |
+| Données obsolètes | ancienne base Azure `yazoo` et bases Docker historiques | SUPPRIMÉES après preuve de bascule; rétention Azure 7 jours contrôlée |
+
+Horodatage de la preuve locale et Azure : `2026-08-17T12:06:49+01:00`.
 
 | Domaine | Commande/preuve | Résultat |
 | --- | --- | --- |
@@ -180,3 +212,20 @@ La recette Azure CLI générique attend `infra/main.bicep`, absent de ce dépôt
 La validation a donc utilisé le mécanisme réel existant (GitHub Actions,
 Azure CLI/OIDC, Docker Hub et deux App Services) sans inventer ni provisionner
 une nouvelle infrastructure.
+
+## Deployment Proof
+
+Horodatage : `2026-08-17T16:21:00+01:00`.
+
+- GitHub Actions est resté indisponible avec `startup_failure` avant tout job ;
+  la voie manuelle gardée `scripts/deploy-database2-release-manually.ps1` a été
+  utilisée.
+- Images Azure : tags immuables backend/frontend du commit exact `f935766`.
+- DATABASE #1 `yazoo` : non modifiée.
+- DATABASE #2 `yazoo_azure_test` : cible active, migrations forward-only et
+  bootstrap idempotent terminés.
+- `/health/live` et `/health/ready` : version exacte et `status=ok`.
+- Auth : login, `/auth/me` et logout CSRF réussis avec un compte DB2.
+- Marketplace : 2 animaux publics, 6 produits, 10 services, 3 vétérinaires ;
+  21/21 médias testés en HTTP 200.
+- Frontend : 16 routes SPA critiques, aucun échec HTTP.

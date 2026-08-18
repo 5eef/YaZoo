@@ -58,12 +58,12 @@ class AccountSecurityTest extends TestCase
             'channel' => 'email',
             'identifier' => 'recovery@example.test',
             'token' => $plainToken,
-            'password' => 'NewStrong!Pass123',
-            'password_confirmation' => 'NewStrong!Pass123',
+            'password' => 'Eight888',
+            'password_confirmation' => 'Eight888',
         ];
 
         $this->postJson('/api/auth/password/reset', $payload)->assertOk();
-        $this->assertTrue(Hash::check('NewStrong!Pass123', $user->fresh()->password));
+        $this->assertTrue(Hash::check('Eight888', $user->fresh()->password));
         $this->assertDatabaseCount('personal_access_tokens', 0);
 
         $this->postJson('/api/auth/password/reset', $payload)

@@ -120,7 +120,7 @@ describe('Layout', () => {
     markNotificationReadRequest.mockResolvedValue({ data: {} })
   })
 
-  it('rend la sidebar avec la route active et conserve les liens existants', () => {
+  it('rend la sidebar avec la route active et conserve les liens existants', async () => {
     renderLayout()
 
     const sidebar = screen.getByTestId('desktop-sidebar')
@@ -130,6 +130,9 @@ describe('Layout', () => {
     expect(sidebar).toHaveClass('hidden', 'xl:flex')
     expect(headerQueries.getByRole('link', { name: 'Feed' })).toBeInTheDocument()
     expect(headerQueries.queryByRole('button', { name: 'Messages' })).not.toBeInTheDocument()
+    const notificationButton = headerQueries.getByRole('button', { name: 'Notifications' })
+    expect(notificationButton).toBeInTheDocument()
+    expect(notificationButton.querySelector('.bg-rose-500')).not.toBeNull()
     expect(sidebarQueries.getByRole('link', { name: 'Feed' })).toHaveAttribute(
       'aria-current',
       'page',
@@ -146,6 +149,11 @@ describe('Layout', () => {
       'href',
       '/orders/history',
     )
+    await waitFor(() => {
+      expect(
+        sidebarQueries.getByRole('link', { name: 'Messages' }).querySelector('.bg-rose-500'),
+      ).not.toBeNull()
+    })
   })
 
   it('ne laisse aucun drawer mobile interactif dans le DOM lorsqu il est ferme', async () => {

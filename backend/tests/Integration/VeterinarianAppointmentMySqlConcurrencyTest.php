@@ -125,7 +125,7 @@ class VeterinarianAppointmentMySqlConcurrencyTest extends TestCase
     {
         $barrier = sys_get_temp_dir().DIRECTORY_SEPARATOR.'yazoo-vet-concurrency-'.Str::uuid();
         mkdir($barrier, 0700, true);
-        $worker = base_path('tests/Integration/fixtures/veterinarian_appointment_worker.php');
+        $worker = base_path('tests/Integration/fixtures/veterinarian_appointment_concurrency_worker.php');
         $environment = $this->childEnvironment();
         $processes = collect($requests)->map(fn (array $request): Process => new Process([
             PHP_BINARY,

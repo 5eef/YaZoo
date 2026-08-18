@@ -782,7 +782,7 @@ function NotificationMenu({
       : safeNotifications
 
   return (
-    <div ref={refObject} className="relative hidden lg:block">
+    <div ref={refObject} className="relative block">
       <button
         type="button"
         onClick={onToggle}

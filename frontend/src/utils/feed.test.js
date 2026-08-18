@@ -63,4 +63,18 @@ describe('feed utilities', () => {
 
     expect(items.map((item) => item.type)).toEqual(['post', 'post', 'service', 'post'])
   })
+
+  it('prioritizes a YaZoo Market publication in a short feed', () => {
+    const items = buildOrganicFeedItems(
+      [{ id: 1 }],
+      {
+        services: [{ id: 8 }],
+        communities: [{ id: 9 }],
+        marketplace: [{ id: 10, kind: 'product' }],
+      },
+    )
+
+    expect(items.map((item) => item.type)).toEqual(['post', 'marketplace'])
+    expect(items[1].listing).toMatchObject({ id: 10, kind: 'product' })
+  })
 })

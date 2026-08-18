@@ -9,7 +9,7 @@ if (-not (Test-Path -LiteralPath $EnrollmentBundlePath -PathType Leaf)) {
     throw "DATABASE #2 test-account enrollment bundle not found: $EnrollmentBundlePath"
 }
 
-$encrypted = Get-Content -Raw -LiteralPath $EnrollmentBundlePath
+$encrypted = (Get-Content -Raw -LiteralPath $EnrollmentBundlePath).Trim()
 $secure = ConvertTo-SecureString $encrypted
 $pointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
 try {

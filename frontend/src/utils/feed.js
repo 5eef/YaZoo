@@ -175,6 +175,11 @@ export function buildMarketplaceHighlights(animals, products, userId, options = 
 export function buildOrganicFeedItems(posts, suggestions) {
   const feedItems = []
   const organicSuggestions = [
+    ...asArray(suggestions.marketplace).map((listing) => ({
+      type: 'marketplace',
+      key: `organic-marketplace-${listing.kind}-${listing.id}`,
+      listing,
+    })),
     ...asArray(suggestions.services).map((service) => ({
       type: 'service',
       key: `organic-service-${service.id}`,
@@ -184,11 +189,6 @@ export function buildOrganicFeedItems(posts, suggestions) {
       type: 'community',
       key: `organic-community-${community.id}`,
       community,
-    })),
-    ...asArray(suggestions.marketplace).map((listing) => ({
-      type: 'marketplace',
-      key: `organic-marketplace-${listing.kind}-${listing.id}`,
-      listing,
     })),
   ]
 
@@ -206,6 +206,13 @@ export function buildOrganicFeedItems(posts, suggestions) {
 
   if (feedItems.length === 0) {
     return organicSuggestions.slice(0, 3)
+  }
+
+  // A short feed must still surface one YaZoo Market publication. Without
+  // this tail insertion, a feed containing a single post showed no organic
+  // recommendation at all.
+  if (!feedItems.some((item) => item.type !== 'post') && organicSuggestions.length > 0) {
+    feedItems.push(organicSuggestions.shift())
   }
 
   return feedItems

@@ -1,6 +1,128 @@
 # Déploiement YaZoo — compte rendu final de la session
 
-Horodatage : 2026-08-14 19:18 (Africa/Casablanca)  
+## Passe corrective — 2026-08-18
+
+La release en préparation utilise exclusivement DATABASE #2
+`yazoo_azure_test`. L'App Service a été contrôlé avant suppression :
+`DB_DATABASE` et `YAZOO_EXPECTED_DB_NAME` pointaient tous deux vers cette base.
+La base Azure historique `yazoo` a ensuite été supprimée; le serveur conserve
+une rétention de sauvegarde de 7 jours et ne contient plus que
+`yazoo_azure_test` comme base applicative.
+
+Les bases Docker historiques ont également été remplacées par
+`yazoo_azure_test`, avec copie transactionnelle, 41/41 tables vérifiées,
+droits du compte applicatif et migrations à jour. La validation de code avant
+publication est verte : 388 tests backend, 131 tests frontend, 97 tests E2E,
+5 tests MySQL DATABASE #2, lint, TypeScript, i18n, Tailwind, build Vite, Pint,
+Composer et Docker Compose.
+
+## Mise à jour finale — 2026-08-17
+
+Statut actuel : **DÉPLOYÉ ET VÉRIFIÉ SUR AZURE AVEC DATABASE #2**
+
+Release candidate : `f9357660bb3e8d17ad09474d318000c0d7758e04`
+
+Branche : `main`
+
+Commit GitHub : poussé avec succès
+
+État Git avant cette mise à jour : propre
+
+### Preuves de validation actuelles
+
+- Backend : 388 tests, 2 116 assertions, Pint et Composer validate verts.
+- Frontend : ESLint, TypeScript, 130 tests Vitest, couverture et build verts.
+- E2E : 97 tests Playwright/axe verts en FR/AR/EN, RTL, responsive et thèmes.
+- Dataset : 14 comptes, 21 images PNG, 12 documents privés fictifs et données
+  marketplace associées, protégés par un bootstrap idempotent DB2.
+- Les secrets du compte de test DB2 et du profil légal/SMTP sont configurés au
+  niveau dépôt en secours chiffré. Le mot de passe DB2 est aussi conservé dans
+  `%LOCALAPPDATA%\YaZoo\database2-test-accounts.dpapi`.
+- Le profil SMTP saisi localement est conservé dans le paquet DPAPI
+  `%LOCALAPPDATA%\YaZoo\production-profile.dpapi` et n'est pas versionné.
+- Déploiement manuel gardé terminé le `2026-08-17T16:21+01:00` après le
+  `startup_failure` GitHub.
+
+### Publication Docker Hub — 2026-08-17
+
+Les deux images ont été reconstruites depuis le commit exact `f935766`, testées
+localement sur leurs endpoints de santé/version, puis publiées sous un tag SHA
+immuable :
+
+| Composant | Image | Digest publié |
+| --- | --- | --- |
+| Backend | `5eef/yazoo-api:f9357660bb3e8d17ad09474d318000c0d7758e04` | `sha256:b4fb57cfb2d0ea277b16f8e0804284019cf240b310fd7824213e2915a39d0865` |
+| Frontend | `5eef/yazoo-frontend:f9357660bb3e8d17ad09474d318000c0d7758e04` | `sha256:8a74957a58eea28171b4ae255445de25660cf96ea5f89606b17b923eed75e65e` |
+
+Le backend local puis Azure ont répondu avec `status=ok` et la version exacte
+`f935766` sur `/health/live`. Le frontend Azure renvoie la même version sur
+`/version.json`. Les alias `latest` ont été publiés seulement après les health
+checks Azure ; les App Services restent épinglés aux tags SHA immuables.
+
+### Échec distant réellement observé
+
+| Run | Déclencheur | Conclusion | Jobs créés |
+| --- | --- | --- | ---: |
+| `32038122692` | push du commit `f935766` | `startup_failure` | 0 |
+| `32038549912` | `workflow_dispatch` sur `main` | `startup_failure` | 0 |
+| `32041073954` | nouvelle relance manuelle | `startup_failure` | 0 |
+
+GitHub retourne `404` sur l'endpoint `/jobs` de ces runs. Les permissions du
+dépôt sont pourtant actives (`enabled: true`, `allowed_actions: all`) et le
+compte courant est `ADMIN`. Le dépôt est privé. Le nouvel endpoint de
+facturation GitHub a aussi renvoyé `HTTP 503`. Le workflow n'a donc exécuté ni
+Docker, ni Azure CLI, ni migration, ni seed. La release a été déployée par la
+voie manuelle gardée du dépôt ; l'incident GitHub Actions reste à corriger.
+
+### État des données
+
+```text
+DATABASE #1 : NON MODIFIÉE
+host     = yazoo-mysql-0c2b09.mysql.database.azure.com
+port     = 3306
+database = yazoo
+
+DATABASE #2 : UTILISÉE PAR LA RELEASE
+host     = yazoo-mysql-0c2b09.mysql.database.azure.com
+port     = 3306
+database = yazoo_azure_test
+```
+
+Les migrations forward-only, le bootstrap idempotent des 14 comptes et le
+bootstrap administrateur MFA ont réussi. Les secrets temporaires de bootstrap
+ont ensuite été retirés des App Settings et les trois indicateurs one-shot ont
+été remis à `false`.
+
+### URLs actuellement accessibles
+
+- Frontend déployé : `https://yazoo.azurewebsites.net`
+- Backend déployé : `https://yazoo-api.azurewebsites.net`
+- Health live : `https://yazoo-api.azurewebsites.net/health/live`
+- Health ready : `https://yazoo-api.azurewebsites.net/health/ready`
+- Marketplace public : `https://yazoo.azurewebsites.net/marketplace`
+
+Ces URLs servent le commit exact `f9357660bb3e8d17ad09474d318000c0d7758e04`.
+
+### Vérifications post-déploiement
+
+- `/health/live` et `/health/ready` : `status=ok`, version SHA exacte.
+- Checks ready : database, Redis, queue, scheduler et stockage persistant OK.
+- Authentification : login, `/auth/me` et logout CSRF propres avec
+  `client.fes@yazoo.test`.
+- Marketplace : 2 animaux publics, 6 produits, 10 services et 3 vétérinaires.
+- Médias : **21/21 URLs testées en HTTP 200** avec contenu non vide.
+- Frontend : 16 routes SPA critiques testées, 0 échec.
+- API et configuration légale : HTTP 200 ; contact SMTP annoncé disponible.
+- Métriques : deux HTTP 5xx transitoires pendant le remplacement, puis zéro sur
+  les intervalles suivants.
+
+## Historique de déploiement — 2026-08-14
+
+La section ci-dessous est conservée comme journal de la passe précédente. Les
+images, commits et états qui y figurent ne remplacent pas le statut actuel du
+17 août présenté ci-dessus.
+
+Horodatage : 2026-08-14 19:18 (Africa/Casablanca)
 Statut : **BLOQUÉ AVANT DÉPLOIEMENT — aucune fausse déclaration de succès**
 
 ## 1. Résumé
@@ -153,4 +275,3 @@ de démarrage désactivées. Ne jamais exécuter de rollback SQL automatique : l
 code rollback doit être compatible avec le schéma étendu de DB2. DATABASE #2
 doit être conservée pour diagnostic et DATABASE #1 ne doit subir aucune
 migration de cette release.
-

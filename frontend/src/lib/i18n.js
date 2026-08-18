@@ -8037,9 +8037,9 @@ const PUBLIC_MARKETPLACE_TRANSLATIONS = {
         en: 'OTP code',
       },
       passwordRules: {
-        fr: 'Au moins 12 caractères avec majuscule, minuscule, chiffre et symbole.',
-        ar: '12 حرفا على الأقل مع حرف كبير وصغير ورقم ورمز.',
-        en: 'At least 12 characters with uppercase, lowercase, number, and symbol.',
+        fr: 'Au moins 8 caractères.',
+        ar: '8 أحرف على الأقل.',
+        en: 'At least 8 characters.',
       },
     },
   },

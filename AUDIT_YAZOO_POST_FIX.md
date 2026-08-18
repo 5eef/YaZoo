@@ -1,6 +1,125 @@
 # Audit YaZoo post-corrections
 
-Date de clôture de cette passe : 2026-08-14 19:18 (Africa/Casablanca)  
+## Mise à jour — 2026-08-18
+
+- Feed : les publications Marché YaZoo sont prioritaires dans les insertions
+  organiques et une carte marché reste visible même avec un seul post social.
+- Mot de passe : création et réinitialisation acceptent désormais tout mot de
+  passe d'au moins 8 caractères, avec contraintes HTML et API alignées.
+- Notifications/messages : cloche mobile rétablie, badges rouges vérifiés sur
+  les icônes et suites API/temps réel vertes.
+- Menu principal : l'expansion de la sidebar reste pilotée par le survol et le
+  focus, sans clic d'ouverture; le scénario navigateur dédié est vert.
+- Formulaires/CRUD : 388 tests backend (2 116 assertions), 131 tests frontend,
+  97 tests Playwright/axe et 5 tests MySQL DATABASE #2 sont verts.
+- DATABASE #2 : MariaDB locale `127.0.0.1:3307/yazoo_azure_test`, Docker
+  `yazoo_azure_test` et Azure `yazoo_azure_test` sont migrés. Les anciennes
+  bases Docker `yazoo` et `yazoo_migration_test_20260717202459`, ainsi que la
+  base logique Azure `yazoo`, ont été supprimées après vérification de la cible.
+- Hygiène : archives de diagnostic, journaux et résumés CI/déploiement locaux
+  ignorés et obsolètes supprimés.
+
+## Mise à jour finale — 2026-08-17
+
+Commit audité et poussé : `f9357660bb3e8d17ad09474d318000c0d7758e04`
+
+Branche : `main`
+
+État Git avant cette mise à jour : propre (`git status --short` vide,
+`git diff --check` vert).
+
+Cette mise à jour remplace les totaux techniques plus anciens présents plus bas
+dans l'historique de la passe. Le rapport exhaustif initial reste
+`AUDIT_YAZOO_COMPLETE.md` (29 constats, score initial 78/100).
+
+### Résultat actuel
+
+- Score post-correction recalculé : **88/100**.
+- Aucun problème critique confirmé.
+- Les risques élevés de concurrence vétérinaire sont corrigés et couverts sur
+  MySQL ; la configuration de couverture frontend mesure désormais l'ensemble
+  des sources, mais la couverture applicative réelle reste faible (32,36 %).
+- 851 fichiers de première partie inventoriés, hors `vendor` et `node_modules`.
+- 166 routes Laravel, dont 156 API et 139 protégées par un middleware d'auth.
+- 63 migrations, 70 fichiers de tests backend et 41 fichiers de tests
+  frontend/E2E.
+- Aucun fichier secret réel n'est suivi. Les fichiers `.env*` suivis sont des
+  exemples ; le motif `DB_PASSWORD=` trouvé dans `azure-showcase-reset.ps1` est
+  une clé de configuration, pas une valeur embarquée.
+
+### Quality gates rejoués sur ce commit
+
+| Contrôle | Résultat réel du 2026-08-17 |
+| --- | --- |
+| Composer validate strict | PASS |
+| Pint | PASS |
+| PHPUnit | **388 tests, 2 116 assertions, PASS** |
+| Bootstrap DB2 + admin ciblé | **10 tests, 60 assertions, PASS** |
+| ESLint | PASS |
+| TypeScript | PASS |
+| Vitest | **38 fichiers, 130 tests, PASS** |
+| Couverture frontend | 32,36 % statements ; 24,81 % branches ; 31,55 % fonctions ; 32,83 % lignes |
+| Vite production build | PASS, 309 modules |
+| Playwright + axe | **97/97 PASS**, FR/AR/EN, RTL, responsive, clair/sombre |
+| Garde-fous release | PASS |
+| `git diff --check` | PASS |
+
+Les audits Composer/npm déjà exécutés avant ce commit étaient verts et les
+lockfiles n'ont pas changé. Ils ne sont pas présentés comme une nouvelle preuve
+réseau du 17 août, l'accès externe ayant été refusé à la session.
+
+### Jeu de données de démonstration prêt pour DATABASE #2
+
+Le bootstrap `yazoo:bootstrap-database2-test-data` est idempotent, protégé par
+le marqueur persistant `database2-test-data-v1` et refuse explicitement la base
+protégée `yazoo`. Il prépare exactement :
+
+- 14 comptes de test, dont un administrateur sécurisé séparément par MFA ;
+- 3 animaux, 7 produits, 10 services et 3 vétérinaires ;
+- 12 vérifications professionnelles et leurs documents PDF fictifs ;
+- 21 images PNG validées (signature, dimensions et taille non nulle) ;
+- les réservations, paiements, rendez-vous, favoris, conversation et messages
+  du jeu local autorisé.
+
+Les sessions, tokens Sanctum, caches, jobs, traces et fichiers GridFS orphelins
+ne sont pas importés. Le mot de passe fort partagé des 13 comptes non-admin est
+stocké dans GitHub Secrets et dans un paquet DPAPI local ; il n'est ni affiché
+ni versionné. Le compte administrateur conserve un mot de passe distinct et la
+MFA.
+
+### Risques restant ouverts
+
+1. **Incident CI distant restant** : les runs `32038122692`, `32038549912` et
+   `32041073954` se terminent en `startup_failure` avant la création d'un job.
+   L'API GitHub de facturation a renvoyé `HTTP 503`. La release a néanmoins été
+   déployée par la voie manuelle gardée et vérifiée sur Azure.
+2. **Dépôt GitHub privé** : Actions est activé et le compte a le rôle ADMIN ;
+   le quota/budget ou l'incident de plateforme doit encore être résolu pour
+   restaurer le déploiement automatique.
+3. **Couverture frontend** : de nombreuses pages critiques restent à 0 % en
+   test direct malgré 97 scénarios E2E de structure/accessibilité.
+4. **Architecture frontend** : Feed, Profile, Layout, Messages et Communities
+   restent volumineux ; leur découpage doit rester progressif.
+5. **Contrats d'erreur historiques** : plusieurs erreurs de réservation et de
+   paiement conservent des messages français, même si le renderer fournit un
+   champ `error` stable pour les nouveaux chemins.
+6. **Larastan** : non installé, car l'ajout de dépendance réseau n'a pas été
+   autorisé.
+7. **Mentions légales** : le profil configuré décrit un projet étudiant de
+   démonstration ; aucune validation juridique n'est revendiquée.
+
+DATABASE #1 demeure protégée et non modifiée. DATABASE #2 Azure est migrée et
+utilisée par la release `f935766`. Les 14 comptes ont été bootstrapés et les 21
+médias publics attendus répondent HTTP 200. Login, `/auth/me`, logout CSRF,
+health, API, configuration légale et 16 routes SPA ont été vérifiés.
+
+## Historique de validation — 2026-08-14
+
+La section ci-dessous est conservée pour la traçabilité. Ses nombres, images
+locales et états d'autorisation décrivent la passe du 14 août ; en cas d'écart,
+la mise à jour du 17 août ci-dessus fait foi.
+
+Date de clôture de cette passe : 2026-08-14 19:18 (Africa/Casablanca)
 Branche : `main`  
 Commit de référence non modifié : `3464df84c3892e604968795a1e6093b8e52824d1`  
 Audit source : `AUDIT_YAZOO_COMPLETE.md`
@@ -171,4 +290,3 @@ preuve.
    lecture/écriture de test réversible réussis.
 5. Poursuivre les tests directs des pages à 0 % et la migration des erreurs
    métier historiques vers des codes stables.
-

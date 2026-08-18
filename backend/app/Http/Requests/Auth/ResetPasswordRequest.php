@@ -4,7 +4,6 @@ namespace App\Http\Requests\Auth;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Password;
 
 class ResetPasswordRequest extends FormRequest
 {
@@ -22,8 +21,9 @@ class ResetPasswordRequest extends FormRequest
             'otp_code' => ['nullable', 'required_if:channel,phone', 'digits:6'],
             'password' => [
                 'required',
+                'string',
                 'confirmed',
-                Password::min(12)->mixedCase()->numbers()->symbols(),
+                'min:8',
             ],
         ];
     }

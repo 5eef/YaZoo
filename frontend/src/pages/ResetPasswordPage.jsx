@@ -54,8 +54,8 @@ function ResetPasswordPage() {
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             <Input label={channel === 'email' ? t('common.email') : t('common.phone')} type={channel === 'email' ? 'email' : 'tel'} value={identifier} onChange={setIdentifier} />
             {channel === 'email' ? <Input label={t('auth.recovery.token')} value={token} onChange={setToken} /> : <Input label={t('auth.recovery.otp')} inputMode="numeric" value={otpCode} onChange={setOtpCode} />}
-            <PasswordField label={t('auth.login.password')} value={password} onChange={setPassword} autoComplete="new-password" showLabel={t('auth.showPassword')} hideLabel={t('auth.hidePassword')} />
-            <PasswordField label={t('auth.register.passwordConfirmation')} value={confirmation} onChange={setConfirmation} autoComplete="new-password" showLabel={t('auth.showPassword')} hideLabel={t('auth.hidePassword')} />
+            <PasswordField label={t('auth.login.password')} value={password} onChange={setPassword} autoComplete="new-password" minLength={8} required showLabel={t('auth.showPassword')} hideLabel={t('auth.hidePassword')} />
+            <PasswordField label={t('auth.register.passwordConfirmation')} value={confirmation} onChange={setConfirmation} autoComplete="new-password" minLength={8} required showLabel={t('auth.showPassword')} hideLabel={t('auth.hidePassword')} />
             <p className="text-sm text-stone-500 dark:text-violet-100/70">{t('auth.recovery.passwordRules')}</p>
             {message ? <p className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-100">{message}</p> : null}
             {error ? <p role="alert" className="rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:bg-rose-500/10 dark:text-rose-100">{error}</p> : null}
