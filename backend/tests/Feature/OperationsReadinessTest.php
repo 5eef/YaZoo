@@ -155,6 +155,28 @@ class OperationsReadinessTest extends TestCase
         $this->assertNotNull(Cache::get('operations:queue-heartbeat'));
     }
 
+    public function test_reverb_runtime_configuration_matches_the_installed_server_contract(): void
+    {
+        $server = config('reverb.servers.reverb');
+        $application = config('reverb.apps.apps.0');
+
+        $this->assertIsArray($server);
+        $this->assertArrayHasKey('pulse_ingest_interval', $server);
+        $this->assertArrayHasKey('telescope_ingest_interval', $server);
+        $this->assertGreaterThan(0, $server['pulse_ingest_interval']);
+        $this->assertGreaterThan(0, $server['telescope_ingest_interval']);
+
+        $this->assertIsArray($application);
+        $this->assertArrayHasKey('accept_client_events_from', $application);
+        $this->assertArrayHasKey('rate_limiting', $application);
+        $this->assertNotEmpty($application['allowed_origins']);
+
+        foreach ($application['allowed_origins'] as $allowedOrigin) {
+            $this->assertStringNotContainsString('://', $allowedOrigin);
+            $this->assertStringNotContainsString(':', $allowedOrigin);
+        }
+    }
+
     public function test_media_backup_schedule_uses_cached_configuration(): void
     {
         config([

@@ -1,9 +1,20 @@
 <?php
 
-$allowedOrigins = array_values(array_filter(array_map(
-    'trim',
+$allowedOrigins = array_values(array_unique(array_filter(array_map(
+    static function (string $origin): string {
+        $origin = trim($origin);
+
+        if ($origin === '' || $origin === '*') {
+            return $origin;
+        }
+
+        $candidate = str_contains($origin, '://') ? $origin : 'https://'.$origin;
+        $host = parse_url($candidate, PHP_URL_HOST);
+
+        return is_string($host) && $host !== '' ? $host : $origin;
+    },
     explode(',', (string) env('REVERB_ALLOWED_ORIGINS', env('FRONTEND_URL', 'http://localhost:4173'))),
-)));
+))));
 
 return [
     'default' => env('REVERB_SERVER', 'reverb'),
@@ -28,6 +39,8 @@ return [
                     'timeout' => env('REDIS_TIMEOUT', 60),
                 ],
             ],
+            'pulse_ingest_interval' => (int) env('REVERB_PULSE_INGEST_INTERVAL', 15),
+            'telescope_ingest_interval' => (int) env('REVERB_TELESCOPE_INGEST_INTERVAL', 15),
         ],
     ],
     'apps' => [
@@ -43,10 +56,17 @@ return [
                 'useTLS' => env('REVERB_SCHEME', 'http') === 'https',
             ],
             'allowed_origins' => $allowedOrigins,
-            'ping_interval' => 60,
-            'activity_timeout' => 30,
+            'ping_interval' => (int) env('REVERB_APP_PING_INTERVAL', 60),
+            'activity_timeout' => (int) env('REVERB_APP_ACTIVITY_TIMEOUT', 30),
             'max_connections' => env('REVERB_APP_MAX_CONNECTIONS'),
-            'max_message_size' => 10_000,
+            'max_message_size' => (int) env('REVERB_APP_MAX_MESSAGE_SIZE', 10_000),
+            'accept_client_events_from' => env('REVERB_APP_ACCEPT_CLIENT_EVENTS_FROM', 'members'),
+            'rate_limiting' => [
+                'enabled' => filter_var(env('REVERB_APP_RATE_LIMITING_ENABLED', false), FILTER_VALIDATE_BOOL),
+                'max_attempts' => (int) env('REVERB_APP_RATE_LIMIT_MAX_ATTEMPTS', 60),
+                'decay_seconds' => (int) env('REVERB_APP_RATE_LIMIT_DECAY_SECONDS', 60),
+                'terminate_on_limit' => filter_var(env('REVERB_APP_RATE_LIMIT_TERMINATE', false), FILTER_VALIDATE_BOOL),
+            ],
         ]],
     ],
 ];

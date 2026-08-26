@@ -21,6 +21,7 @@ sonar-issues.json
 /ci-summary.txt
 /deploy-summary.txt
 /backend/storage/framework/manual-*.ps1
+.copilot-azure/
 
 # Local point-in-time audit reports
 /AUDIT_COMPLET_YAZOO_STARTUP_INDH_2026.md
