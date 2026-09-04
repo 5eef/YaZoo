@@ -27,4 +27,4 @@ Keep a Changelog et les versions publiées suivent Semantic Versioning.
 - Images : tag immuable SHA Git complet; `latest` seulement après rollout vert.
 - Aucun tag n'est créé automatiquement pendant une session de correction.
 
-[Unreleased]: https://github.com/Seef590/YaZoo/compare/HEAD
+[Unreleased]: https://github.com/5eef/YaZoo/compare/HEAD

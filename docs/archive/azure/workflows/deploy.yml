@@ -1,4 +1,4 @@
-name: Deploy YaZoo
+name: Legacy Azure deployment (decommissioned)
 
 on:
   workflow_dispatch:

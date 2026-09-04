@@ -11,7 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (! in_array(Schema::getConnection()->getDriverName(), ['mysql', 'mariadb'], true)) {
+        if (
+            ! (bool) config('operations.fulltext_search_enabled')
+            || ! in_array(Schema::getConnection()->getDriverName(), ['mysql', 'mariadb'], true)
+        ) {
             return;
         }
 
@@ -32,7 +35,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        if (! in_array(Schema::getConnection()->getDriverName(), ['mysql', 'mariadb'], true)) {
+        if (
+            ! (bool) config('operations.fulltext_search_enabled')
+            || ! in_array(Schema::getConnection()->getDriverName(), ['mysql', 'mariadb'], true)
+        ) {
             return;
         }
 

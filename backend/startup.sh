@@ -19,9 +19,12 @@ if [ "${YAZOO_RUN_SHOWCASE_BOOTSTRAP:-false}" = "true" ]; then
         php artisan queue:clear "${QUEUE_CONNECTION:-redis}" --force
     fi
 
-    php artisan yazoo:bootstrap-azure-showcase \
+    php artisan yazoo:bootstrap-showcase \
         --images="${YAZOO_SHOWCASE_IMAGES_PATH:-/opt/yazoo-showcase-images}" \
         --confirmation="${YAZOO_SHOWCASE_CONFIRMATION}"
+
+    php artisan yazoo:ensure-showcase-media \
+        --images="${YAZOO_SHOWCASE_IMAGES_PATH:-/opt/yazoo-showcase-images}"
 
     sh /var/www/html/scripts/run-production-preflight.sh
 else

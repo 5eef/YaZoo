@@ -12,8 +12,8 @@ class ShowcaseBootstrapGuard
             throw new RuntimeException('Le bootstrap showcase est desactive.');
         }
 
-        if (! app()->environment('production')) {
-            throw new RuntimeException('Le bootstrap showcase exige APP_ENV=production.');
+        if (! app()->environment('production') || config('operations.deployment_profile') !== 'showcase') {
+            throw new RuntimeException('Le bootstrap showcase exige APP_ENV=production et YAZOO_DEPLOYMENT_PROFILE=showcase.');
         }
 
         $expectedConfirmation = (string) config('operations.showcase_bootstrap_confirmation');
@@ -28,7 +28,7 @@ class ShowcaseBootstrapGuard
         $expectedAppHost = strtolower((string) config('operations.showcase_app_host'));
 
         if ($scheme !== 'https' || $expectedAppHost === '' || $host !== $expectedAppHost) {
-            throw new RuntimeException('La cible applicative showcase ne correspond pas a la Web App autorisee.');
+            throw new RuntimeException('La cible applicative showcase ne correspond pas au host autorise.');
         }
 
         $connection = (string) config('database.default');

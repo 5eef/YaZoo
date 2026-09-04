@@ -1,234 +1,151 @@
-# YaZoo V2
+# YaZoo
 
-Projet local: `C:\Users\seef7\OneDrive\Desktop\YaZoo`
+YaZoo est une plateforme sociale et marketplace animalière full-stack destinée au marché marocain, développée avec React, Laravel et MySQL.
 
-Copyright (c) 2026 Youssef BOUGHIOUL. YaZoo est distribue sous licence MIT.
-Voir le fichier `LICENSE` pour les conditions completes.
+![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
+![Laravel 12](https://img.shields.io/badge/Laravel-12-FF2D20?logo=laravel&logoColor=white)
+![PHP 8.4](https://img.shields.io/badge/PHP-8.4-777BB4?logo=php&logoColor=white)
+![MySQL 8](https://img.shields.io/badge/MySQL-8-4479A1?logo=mysql&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)
+[![CI](https://github.com/5eef/YaZoo/actions/workflows/ci.yml/badge.svg)](https://github.com/5eef/YaZoo/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-## Prerequis
+![Accueil réel de YaZoo avec les données de démonstration](docs/screenshots/yazoo-home.png)
 
-- PHP 8.2+ et Composer
-- Node.js 22.22+ et npm
-- Docker Desktop
-- Azure CLI connecte avec `az login`
-- Git, puis `git-filter-repo` ou BFG si un historique Git doit etre purge
+## Problème résolu
 
-## Securite critique
+YaZoo réunit dans une seule expérience une communauté autour des animaux, un fil social et une marketplace d'animaux, produits et services professionnels. Les utilisateurs peuvent découvrir des vétérinaires, échanger, réserver et suivre leurs demandes sans multiplier les plateformes.
 
-Le `.gitignore` racine ignore les secrets, dependances, logs, coverage et artefacts locaux. Si des fichiers `.env` ont deja ete versionnes, purger l'historique avant de pousser:
+La confiance est traitée comme une fonction du produit : publication modérée, vérification des professionnels, protection des coordonnées, signalements, avis et gouvernance des comptes sensibles.
 
-```powershell
-cd "C:\Users\seef7\OneDrive\Desktop\YaZoo"
-python -m pip install git-filter-repo
-git filter-repo --path .env --path backend/.env --path frontend/.env --invert-paths --force
-git for-each-ref --format="%(refname)" refs/original/ | ForEach-Object { git update-ref -d $_ }
-git reflog expire --expire=now --all
-git gc --prune=now --aggressive
+## Mon rôle
+
+Développé par Youssef BOUGHIOUL dans le cadre de son projet de formation / PFE OFPPT, avec contribution full-stack.
+
+[GitHub @5eef](https://github.com/5eef) · [bough.youssef@gmail.com](mailto:bough.youssef@gmail.com)
+
+## Fonctionnalités clés
+
+- Authentification sécurisée, OAuth Google optionnel et gestion des profils.
+- Feed social avec posts, commentaires, réactions, abonnements et stories.
+- Marketplace pour animaux, produits, services animaliers et vétérinaires.
+- Réservations, rendez-vous vétérinaires, historique, factures et évaluations.
+- Modération, signalements, gouvernance admin et vérifications professionnelles.
+- Favoris, messagerie, notifications temps réel optionnelles ou actualisation classique.
+- Interface responsive, accessible et internationalisée en français, arabe et anglais.
+
+## Architecture
+
+Le dépôt conserve l'architecture complète pour le développement et une image plus légère pour la démonstration gratuite.
+
+```mermaid
+flowchart LR
+    B[Browser] --> R[React 19 SPA]
+    R -->|REST + cookies same-origin| L[Laravel 12 API]
+    L -->|Sanctum + CSRF| M[(MySQL 8 compatible)]
+    L --> S[Stockage public / privé]
+    L --> Q[Queue + cache]
+    R -. optionnel .-> W[Reverb / Echo]
+    W -. événements .-> L
+
+    subgraph Démonstration gratuite
+      N[Nginx + PHP-FPM<br/>image Docker unique] --> T[(TiDB Cloud Starter)]
+      N --> E[Filesystem éphémère<br/>21 médias réhydratés]
+    end
 ```
 
-Alternative BFG:
+- Architecture complète : conteneurs React, Laravel, MySQL, Redis, worker, scheduler et Reverb séparés avec `docker-compose.yml`.
+- Architecture showcase : `Dockerfile.demo` sert React et Laravel sur le même host ; sessions et cache utilisent SQL, la queue est synchrone et Reverb est désactivé.
 
-```powershell
-cd "C:\Users\seef7\OneDrive\Desktop\YaZoo"
-java -jar .\bfg.jar --delete-files ".env" --delete-files ".env.*"
-git reflog expire --expire=now --all
-git gc --prune=now --aggressive
+## Stack
+
+| Domaine | Technologies vérifiées |
+| --- | --- |
+| Frontend | React 19, Vite 8, Tailwind CSS 3, Axios, React Router 8 |
+| Backend | PHP 8.4 dans l'image runtime, Laravel 12, Sanctum 4, Socialite 5 |
+| Data | MySQL 8 compatible, TiDB Starter pour le showcase, SQLite pour les tests rapides |
+| Infra | Docker, GitHub Actions, Nginx, PHP-FPM |
+| Qualité | PHPUnit 11, Vitest 4, Playwright, ESLint 10, SonarCloud |
+
+## Tests et sécurité
+
+Résultats obtenus sur cette révision :
+
+| Contrôle | Résultat |
+| --- | --- |
+| Backend PHPUnit | 394 tests réussis (2 142 assertions) |
+| Frontend Vitest | 131 tests réussis |
+| Playwright E2E | 97 scénarios réussis |
+| Qualité frontend | ESLint, TypeScript, i18n et audit Tailwind réussis |
+| Dépendances | Composer sans advisory ; audit npm production sans vulnérabilité |
+| Conteneurs | Compose valide ; images release et `Dockerfile.demo` construites |
+
+L'application combine Sanctum, cookies HttpOnly, CSRF, rate limiting, MFA administrateur, politiques d'autorisation, modération, CORS restreint et en-têtes de sécurité. Les secrets restent hors Git et les contrôles de démarrage échouent explicitement sur une cible de base ou une configuration dangereuse.
+
+## Demo
+
+**Demo publique : en préparation.** Aucune URL n'est publiée tant que l'environnement gratuit n'a pas été créé et vérifié.
+
+- Mode : `showcase`
+- Données : entièrement fictives
+- Hébergement prévu : free-tier, non destiné à la production commerciale
+- Aperçu marketplace : [capture Playwright réelle](docs/screenshots/yazoo-marketplace.png)
+
+## Installation locale
+
+### Docker Compose — architecture complète
+
+Prérequis : Git, Docker Desktop et Docker Compose.
+
+```bash
+git clone https://github.com/5eef/YaZoo.git
+cd YaZoo
+cp .env.example .env
 ```
 
-Apres purge, changer tous les secrets dans Azure/GitHub/local: `APP_KEY`, `DB_PASSWORD`, `DB_ROOT_PASSWORD`, mots de passe Redis/MySQL et tokens tiers. Ne jamais reutiliser les anciennes valeurs.
+Renseigner dans le `.env` local une `APP_KEY` Laravel et des mots de passe de développement forts pour MySQL et Redis, puis :
 
-Generer une nouvelle cle Laravel:
-
-```powershell
-cd "C:\Users\seef7\OneDrive\Desktop\YaZoo\backend"
-php artisan key:generate
+```bash
+docker compose up -d --build
+docker compose exec app php artisan migrate --seed --force
 ```
 
-Headers et HTTPS sont actifs via:
+Frontend : `http://localhost:4173` · API : `http://localhost:8000/api`. Le MySQL Docker utilise le port hôte `3308` pour rester distinct de MySQL Server (`3306`) et XAMPP MariaDB (`3307`).
 
-- `backend\app\Http\Middleware\ForceHttps.php`
-- `backend\app\Http\Middleware\SecurityHeaders.php`
-- `APP_FORCE_HTTPS=true` en production
+### Installation manuelle
 
-La CSP est appliquée à la fois par le middleware Laravel et les configurations
-Nginx afin de rester présente si l'un des reverse proxies change.
-
-## Backend Laravel
-
-Installer et tester:
-
-```powershell
-cd "C:\Users\seef7\OneDrive\Desktop\YaZoo\backend"
+```bash
+cd backend
 composer install
-php artisan migrate
-php artisan test
+cp .env.example .env
+php artisan key:generate
+php artisan migrate --seed
+php artisan serve
 ```
 
-Les routes `/api/auth/login` et `/api/auth/register` sont rate-limitees. CORS utilise `CORS_ALLOWED_ORIGINS`. La detection N+1 est active hors production via `Model::preventLazyLoading`.
+Dans un second terminal :
 
-Commande utile pour reperer des `get()` non pagines dans les controleurs:
-
-```powershell
-cd "C:\Users\seef7\OneDrive\Desktop\YaZoo"
-rg "->get\(" backend\app\Http\Controllers
-```
-
-Ne jamais remplacer globalement `get()` par `paginate()`: chaque endpoint doit conserver
-son contrat JSON et recevoir une pagination serveur explicite, bornee et testee.
-
-## Frontend React
-
-Installer, tester et construire:
-
-```powershell
-cd "C:\Users\seef7\OneDrive\Desktop\YaZoo\frontend"
+```bash
+cd frontend
 npm ci
-npm audit --omit=dev
-npm run lint
-npm run typecheck
-npm run test:coverage -- --run
-npm run build
+npm run dev
 ```
 
-La migration progressive vers une couche API typee est dans:
+## Documentation
 
-- `frontend\src\services\api\client.ts`
-- `frontend\src\services\api\auth.ts`
-- `frontend\src\services\api\users.ts`
-- `frontend\src\types\`
+| Sujet | Document |
+| --- | --- |
+| Architecture et exploitation | [Plan de montée en charge](docs/production-scaling-plan.md) |
+| Sécurité | [Partage et configuration sécurisés](docs/SECURITY_SHARING.md) |
+| Accessibilité | [Référentiel d'accessibilité](docs/ACCESSIBILITY.md) |
+| Vie privée / CNDP | [Préparation CNDP](docs/CNDP_PRIVACY_READINESS.md) |
+| Conformité animale / ONSSA | [Notes ONSSA](docs/ONSSA_COMPLIANCE_NOTES.md) |
+| Paiements | [Architecture des paiements](docs/PAYMENTS_ARCHITECTURE.md) |
+| Déploiement showcase | [Déploiement gratuit Koyeb + TiDB](docs/DEMO_DEPLOYMENT_FREE.md) |
+| Historique cloud | [Archives Azure décommissionnées](docs/archive/azure/README.md) |
 
-Exemple de migration:
+## Licence et auteur
 
-```ts
-import { login } from '../services/api/auth'
+Distribué sous licence [MIT](LICENSE).
 
-const result = await login({ email, password, device_name: 'yazoo-web' })
-setUser(result.user)
-```
-
-## Docker
-
-Build et lancement local:
-
-```powershell
-cd "C:\Users\seef7\OneDrive\Desktop\YaZoo"
-docker compose -p yazoo_v2 down
-docker compose build
-docker compose up -d
-```
-
-Image backend seule:
-
-```powershell
-cd "C:\Users\seef7\OneDrive\Desktop\YaZoo"
-docker build -f backend\Dockerfile -t yazoo-api:local .
-```
-
-Construction locale avec un tag immuable:
-
-```powershell
-git rev-parse HEAD
-docker build --build-arg APP_VERSION=<git-sha> -f backend\Dockerfile -t yazoo-api:<git-sha> .
-docker build --build-arg APP_VERSION=<git-sha> -f frontend\Dockerfile -t yazoo-frontend:<git-sha> .
-```
-
-La publication Docker Hub et le deploiement sont assures par les workflows seulement
-apres la CI complete. Azure est fixe sur `<github.sha>`; `latest` n'est publie
-qu'apres un rollout dont les health checks et versions ont reussi.
-
-## Azure Student
-
-Creer les ressources:
-
-```powershell
-cd "C:\Users\seef7\OneDrive\Desktop\YaZoo"
-.\deploy\azure-setup.ps1 `
-  -ResourceGroup <groupe-existant-ou-approuve> `
-  -Location <region-approuvee> `
-  -AppServicePlanName <plan-approuve> `
-  -BackendWebAppName <app-backend-approuvee> `
-  -FrontendWebAppName <app-frontend-approuvee> `
-  -MysqlServerName <serveur-mysql-approuve> `
-  -MysqlDatabase <base-approuvee> `
-  -MysqlAdminUser <administrateur-approuve> `
-  -KeyVaultName <coffre-approuve> `
-  -VnetName <vnet-approuve> `
-  -AppSubnetName <sous-reseau-app-approuve> `
-  -MysqlSubnetName <sous-reseau-mysql-approuve> `
-  -MysqlPrivateDnsZone <zone-dns-privee-approuvee> `
-  -ProvisioningPrincipalObjectId <object-id-entra> `
-  -BackendImage 5eef/yazoo-api:<sha-git-40-caracteres> `
-  -FrontendImage 5eef/yazoo-frontend:<sha-git-40-caracteres> `
-  -AllowCreateResources
-```
-
-Le script est idempotent, cible deux Azure App Services conteneurises et n'utilise ni
-Static Web Apps ni ACR. Tous les noms sont obligatoires. Sans
-`-AllowCreateResources`, il inspecte seulement les ressources existantes. Verifier
-d'abord sans mutation avec les memes parametres et `-WhatIf`; l'exemple abrege
-ci-dessous doit etre complete avec tous les noms explicites:
-
-```powershell
-.\deploy\azure-setup.ps1 `
-  -ResourceGroup <groupe-a-inspecter> `
-  -Location <region-a-inspecter> `
-  -AppServicePlanName <plan-a-inspecter> `
-  -BackendWebAppName <app-backend-a-inspecter> `
-  -FrontendWebAppName <app-frontend-a-inspecter> `
-  -MysqlServerName <serveur-mysql-a-inspecter> `
-  -MysqlDatabase <base-a-inspecter> `
-  -MysqlAdminUser <administrateur-a-inspecter> `
-  -KeyVaultName <coffre-a-inspecter> `
-  -VnetName <vnet-a-inspecter> `
-  -AppSubnetName <sous-reseau-app-a-inspecter> `
-  -MysqlSubnetName <sous-reseau-mysql-a-inspecter> `
-  -MysqlPrivateDnsZone <zone-dns-a-inspecter> `
-  -ProvisioningPrincipalObjectId 00000000-0000-0000-0000-000000000000 `
-  -BackendImage 5eef/yazoo-api:0000000000000000000000000000000000000000 `
-  -FrontendImage 5eef/yazoo-frontend:0000000000000000000000000000000000000000 `
-  -WhatIf
-```
-
-Ajouter un domaine et certificat gratuit App Service:
-
-```powershell
-az webapp config hostname add --resource-group yazoo-rg --webapp-name yazoo-api --hostname api.example.com
-az webapp config ssl create --resource-group yazoo-rg --name yazoo-api --hostname api.example.com
-az webapp config ssl bind --resource-group yazoo-rg --name yazoo-api --certificate-thumbprint <THUMBPRINT> --ssl-type SNI
-```
-
-Redis gratuit: utiliser Upstash Free, puis renseigner `REDIS_HOST`, `REDIS_PASSWORD`, `REDIS_PORT=6379`, `CACHE_STORE=redis`, `SESSION_DRIVER=redis`, `QUEUE_CONNECTION=redis` dans les variables Azure. Azure Cache for Redis n'a generalement pas de niveau gratuit durable.
-
-## GitHub Actions
-
-Workflow: `.github\workflows\deploy.yml`
-
-Secrets GitHub requis:
-
-- `DOCKERHUB_USERNAME`
-- `DOCKERHUB_TOKEN`
-
-L'authentification Azure utilise OIDC, sans secret `AZURE_CREDENTIALS`, via les
-variables `AZURE_CLIENT_ID`, `AZURE_TENANT_ID` et `AZURE_SUBSCRIPTION_ID`.
-
-Variables de l'environnement GitHub `production`:
-
-- `AZURE_RESOURCE_GROUP`
-- `AZURE_BACKEND_WEBAPP_NAME`
-- `AZURE_FRONTEND_WEBAPP_NAME`
-- `AZURE_BACKEND_URL`
-- `AZURE_FRONTEND_URL`
-- `AZURE_MYSQL_SERVER_NAME`
-- `AZURE_DATABASE2_HOST`
-- `AZURE_DATABASE2_PORT`
-- `AZURE_DATABASE2_NAME`
-
-L'environnement GitHub `production` doit exiger une approbation humaine avant le
-job `build-and-deploy` et limiter les branches autorisees. GitHub ne versionne pas
-ce reglage: s'il n'est pas configure dans les parametres du depot, un merge vers
-`main` peut deployer automatiquement apres la CI. Le flux attendu est merge,
-CI complete, attente d'approbation, approbation, push des images SHA, validation
-MySQL, rollout Azure, puis publication de `latest`.
-
-Le plan complet, le rollback, la migration unique et l'activation des services externes
-sont documentes dans `.azure/deployment-plan.md`.
+Youssef BOUGHIOUL · [GitHub @5eef](https://github.com/5eef) · [bough.youssef@gmail.com](mailto:bough.youssef@gmail.com)

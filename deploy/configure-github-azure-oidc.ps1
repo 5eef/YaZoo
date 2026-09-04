@@ -6,7 +6,7 @@ param(
     [string] $BackendWebAppName = 'yazoo-api',
     [string] $FrontendWebAppName = 'yazoo',
     [string] $MysqlServerName = 'yazoo-mysql-0c2b09',
-    [string] $Repository = 'Seef590/YaZoo',
+    [string] $Repository = '5eef/YaZoo',
     [string] $GitHubEnvironment = 'production',
     [string] $ManagedIdentityName = 'yazoo-github-actions',
     [string] $Confirmation = '',
@@ -21,12 +21,12 @@ $expectedResourceGroup = 'yazoo-rg'
 $expectedBackendWebAppName = 'yazoo-api'
 $expectedFrontendWebAppName = 'yazoo'
 $expectedMysqlServerName = 'yazoo-mysql-0c2b09'
-$expectedRepository = 'Seef590/YaZoo'
+$expectedRepository = '5eef/YaZoo'
 $expectedEnvironment = 'production'
 $expectedManagedIdentityName = 'yazoo-github-actions'
-$expectedConfirmation = 'Seef590/YaZoo@yazoo-rg/production'
+$expectedConfirmation = '5eef/YaZoo@yazoo-rg/production'
 $federatedCredentialName = 'github-yazoo-production'
-$federatedSubject = 'repo:Seef590/YaZoo:environment:production'
+$federatedSubject = 'repo:5eef/YaZoo:environment:production'
 
 function Format-SafeArguments {
     param([string[]] $Arguments)

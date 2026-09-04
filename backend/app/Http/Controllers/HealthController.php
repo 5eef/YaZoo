@@ -109,8 +109,7 @@ class HealthController extends Controller
         $path = rtrim((string) config('operations.persistent_storage_path'), '/\\');
         $public = $path.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'public';
         $private = $path.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'private';
-        $ok = (bool) config('operations.app_service_storage_enabled')
-            && is_dir($public)
+        $ok = is_dir($public)
             && is_readable($public)
             && is_writable($public)
             && is_dir($private)

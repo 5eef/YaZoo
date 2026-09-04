@@ -18,6 +18,7 @@
     "audit:tailwind": "node scripts/check-tailwind-classes.mjs",
     "test": "vitest",
     "test:e2e": "node e2e/run-smoke.mjs",
+    "screenshots:showcase": "node e2e/capture-showcase-screenshots.mjs",
     "test:e2e:ui": "playwright test --ui",
     "test:coverage": "vitest run --coverage",
     "preview": "vite preview"

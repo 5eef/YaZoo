@@ -21,13 +21,13 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
-class AzureShowcaseBootstrapTest extends TestCase
+class ShowcaseBootstrapTest extends TestCase
 {
     use RefreshDatabase;
 
     private string $imagesPath;
 
-    private string $confirmation = 'yazoo-mysql-0c2b09/yazoo@yazoo-api';
+    private string $confirmation = 'demo-db.example/yazoo_showcase@demo.example';
 
     private string $password = 'Showcase-Test-Password-2026!';
 
@@ -37,6 +37,7 @@ class AzureShowcaseBootstrapTest extends TestCase
 
         config([
             'app.url' => 'http://localhost',
+            'operations.deployment_profile' => 'showcase',
             'operations.showcase_bootstrap_confirmation' => $this->confirmation,
             'operations.showcase_password' => $this->password,
             'operations.showcase_mfa_secret' => 'JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP',
@@ -44,14 +45,14 @@ class AzureShowcaseBootstrapTest extends TestCase
         ]);
         Storage::fake('public');
         Storage::fake('private');
-        $this->imagesPath = storage_path('framework/testing/azure-showcase-'.Str::uuid());
+        $this->imagesPath = storage_path('framework/testing/showcase-'.Str::uuid());
         File::ensureDirectoryExists($this->imagesPath);
         $this->writeImages();
     }
 
     protected function tearDown(): void
     {
-        if (isset($this->imagesPath) && str_starts_with($this->imagesPath, storage_path('framework/testing/azure-showcase-'))) {
+        if (isset($this->imagesPath) && str_starts_with($this->imagesPath, storage_path('framework/testing/showcase-'))) {
             File::deleteDirectory($this->imagesPath);
         }
 
@@ -65,7 +66,7 @@ class AzureShowcaseBootstrapTest extends TestCase
             '--confirmation' => $this->confirmation,
         ];
 
-        $this->assertSame(0, Artisan::call('yazoo:bootstrap-azure-showcase', $arguments));
+        $this->assertSame(0, Artisan::call('yazoo:bootstrap-showcase', $arguments));
         $this->assertDatabaseCount('users', 20);
         $this->assertDatabaseCount('posts', 3);
         $this->assertDatabaseCount('comments', 2);
@@ -89,7 +90,7 @@ class AzureShowcaseBootstrapTest extends TestCase
         $publicFilesBefore = Storage::disk('public')->allFiles();
         $privateFilesBefore = Storage::disk('private')->allFiles();
 
-        $this->assertSame(0, Artisan::call('yazoo:bootstrap-azure-showcase', $arguments));
+        $this->assertSame(0, Artisan::call('yazoo:bootstrap-showcase', $arguments));
         $this->assertSame($countsBefore, $this->showcaseCounts());
         $this->assertSame($publicFilesBefore, Storage::disk('public')->allFiles());
         $this->assertSame($privateFilesBefore, Storage::disk('private')->allFiles());
@@ -99,7 +100,7 @@ class AzureShowcaseBootstrapTest extends TestCase
     {
         User::factory()->create(['email' => 'existing-user@example.test']);
 
-        $exit = Artisan::call('yazoo:bootstrap-azure-showcase', [
+        $exit = Artisan::call('yazoo:bootstrap-showcase', [
             '--images' => $this->imagesPath,
             '--confirmation' => $this->confirmation,
         ]);
@@ -119,6 +120,25 @@ class AzureShowcaseBootstrapTest extends TestCase
             $this->assertStringNotContainsString('::factory(', $source, $seeder);
             $this->assertStringNotContainsString('fake()', $source, $seeder);
         }
+    }
+
+    public function test_it_rehydrates_missing_showcase_media_without_changing_database_rows(): void
+    {
+        $arguments = [
+            '--images' => $this->imagesPath,
+            '--confirmation' => $this->confirmation,
+        ];
+        $this->assertSame(0, Artisan::call('yazoo:bootstrap-showcase', $arguments));
+        $countsBefore = $this->showcaseCounts();
+
+        Storage::disk('public')->deleteDirectory('marketplace/demo');
+        $this->assertSame([], Storage::disk('public')->allFiles('marketplace/demo'));
+
+        $this->assertSame(0, Artisan::call('yazoo:ensure-showcase-media', [
+            '--images' => $this->imagesPath,
+        ]));
+        $this->assertCount(21, Storage::disk('public')->allFiles('marketplace/demo'));
+        $this->assertSame($countsBefore, $this->showcaseCounts());
     }
 
     private function writeImages(): void

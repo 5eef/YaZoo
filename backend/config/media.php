@@ -32,12 +32,6 @@ return [
         'schedule' => env('MEDIA_BACKUP_SCHEDULE', '03:30'),
         'keep_days' => env('MEDIA_BACKUP_KEEP_DAYS', 7),
     ],
-    'azure_blob' => [
-        'enabled' => env('MEDIA_AZURE_BLOB_ENABLED', false),
-        'account' => env('MEDIA_AZURE_BLOB_ACCOUNT'),
-        'container' => env('MEDIA_AZURE_BLOB_CONTAINER'),
-        'endpoint' => env('MEDIA_AZURE_BLOB_ENDPOINT'),
-    ],
     'mongodb' => [
         'enabled' => env('MEDIA_MONGODB_ENABLED', false),
         'uri' => env('MEDIA_MONGODB_URI'),

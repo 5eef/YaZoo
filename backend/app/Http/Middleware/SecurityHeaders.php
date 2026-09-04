@@ -20,13 +20,10 @@ class SecurityHeaders
             'Permissions-Policy' => 'camera=(), microphone=(), geolocation=(self)',
             'Cross-Origin-Opener-Policy' => 'same-origin',
             'Cross-Origin-Resource-Policy' => 'same-site',
-            'Content-Security-Policy' => "default-src 'self'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' https: wss:; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:",
+            'Content-Security-Policy' => "default-src 'self'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:",
         ];
 
-        $isAzureHttpsRequest = filled(config('app.azure_instance_id'))
-            && strtolower((string) $request->headers->get('X-AppService-Proto')) === 'https';
-
-        if ($request->isSecure() || $isAzureHttpsRequest) {
+        if ($request->isSecure()) {
             $headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains; preload';
         }
 

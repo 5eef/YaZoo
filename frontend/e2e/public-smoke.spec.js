@@ -289,7 +289,7 @@ test('catalogue public animaux reste consultable sans connexion', async ({ page 
   )
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
     'href',
-    'https://yazoo.azurewebsites.net/discover/animals',
+    new URL('/discover/animals', page.url()).href,
   )
 
   await page.getByRole('link', { name: /Voir les détails: Chat public/i }).click()
@@ -327,7 +327,7 @@ test('metadonnees SEO indexent uniquement les routes publiques', async ({ page }
   await expect(page).toHaveTitle('A propos de YaZoo | YaZoo')
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
     'href',
-    'https://yazoo.azurewebsites.net/about',
+    new URL('/about', page.url()).href,
   )
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
     'content',

@@ -1,5 +1,10 @@
 # Administrateur initial de la release DATABASE #2
 
+> **Archive operationnelle Azure.** Ce document decrit une ancienne release sur
+> des ressources desormais decommissionnees. Il est conserve comme historique et
+> ne constitue plus une procedure de deploiement active. Le showcase actuel est
+> documente dans [`DEMO_DEPLOYMENT_FREE.md`](DEMO_DEPLOYMENT_FREE.md).
+
 La base Azure `yazoo_azure_test` reçoit le jeu marketplace local explicitement
 autorisé pour cette release : 14 comptes de test, leurs profils professionnels,
 les annonces, réservations, paiements, rendez-vous, messages, 21 images PNG et

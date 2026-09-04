@@ -176,7 +176,7 @@ La couverture HTML dépassait la limite CLI historique de 128 MiB après l'ajout
 | SQLite `migrate:fresh` | succès |
 | SQLite rollback complet puis upgrade | succès |
 | MySQL 8.4 isolé sur `127.0.0.1:3309` | migrations from-zero, tests critiques et rollback/upgrade réussis |
-| Contraintes de ports | 3306 et 3307 non utilisés par l'environnement éphémère ; MongoDB 27017 non touché |
+| Contraintes de ports | MySQL Docker 3308 ; MongoDB 27017 non touché |
 | Paiements sur MySQL après correction de largeur | 28 tests, 131 assertions, 0 échec |
 | Suites MySQL ACL/médias/réservations/messagerie/vétérinaires/performance/auth | succès |
 | `docker compose config --quiet` | succès avec valeurs éphémères non secrètes |

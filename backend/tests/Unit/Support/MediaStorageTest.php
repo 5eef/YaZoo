@@ -85,7 +85,7 @@ class MediaStorageTest extends TestCase
 
         $this->assertSame(extension_loaded('mongodb'), MediaStorage::isMongoDriverAvailable());
         $this->assertSame(
-            'https://api.yazoo.test/api/media/507f1f77bcf86cd799439011',
+            '/api/media/507f1f77bcf86cd799439011',
             MediaStorage::resolveUrl('mongodb:507f1f77bcf86cd799439011'),
         );
 

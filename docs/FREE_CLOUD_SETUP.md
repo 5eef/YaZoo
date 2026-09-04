@@ -1,5 +1,7 @@
 # Free Cloud Setup
 
+> Current provider-neutral showcase guide: [`DEMO_DEPLOYMENT_FREE.md`](DEMO_DEPLOYMENT_FREE.md). Any Azure material below is historical and no longer describes an active environment.
+
 This project is local-first. These integrations are optional and safe to enable without a VPS or production domain.
 
 ## GitHub Actions

@@ -72,7 +72,7 @@ Objectif: PWA, SEO, accessibilite, documentation INDH finale et checklists de pr
 - `docs/README_COMMISSION.md` cree pour presenter YaZoo a une commission INDH.
 - `docs/SECURITY_SHARING.md` cree avec consignes de partage et commande PowerShell de ZIP propre.
 - `.env.example` enrichi avec avertissement local sans secrets.
-- `backend/.env.example` clarifie pour Windows local (`127.0.0.1:3307`) et Docker (`mysql:3306`).
+- `backend/.env.example` clarifie pour Windows local (`127.0.0.1:3308`) et Docker (`mysql:3306`).
 - `frontend/.env.example` enrichi avec avertissement local sans secrets.
 - `frontend/src/pages/PrivacyPage.jsx` enrichi avec sections CNDP minimales.
 - `frontend/src/pages/TermsPage.jsx` enrichi avec intermediation, non vente directe et reclamations.
@@ -250,7 +250,7 @@ Aucune migration creee ou appliquee. La phase concerne le frontend, les assets p
 ### Phase 3
 
 - `php artisan migrate` depuis Windows: annule par Laravel car l'application est detectee en production et demande une confirmation interactive. `.env` non modifie.
-- `php artisan migrate` depuis Windows avec `DB_HOST=127.0.0.1` et `DB_PORT=3307` temporaires: connexion MySQL refusee pour l'utilisateur configure dans le `.env` Windows. `.env` non modifie.
+- `php artisan migrate` depuis Windows utilise le MySQL Docker publie sur `DB_HOST=127.0.0.1` et `DB_PORT=3308`.
 - Migration appliquee localement via Docker apres copie des deux fichiers de migration dans le conteneur Laravel qui ne monte pas le code applicatif local: OK, batch 5.
 - `docker exec yazoo-app-1 php artisan migrate:status`: OK, migrations Phase 3 Ran.
 - `php artisan test` dans `backend`: OK, 103 tests, 591 assertions.
@@ -323,7 +323,7 @@ Aucune migration creee ou appliquee. La phase concerne le frontend, les assets p
 - Phase 4: les exports CSV excluent mots de passe, tokens et secrets; les IP/user-agents de moderation sont haches.
 - Phase 5: le service worker reste prudent et ne cache pas les routes API ni les donnees privees.
 - Phase 5: YaZoo est presente comme base technique preparee pour une demarche de conformite, pas comme projet totalement conforme CNDP/ONSSA.
-- Phase 5: le sitemap utilise le domaine Azure actuel `https://yazoo.azurewebsites.net`; il devra etre remplace par un domaine personnalise si disponible.
+- Phase 5 (historique): l'ancien sitemap utilisait le domaine Azure decommissionne. Le sitemap absolu est desormais genere uniquement avec `VITE_SITE_URL` une fois un domaine public verifie.
 
 ## 10. Confirmation de securite locale
 

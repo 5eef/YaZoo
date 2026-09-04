@@ -1,19 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://yazoo.azurewebsites.net/</loc></url>
-  <url><loc>https://yazoo.azurewebsites.net/about</loc></url>
-  <url><loc>https://yazoo.azurewebsites.net/privacy</loc></url>
-  <url><loc>https://yazoo.azurewebsites.net/cgu</loc></url>
-  <url><loc>https://yazoo.azurewebsites.net/trust</loc></url>
-  <url><loc>https://yazoo.azurewebsites.net/rules</loc></url>
-  <url><loc>https://yazoo.azurewebsites.net/partner</loc></url>
-  <url><loc>https://yazoo.azurewebsites.net/pros</loc></url>
-  <url><loc>https://yazoo.azurewebsites.net/demo-mobile</loc></url>
-  <url><loc>https://yazoo.azurewebsites.net/accessibility</loc></url>
-  <url><loc>https://yazoo.azurewebsites.net/impact</loc></url>
-  <url><loc>https://yazoo.azurewebsites.net/contact</loc></url>
-  <url><loc>https://yazoo.azurewebsites.net/discover/animals</loc></url>
-  <url><loc>https://yazoo.azurewebsites.net/discover/products</loc></url>
-  <url><loc>https://yazoo.azurewebsites.net/discover/services</loc></url>
-  <url><loc>https://yazoo.azurewebsites.net/discover/veterinarians</loc></url>
+  <!-- Populated at build time only when VITE_SITE_URL is configured. -->
 </urlset>

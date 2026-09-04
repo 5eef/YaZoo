@@ -12,7 +12,7 @@
   focus, sans clic d'ouverture; le scénario navigateur dédié est vert.
 - Formulaires/CRUD : 388 tests backend (2 116 assertions), 131 tests frontend,
   97 tests Playwright/axe et 5 tests MySQL DATABASE #2 sont verts.
-- DATABASE #2 : MariaDB locale `127.0.0.1:3307/yazoo_azure_test`, Docker
+- DATABASE #2 : MySQL Docker `127.0.0.1:3308/yazoo_azure_test`
   `yazoo_azure_test` et Azure `yazoo_azure_test` sont migrés. Les anciennes
   bases Docker `yazoo` et `yazoo_migration_test_20260717202459`, ainsi que la
   base logique Azure `yazoo`, ont été supprimées après vérification de la cible.
@@ -214,7 +214,7 @@ preuve.
 
 ### DATABASE #2 — validation locale réussie
 
-- `127.0.0.1:3307/yazoo_azure_test`, MariaDB 10.4.32.
+- `127.0.0.1:3308/yazoo_azure_test`, MySQL 8.4.
 - Sauvegarde avant migration :
   `C:\Users\seef7\AppData\Local\Temp\yazoo-db2-backups\yazoo_azure_test-before-20260814-184451.sql`.
 - SHA-256 :

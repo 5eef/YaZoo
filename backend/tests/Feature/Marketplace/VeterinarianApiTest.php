@@ -45,9 +45,9 @@ class VeterinarianApiTest extends TestCase
         $response = $this
             ->withServerVariables([
                 'REMOTE_ADDR' => '10.0.0.5',
-                'HTTP_HOST' => 'yazoo-api.azurewebsites.net',
+                'HTTP_HOST' => 'demo.example',
                 'HTTP_X_FORWARDED_FOR' => '203.0.113.10',
-                'HTTP_X_FORWARDED_HOST' => 'yazoo-api.azurewebsites.net',
+                'HTTP_X_FORWARDED_HOST' => 'demo.example',
                 'HTTP_X_FORWARDED_PROTO' => 'https',
                 'HTTP_X_FORWARDED_PORT' => '443',
             ])
@@ -55,8 +55,8 @@ class VeterinarianApiTest extends TestCase
 
         $response->assertOk();
 
-        $this->assertStringStartsWith('https://yazoo-api.azurewebsites.net', $response->json('links.first'));
-        $this->assertStringStartsWith('https://yazoo-api.azurewebsites.net', $response->json('meta.path'));
+        $this->assertStringStartsWith('https://demo.example', $response->json('links.first'));
+        $this->assertStringStartsWith('https://demo.example', $response->json('meta.path'));
     }
 
     public function test_guest_cannot_create_veterinarian(): void

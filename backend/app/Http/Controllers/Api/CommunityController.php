@@ -345,7 +345,10 @@ class CommunityController extends Controller
 
         $driver = $query->getModel()->getConnection()->getDriverName();
 
-        if (in_array($driver, ['mysql', 'mariadb'], true)) {
+        if (
+            (bool) config('operations.fulltext_search_enabled')
+            && in_array($driver, ['mysql', 'mariadb'], true)
+        ) {
             $query->whereFullText(
                 ['name', 'description'],
                 $this->booleanFullTextQuery($search),

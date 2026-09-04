@@ -1,4 +1,6 @@
-# Persistance et sauvegarde des médias Azure App Service
+# Archive — persistance et sauvegarde des medias Azure App Service
+
+> Historique uniquement. Cet environnement a ete decommissionne et ne constitue plus la cible active.
 
 Le conteneur backend relie `storage/app/public` et `storage/app/private` à
 `/home/site/yazoo-storage/app/*`. Le workflow refuse désormais un déploiement lorsque

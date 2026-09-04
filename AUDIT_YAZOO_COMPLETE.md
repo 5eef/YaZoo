@@ -213,8 +213,8 @@ L'absence de schéma OpenAPI versionné empêche toutefois de prouver automatiqu
 - clés étrangères, uniques, index simples/composites, soft deletes et full-text présents selon les domaines ;
 - les migrations full-text contiennent des branches de compatibilité et les recherches disposent de fallback SQLite ;
 - les tests migrent complètement SQLite en mémoire ;
-- MySQL 8.4 est la cible Docker ; MariaDB/XAMPP n'est pas la cible de production déclarée ;
-- la configuration respecte les ports locaux imposés : MySQL système 3306, XAMPP MariaDB 3307, MongoDB 27017 ; Compose publie son MySQL sur 3308 par défaut (`docker-compose.yml:205-206`) pour éviter les collisions ;
+- MySQL 8.4 est la cible Docker et de production déclarée ;
+- la configuration réserve MySQL système 3306 et MongoDB 27017 ; Compose publie son MySQL sur 3308 par défaut (`docker-compose.yml:205-206`) pour éviter les collisions ;
 - les réservations, paiements, suppressions de compte, MFA et médias sensibles utilisent des transactions/verrous ;
 - les suppressions d'animaux/produits sont soft-delete et les contraintes critiques évitent les cascades destructives non contrôlées.
 
@@ -389,7 +389,7 @@ Scénarios critiques encore insuffisamment prouvés : concurrence rendez-vous, M
 - healthchecks pour app, queue, scheduler, Reverb, Nginx, frontend, MySQL et Redis ;
 - secrets exigés par expansion Compose ;
 - MySQL/Redis/Reverb publiés sur loopback ;
-- MySQL Compose par défaut sur 3308, sans collision avec 3306/3307 ;
+- MySQL Compose par défaut sur 3308, sans collision avec le port MySQL système 3306 ;
 - Nginx expose CSP, HSTS et headers de sécurité ;
 - volumes persistants explicites.
 

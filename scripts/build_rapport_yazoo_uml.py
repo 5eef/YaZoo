@@ -13,7 +13,7 @@ from docx.shared import Cm, Inches, Pt, RGBColor
 from PIL import Image, ImageDraw, ImageFont
 
 
-ROOT = Path(r"C:\Users\seef7\OneDrive\Desktop\YaZoo")
+ROOT = Path(__file__).resolve().parents[1]
 OUT_DIR = ROOT / "docs" / "rapport_yazoo_uml"
 IMG_DIR = OUT_DIR / "uml"
 DOCX_PATH = OUT_DIR / "Rapport_YaZoo_Analyse_UML.docx"

@@ -60,8 +60,6 @@ return [
 
     'force_https' => (bool) env('APP_FORCE_HTTPS', false),
 
-    'azure_instance_id' => env('WEBSITE_INSTANCE_ID'),
-
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

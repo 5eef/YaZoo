@@ -77,10 +77,11 @@ class OperationsReadinessTest extends TestCase
     public function test_production_migration_command_refuses_a_protected_database_target(): void
     {
         config([
+            'operations.deployment_profile' => 'production',
             'operations.run_migrations' => true,
             'operations.require_expected_database' => true,
             'operations.expected_database_host' => 'database2.test',
-            'operations.expected_database_port' => '3307',
+            'operations.expected_database_port' => '3308',
             'operations.expected_database_name' => 'yazoo_database2',
             'operations.protected_database_names' => [':memory:'],
             'database.connections.sqlite.host' => 'database1.test',
@@ -97,6 +98,7 @@ class OperationsReadinessTest extends TestCase
     public function test_production_configuration_preflight_accepts_the_exact_expected_database_target(): void
     {
         config([
+            'operations.deployment_profile' => 'production',
             'operations.require_expected_database' => true,
             'operations.expected_database_host' => 'database2.test',
             'operations.expected_database_port' => '3306',
@@ -144,6 +146,20 @@ class OperationsReadinessTest extends TestCase
         $lock = Cache::lock('operations:production-migrations', 60);
         $this->assertTrue($lock->get());
         $lock->release();
+    }
+
+    public function test_production_migration_uses_a_bootstrap_lock_before_database_cache_tables_exist(): void
+    {
+        config([
+            'operations.run_migrations' => true,
+            'cache.default' => 'database',
+            'cache.stores.database.connection' => null,
+            'cache.stores.database.lock_table' => 'missing_cache_locks',
+        ]);
+
+        $this->artisan('yazoo:migrate-production')
+            ->expectsOutput('Database lock table is not available yet; using the local bootstrap lock.')
+            ->assertExitCode(0);
     }
 
     public function test_queue_heartbeat_job_records_worker_liveness(): void
@@ -199,6 +215,7 @@ class OperationsReadinessTest extends TestCase
     public function test_production_preflight_requires_external_configuration_and_an_active_admin(): void
     {
         config([
+            'operations.deployment_profile' => 'production',
             'app.key' => 'base64:test-key',
             'legal.legal_status' => '',
             'legal.address' => '',
@@ -236,6 +253,7 @@ class OperationsReadinessTest extends TestCase
             'admin_mfa_confirmed_at' => now(),
         ]);
         config([
+            'operations.deployment_profile' => 'production',
             'app.key' => 'base64:test-key',
             'legal.legal_status' => 'Configuration de test',
             'legal.address' => 'Adresse de test',
@@ -254,8 +272,7 @@ class OperationsReadinessTest extends TestCase
             'operations.account_deletion_unique_lock_store' => 'redis',
             'operations.account_deletion_retry_max_attempts' => 5,
             'operations.account_deletion_processing_lease_seconds' => 900,
-            'operations.app_service_storage_enabled' => true,
-            'operations.persistent_storage_path' => '/home/site/yazoo-storage',
+            'operations.require_persistent_storage' => false,
             'payments.providers.cmi.enabled' => false,
             'auth.admin_bootstrap.enabled' => false,
             'auth.admin_mfa.enforced' => true,
@@ -269,6 +286,7 @@ class OperationsReadinessTest extends TestCase
     public function test_production_configuration_preflight_does_not_require_the_application_schema(): void
     {
         config([
+            'operations.deployment_profile' => 'production',
             'app.key' => 'base64:test-key',
             'legal.legal_status' => 'Configuration de test',
             'legal.address' => 'Adresse de test',
@@ -287,8 +305,7 @@ class OperationsReadinessTest extends TestCase
             'operations.account_deletion_unique_lock_store' => 'redis',
             'operations.account_deletion_retry_max_attempts' => 5,
             'operations.account_deletion_processing_lease_seconds' => 900,
-            'operations.app_service_storage_enabled' => true,
-            'operations.persistent_storage_path' => '/home/site/yazoo-storage',
+            'operations.require_persistent_storage' => false,
             'payments.providers.cmi.enabled' => false,
             'auth.admin_bootstrap.enabled' => false,
             'auth.admin_mfa.enforced' => true,
@@ -304,6 +321,7 @@ class OperationsReadinessTest extends TestCase
     public function test_production_preflight_fails_without_an_active_administrator(): void
     {
         config([
+            'operations.deployment_profile' => 'production',
             'app.key' => 'base64:test-key',
             'legal.legal_status' => 'Configuration de test',
             'legal.address' => 'Adresse de test',
@@ -319,14 +337,60 @@ class OperationsReadinessTest extends TestCase
             'queue.default' => 'redis',
             'operations.run_queue_worker' => true,
             'operations.run_scheduler' => true,
-            'operations.app_service_storage_enabled' => true,
-            'operations.persistent_storage_path' => '/home/site/yazoo-storage',
+            'operations.require_persistent_storage' => false,
             'payments.providers.cmi.enabled' => false,
             'auth.admin_bootstrap.enabled' => false,
         ]);
 
         $this->artisan('yazoo:preflight-production')
             ->expectsOutput('At least one active administrator is required.')
+            ->assertExitCode(1);
+    }
+
+    public function test_showcase_preflight_allows_optional_scheduler_mail_and_persistent_storage(): void
+    {
+        User::factory()->admin()->create([
+            'admin_mfa_secret' => 'test-mfa-secret',
+            'admin_mfa_recovery_codes' => [Hash::make('TESTRECOVERY')],
+            'admin_mfa_confirmed_at' => now(),
+        ]);
+        config([
+            'operations.deployment_profile' => 'showcase',
+            'app.key' => 'base64:test-key',
+            'legal.legal_status' => 'Projet de demonstration',
+            'legal.address' => 'Maroc',
+            'legal.ice' => 'DEMO-NON-VALABLE',
+            'legal.privacy_contact_email' => 'privacy@yazoo.test',
+            'services.contact.recipient' => 'contact@yazoo.test',
+            'mail.default' => 'log',
+            'services.sms.driver' => 'disabled',
+            'queue.default' => 'sync',
+            'operations.run_queue_worker' => false,
+            'operations.run_scheduler' => false,
+            'operations.account_deletion_unique_lock_store' => 'database',
+            'operations.require_persistent_storage' => false,
+            'media.scanning.required_in_production' => true,
+            'media.scanning.enabled' => false,
+            'payments.providers.cmi.enabled' => false,
+            'auth.admin_bootstrap.enabled' => false,
+            'auth.admin_mfa.enforced' => true,
+        ]);
+
+        $this->artisan('yazoo:preflight-production')
+            ->expectsOutput('Production preflight passed.')
+            ->assertExitCode(0);
+    }
+
+    public function test_preflight_rejects_an_unusable_required_persistent_storage_path(): void
+    {
+        config([
+            'operations.deployment_profile' => 'production',
+            'operations.require_persistent_storage' => true,
+            'operations.persistent_storage_path' => storage_path('missing-persistent-root'),
+        ]);
+
+        $this->artisan('yazoo:preflight-production')
+            ->expectsOutput('YAZOO_PERSISTENT_STORAGE_PATH must exist and be readable and writable.')
             ->assertExitCode(1);
     }
 

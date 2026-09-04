@@ -29,16 +29,10 @@ class ForceHttps
             return false;
         }
 
-        if (! app()->isProduction() && ! (bool) config('app.force_https')) {
+        if (! (bool) config('app.force_https')) {
             return false;
         }
 
-        return ! $request->isSecure() && ! $this->isAzureHttpsRequest($request);
-    }
-
-    private function isAzureHttpsRequest(Request $request): bool
-    {
-        return filled(config('app.azure_instance_id'))
-            && strtolower((string) $request->headers->get('X-AppService-Proto')) === 'https';
+        return ! $request->isSecure();
     }
 }

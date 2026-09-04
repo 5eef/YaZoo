@@ -1,4 +1,6 @@
-# Rapport incident frontend Azure
+# Archive — rapport incident frontend Azure
+
+> Historique uniquement. Cet environnement a ete decommissionne et ne constitue plus la cible active.
 
 Date: 2026-07-09
 Fenetre de diagnostic: environ 11:20-11:31 UTC

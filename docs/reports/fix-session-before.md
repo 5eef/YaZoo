@@ -61,9 +61,9 @@ Les empreintes sont volontairement abrégées dans ce document ; les fichiers n'
 ### DATABASE #2 — cible demandée
 
 - Hôte local existant : `127.0.0.1`
-- Port : `3307`
+- Port : `3308`
 - Base : `yazoo_azure_test`
-- Moteur local : XAMPP MariaDB 10.4.32
+- Moteur local : MySQL Docker 8.4
 - État : accessible en lecture
 - Empreinte structurelle avant travaux : 36 tables, 52 migrations, dernière migration `2026_07_27_000200_prevent_duplicate_pending_professional_verifications`, 2 850 816 octets données+index.
 - Source de configuration : `backend/.env.backup-before-local-20260801-152302`.

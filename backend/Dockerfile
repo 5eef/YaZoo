@@ -22,7 +22,7 @@ ENV APP_VERSION=$APP_VERSION
 
 LABEL org.opencontainers.image.title="YaZoo API" \
       org.opencontainers.image.description="YaZoo social platform and animal marketplace backend." \
-      org.opencontainers.image.authors="Youssef BOUGHIOUL <youssefboughioul@gmail.com>" \
+      org.opencontainers.image.authors="Youssef BOUGHIOUL <bough.youssef@gmail.com>" \
       org.opencontainers.image.licenses="MIT" \
       org.opencontainers.image.vendor="Youssef BOUGHIOUL"
 

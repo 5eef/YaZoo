@@ -20,6 +20,9 @@ sonar-issues.json
 # Local CI/deployment diagnostics
 /ci-summary.txt
 /deploy-summary.txt
+/output/
+__pycache__/
+*.py[cod]
 /backend/storage/framework/manual-*.ps1
 .copilot-azure/
 

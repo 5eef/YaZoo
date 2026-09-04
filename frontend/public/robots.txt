@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://yazoo.azurewebsites.net/sitemap.xml
+# A Sitemap line is generated at build time only when VITE_SITE_URL is set.

@@ -1,4 +1,6 @@
-# Rapport monitoring et backup production YaZoo
+# Archive — rapport monitoring et backup Azure YaZoo
+
+> Historique uniquement. Ces preuves ne decrivent pas la demonstration active.
 
 Date: 2026-07-08
 

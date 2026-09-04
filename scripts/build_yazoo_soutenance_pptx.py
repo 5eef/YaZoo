@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from textwrap import wrap
 
@@ -10,13 +11,13 @@ from pptx.enum.text import PP_ALIGN, MSO_AUTO_SIZE, MSO_ANCHOR
 from pptx.util import Inches, Pt
 
 
-ROOT = Path(r"C:\Users\seef7\OneDrive\Desktop\YaZoo")
+ROOT = Path(__file__).resolve().parents[1]
 OUT_DIR = ROOT / "docs" / "soutenance"
 OUT = OUT_DIR / "YaZoo_Soutenance_PFE_DEVFS201.pptx"
 
-LOGO_YAZOO = Path(r"C:\Users\seef7\Downloads\YaZoo_Logo_Cat-Bird_Hybrid_with_Paw_Print__1_-removebg-preview.png")
-LOGO_OFPPT = Path(r"C:\Users\seef7\Downloads\unnamed.jpg")
-IMG_DIR = Path(r"C:\Users\seef7\OneDrive\Pictures\siteYazoo")
+LOGO_YAZOO = Path(os.getenv("YAZOO_LOGO_PATH", ROOT / "frontend" / "public" / "yazoo-logo.webp"))
+LOGO_OFPPT = Path(os.getenv("OFPPT_LOGO_PATH", ROOT / "docs" / "soutenance" / "assets" / "ofppt-logo.jpg"))
+IMG_DIR = Path(os.getenv("YAZOO_PRESENTATION_IMAGES", ROOT / "docs" / "screenshots"))
 SHOTS = [
     IMG_DIR / "Capture d’écran 2026-05-19 211856.png",
     IMG_DIR / "Capture d’écran 2026-05-19 211950.png",

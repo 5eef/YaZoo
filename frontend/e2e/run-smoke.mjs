@@ -1,15 +1,17 @@
 import http from 'node:http'
 import https from 'node:https'
+import net from 'node:net'
 import process from 'node:process'
 import { spawn } from 'node:child_process'
 
-const baseURL = process.env.E2E_BASE_URL ?? 'http://127.0.0.1:5173'
+const baseURL = process.env.E2E_BASE_URL ?? await reserveLocalBaseURL()
 const apiURL = process.env.E2E_API_URL ?? 'http://127.0.0.1:8000/api'
 const forwardedArgs = process.argv.slice(2)
+const vitePort = new URL(baseURL).port
 
 const vite = spawn(
   process.execPath,
-  ['./node_modules/vite/bin/vite.js', '--host', '127.0.0.1'],
+  ['./node_modules/vite/bin/vite.js', '--host', '127.0.0.1', '--port', vitePort, '--strictPort'],
   {
     cwd: process.cwd(),
     env: {
@@ -88,5 +90,24 @@ function waitForHttp(url, timeoutMs) {
     }
 
     attempt()
+  })
+}
+
+function reserveLocalBaseURL() {
+  return new Promise((resolve, reject) => {
+    const server = net.createServer()
+
+    server.unref()
+    server.on('error', reject)
+    server.listen(0, '127.0.0.1', () => {
+      const address = server.address()
+
+      if (!address || typeof address === 'string') {
+        server.close(() => reject(new Error('Unable to reserve a local E2E port.')))
+        return
+      }
+
+      server.close(() => resolve(`http://127.0.0.1:${address.port}`))
+    })
   })
 }

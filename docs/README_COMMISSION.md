@@ -6,7 +6,7 @@ YaZoo est une plateforme marocaine de mise en relation responsable autour de l'a
 
 YaZoo n'est pas un vendeur direct d'animaux. Les utilisateurs restent responsables des annonces, des informations publiees, des echanges, des prix eventuels, des documents et du respect de la reglementation applicable.
 
-Porteur de projet: Youssef BOUGHIOUL. Email officiel: youssefboughioul@gmail.com. Telephone officiel: +212606610014. Hebergeur actuel: Microsoft Azure App Service. Statut juridique, adresse officielle et ICE restent a completer.
+Porteur de projet: Youssef BOUGHIOUL. Email officiel: bough.youssef@gmail.com. Telephone officiel: +212606610014. Hebergement public: demonstration free-tier en preparation. Statut juridique, adresse officielle et ICE restent a completer.
 
 ## Fonctionnalites principales
 

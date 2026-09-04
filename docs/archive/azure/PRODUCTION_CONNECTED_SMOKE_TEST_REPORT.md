@@ -1,4 +1,6 @@
-# Production Connected Smoke Test Report
+# Archive — Azure Production Connected Smoke Test Report
+
+> Historical evidence only. The Azure environment has been decommissioned.
 
 Date: 2026-07-09
 Time window: 12:39-12:56 UTC

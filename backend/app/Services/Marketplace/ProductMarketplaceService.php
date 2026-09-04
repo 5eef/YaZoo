@@ -195,7 +195,11 @@ class ProductMarketplaceService
     {
         $terms = $this->booleanFullTextTerms($value);
 
-        if ($terms !== null && in_array(DB::connection()->getDriverName(), ['mysql', 'mariadb'], true)) {
+        if (
+            $terms !== null
+            && (bool) config('operations.fulltext_search_enabled')
+            && in_array(DB::connection()->getDriverName(), ['mysql', 'mariadb'], true)
+        ) {
             $query->whereFullText($columns, $terms, ['mode' => 'boolean']);
 
             return;

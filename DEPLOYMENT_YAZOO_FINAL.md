@@ -1,5 +1,8 @@
 # Déploiement YaZoo — compte rendu final de la session
 
+> **Archive Azure.** Les ressources decrites ici ont ete decommissionnees.
+> Le chemin actif de demonstration est `docs/DEMO_DEPLOYMENT_FREE.md`.
+
 ## Passe corrective — 2026-08-18
 
 La release en préparation utilise exclusivement DATABASE #2
@@ -150,7 +153,7 @@ database = yazoo
 
 DATABASE #2 LOCALE : MIGRÉE ET TESTÉE
 host     = 127.0.0.1
-port     = 3307
+port     = 3308
 database = yazoo_azure_test
 
 DATABASE #2 AZURE : CRÉÉE, NON MIGRÉE, NON UTILISÉE PAR L'APPLICATION

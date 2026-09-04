@@ -16,9 +16,11 @@ YaZoo reste une application React SPA. Les balises meta sont globales et ne chan
 - meta descriptions par route;
 - verification Search Console apres mise en production.
 
-## Domaine actuel
+## Domaine public
 
-Le sitemap statique utilise le domaine Azure actuellement confirme: `https://yazoo.azurewebsites.net`. Avant une production publique plus avancee, remplacer ces URLs par le domaine officiel personnalise si YaZoo en adopte un.
+Aucun domaine public n'est declare tant que la demonstration n'est pas reellement
+deployee. Les pages SEO statiques, les URL canoniques et le sitemap absolu sont
+generes uniquement lorsque `VITE_SITE_URL` contient l'origine HTTPS verifiee.
 
 ## Pages publiques importantes
 

@@ -7,7 +7,7 @@ import { MemoryRouter, useNavigate } from 'react-router'
 
 import { I18nProvider } from '../../contexts/I18nContext'
 import SeoManager from './SeoManager'
-import { INDEXABLE_PATHS, getRouteSeo } from './seoConfig'
+import { getRouteSeo } from './seoConfig'
 
 function RouteControls() {
   const navigate = useNavigate()
@@ -34,7 +34,7 @@ describe('SeoManager', () => {
     const seo = getRouteSeo('/about/', 'fr', (key) => translations[key])
 
     expect(seo).toMatchObject({
-      canonicalUrl: 'https://yazoo.azurewebsites.net/about',
+      canonicalUrl: `${globalThis.location.origin}/about`,
       description: 'Présentation de YaZoo.',
       indexable: true,
       locale: 'fr_MA',
@@ -46,7 +46,7 @@ describe('SeoManager', () => {
     const seo = getRouteSeo('/marketplace/animals', 'en', () => 'Animal community')
 
     expect(seo).toMatchObject({
-      canonicalUrl: 'https://yazoo.azurewebsites.net/marketplace/animals',
+      canonicalUrl: `${globalThis.location.origin}/marketplace/animals`,
       indexable: false,
       locale: 'en_US',
       structuredData: false,
@@ -66,7 +66,7 @@ describe('SeoManager', () => {
     )
 
     expect(seo).toMatchObject({
-      canonicalUrl: 'https://yazoo.azurewebsites.net/discover/animals/42',
+      canonicalUrl: `${globalThis.location.origin}/discover/animals/42`,
       description: 'Animaux approuves.',
       indexable: true,
       title: 'Animaux au Maroc | YaZoo',
@@ -100,7 +100,7 @@ describe('SeoManager', () => {
     })
     expect(document.head.querySelector('link[rel="canonical"]')).toHaveAttribute(
       'href',
-      'https://yazoo.azurewebsites.net/login',
+      `${globalThis.location.origin}/login`,
     )
     expect(document.getElementById('yazoo-structured-data')).not.toBeInTheDocument()
 
@@ -111,39 +111,26 @@ describe('SeoManager', () => {
     })
   })
 
-  it('keeps the sitemap aligned with every indexable route', () => {
+  it('does not publish a stale provider URL before a public host is configured', () => {
     const sitemap = readFileSync(
       path.resolve(process.cwd(), 'public/sitemap.xml'),
       'utf8',
     )
     const xml = new DOMParser().parseFromString(sitemap, 'application/xml')
-    const sitemapPaths = [...xml.querySelectorAll('loc')]
-      .map((element) => new URL(element.textContent).pathname)
-      .sort()
-
     expect(xml.querySelector('parsererror')).not.toBeInTheDocument()
-    expect(sitemapPaths).toEqual([...INDEXABLE_PATHS].sort())
-    expect(sitemapPaths.some((path) => path.startsWith('/marketplace'))).toBe(false)
+    expect([...xml.querySelectorAll('loc')]).toHaveLength(0)
+    expect(sitemap).not.toContain('azurewebsites.net')
   })
 
-  it('ships valid homepage structured data and an absolute sitemap reference', () => {
+  it('ships neutral static metadata before a public host is configured', () => {
     const indexHtml = readFileSync(path.resolve(process.cwd(), 'index.html'), 'utf8')
     const robots = readFileSync(
       path.resolve(process.cwd(), 'public/robots.txt'),
       'utf8',
     )
     const documentNode = new DOMParser().parseFromString(indexHtml, 'text/html')
-    const structuredData = JSON.parse(
-      documentNode.getElementById('yazoo-structured-data').textContent,
-    )
-
-    expect(structuredData['@context']).toBe('https://schema.org')
-    expect(structuredData['@graph'].map((entry) => entry['@type'])).toEqual([
-      'Organization',
-      'WebSite',
-    ])
-    expect(robots).toContain(
-      'Sitemap: https://yazoo.azurewebsites.net/sitemap.xml',
-    )
+    expect(documentNode.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe('')
+    expect(documentNode.getElementById('yazoo-structured-data')).not.toBeInTheDocument()
+    expect(robots).not.toContain('Sitemap: http')
   })
 })

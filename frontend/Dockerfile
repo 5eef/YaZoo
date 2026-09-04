@@ -13,6 +13,7 @@ ARG VITE_MONITORING_ENABLED=false
 ARG VITE_MONITORING_ENDPOINT=/api/monitoring/frontend-error
 ARG VITE_NOTIFICATIONS_POLL_MS=30000
 ARG VITE_BUILD_SOURCEMAPS=false
+ARG VITE_SITE_URL=
 ARG APP_VERSION=local
 
 ENV VITE_APP_NAME=$VITE_APP_NAME \
@@ -25,7 +26,8 @@ ENV VITE_APP_NAME=$VITE_APP_NAME \
     VITE_MONITORING_ENABLED=$VITE_MONITORING_ENABLED \
     VITE_MONITORING_ENDPOINT=$VITE_MONITORING_ENDPOINT \
     VITE_NOTIFICATIONS_POLL_MS=$VITE_NOTIFICATIONS_POLL_MS \
-    VITE_BUILD_SOURCEMAPS=$VITE_BUILD_SOURCEMAPS
+    VITE_BUILD_SOURCEMAPS=$VITE_BUILD_SOURCEMAPS \
+    VITE_SITE_URL=$VITE_SITE_URL
 
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
@@ -36,11 +38,11 @@ RUN npm run build
 FROM nginx:1.30.4-alpine3.24@sha256:97d490c12ba55b4946b01546d1c3ed324e8d41ab1c9fcb2a616aa470620e5b46
 
 ARG APP_VERSION=local
-ENV BACKEND_UPSTREAM=https://yazoo-api.azurewebsites.net
+ENV BACKEND_UPSTREAM=http://host.docker.internal:8000
 
 LABEL org.opencontainers.image.title="YaZoo Frontend" \
       org.opencontainers.image.description="YaZoo social platform and animal marketplace frontend." \
-      org.opencontainers.image.authors="Youssef BOUGHIOUL <youssefboughioul@gmail.com>" \
+      org.opencontainers.image.authors="Youssef BOUGHIOUL <bough.youssef@gmail.com>" \
       org.opencontainers.image.licenses="MIT" \
       org.opencontainers.image.vendor="Youssef BOUGHIOUL"
 

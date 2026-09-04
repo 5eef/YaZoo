@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [string] $Environment = 'production',
-    [string] $Repository = 'Seef590/YaZoo',
+    [string] $Repository = '5eef/YaZoo',
     [switch] $UseRepositoryScope
 )
 

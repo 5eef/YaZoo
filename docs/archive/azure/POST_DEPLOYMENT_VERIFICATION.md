@@ -1,4 +1,6 @@
-# Verification post-deploiement YaZoo
+# Archive — verification post-deploiement Azure YaZoo
+
+> Historique uniquement. Ces preuves ne decrivent pas la demonstration active.
 
 Date: 2026-07-07T21:46:51+01:00
 

@@ -19,6 +19,13 @@ class AuthApiTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        config(['cors.allowed_origins' => ['http://localhost:4173']]);
+    }
+
     public function test_api_root_returns_json_health_payload(): void
     {
         $this->getJson('/api')
@@ -173,7 +180,7 @@ class AuthApiTest extends TestCase
             ->withUnencryptedCookie('yazoo_api_token', $encryptedToken)
             ->withUnencryptedCookie('XSRF-TOKEN', 'csrf-test-token')
             ->withHeader('X-XSRF-TOKEN', 'csrf-test-token')
-            ->withHeader('Origin', 'https://yazoo.azurewebsites.net')
+            ->withHeader('Origin', 'http://localhost:4173')
             ->postJson('/api/auth/logout')
             ->assertOk()
             ->assertJsonPath('message', 'Deconnexion reussie.');
@@ -194,7 +201,7 @@ class AuthApiTest extends TestCase
 
         $this->withCredentials()
             ->withUnencryptedCookie('yazoo_api_token', $this->authCookieValue($loginResponse))
-            ->withHeader('Origin', 'https://yazoo.azurewebsites.net')
+            ->withHeader('Origin', 'http://localhost:4173')
             ->postJson('/api/posts', [
                 'content' => 'Mutation sans CSRF',
                 'visibility' => 'public',
@@ -250,7 +257,7 @@ class AuthApiTest extends TestCase
             ->withUnencryptedCookie('yazoo_api_token', $encryptedToken)
             ->withUnencryptedCookie('XSRF-TOKEN', 'csrf-test-token')
             ->withHeader('X-XSRF-TOKEN', 'csrf-test-token')
-            ->withHeader('Origin', 'https://yazoo.azurewebsites.net')
+            ->withHeader('Origin', 'http://localhost:4173')
             ->postJson('/api/posts', [
                 'content' => 'Mutation avec CSRF',
                 'visibility' => 'public',
@@ -465,7 +472,6 @@ class AuthApiTest extends TestCase
 
         $this
             ->withHeader('X-Forwarded-Proto', 'https')
-            ->withHeader('X-AppService-Proto', 'https')
             ->postJson('/api/auth/register', [
                 'name' => 'Spoofed Transport',
                 'email' => 'spoofed-transport@yazoo.app',
@@ -476,23 +482,14 @@ class AuthApiTest extends TestCase
             ->assertStatus(426);
     }
 
-    public function test_azure_platform_proto_is_used_only_with_the_azure_runtime_marker(): void
+    public function test_https_can_be_explicitly_disabled_for_a_local_production_smoke_test(): void
     {
-        config([
-            'app.force_https' => true,
-            'app.azure_instance_id' => 'test-instance',
-        ]);
+        config(['app.force_https' => false]);
+        $this->app->detectEnvironment(fn () => 'production');
 
-        $this
-            ->withHeader('X-AppService-Proto', 'https')
-            ->postJson('/api/auth/register', [
-                'name' => 'Azure Transport',
-                'email' => 'azure-transport@yazoo.app',
-                'password' => 'password123',
-                'password_confirmation' => 'password123',
-                'device_name' => 'phpunit',
-            ])
-            ->assertCreated();
+        $this->getJson('/api')
+            ->assertOk()
+            ->assertJsonPath('status', 'ok');
     }
 
     public function test_google_oauth_never_creates_admin_automatically_in_production(): void

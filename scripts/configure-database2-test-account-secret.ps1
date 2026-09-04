@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [string] $Environment = 'production',
-    [string] $Repository = 'Seef590/YaZoo',
+    [string] $Repository = '5eef/YaZoo',
     [switch] $UseRepositoryScope,
     [string] $EnrollmentBundlePath = (Join-Path $env:LOCALAPPDATA 'YaZoo\database2-test-accounts.dpapi')
 )

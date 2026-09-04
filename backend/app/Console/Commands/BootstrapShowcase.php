@@ -13,16 +13,16 @@ use Illuminate\Support\Facades\Hash;
 use RuntimeException;
 use Throwable;
 
-class BootstrapAzureShowcase extends Command
+class BootstrapShowcase extends Command
 {
     private const MARKER_KEY = 'yazoo_showcase_bootstrap_v1';
 
-    protected $signature = 'yazoo:bootstrap-azure-showcase
+    protected $signature = 'yazoo:bootstrap-showcase
         {--images= : Dossier en lecture seule contenant exactement les 21 images PNG}
-        {--confirmation= : Confirmation exacte de la cible Azure autorisee}
+        {--confirmation= : Confirmation exacte de la cible showcase autorisee}
         {--dry-run : Valide tous les garde-fous sans ecrire}';
 
-    protected $description = 'Peuple une base Azure showcase vide avec des donnees fictives, sous garde-fous stricts.';
+    protected $description = 'Peuple une base showcase vide avec des donnees fictives, sous garde-fous stricts.';
 
     public function handle(
         ShowcaseBootstrapGuard $guard,
@@ -103,7 +103,7 @@ class BootstrapAzureShowcase extends Command
                 );
             }
 
-            $marketplaceResult = $marketplaceSeeder->seedFrom(
+            $marketplaceSeeder->seedFrom(
                 $imagesPath,
                 false,
                 null,
@@ -117,14 +117,7 @@ class BootstrapAzureShowcase extends Command
 
                 $socialSeeder->run();
 
-                $expectedCounts = [
-                    'users' => 20,
-                    'posts' => 3,
-                    'comments' => 2,
-                    'likes' => 4,
-                ];
-
-                foreach ($expectedCounts as $table => $expectedCount) {
+                foreach (['users' => 20, 'posts' => 3, 'comments' => 2, 'likes' => 4] as $table => $expectedCount) {
                     $actualCount = DB::table($table)->count();
 
                     if ($actualCount !== $expectedCount) {
@@ -151,11 +144,11 @@ class BootstrapAzureShowcase extends Command
                 Cache::store('database')->forever(self::MARKER_KEY, 'complete');
             }, 1);
 
-            $this->info('Bootstrap Azure showcase termine: comptes, marketplace et contenu social sont prets.');
+            $this->info('Bootstrap showcase termine: comptes, marketplace et contenu social sont prets.');
 
             return self::SUCCESS;
         } catch (Throwable $exception) {
-            $this->error('Bootstrap Azure showcase refuse ou annule: '.$exception->getMessage());
+            $this->error('Bootstrap showcase refuse ou annule: '.$exception->getMessage());
 
             return self::FAILURE;
         }

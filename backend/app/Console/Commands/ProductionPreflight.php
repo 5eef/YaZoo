@@ -20,6 +20,13 @@ class ProductionPreflight extends Command
     {
         $failures = [];
         $configurationOnly = (bool) $this->option('configuration-only');
+        $profile = (string) config('operations.deployment_profile');
+        $isProductionProfile = $profile === 'production';
+        $isShowcaseProfile = $profile === 'showcase';
+
+        if (! in_array($profile, ['showcase', 'production'], true)) {
+            $failures[] = 'YAZOO_DEPLOYMENT_PROFILE must be showcase or production for deployment preflight.';
+        }
 
         array_push($failures, ...$databaseTargetGuard->failures());
 
@@ -44,9 +51,9 @@ class ProductionPreflight extends Command
             $failures[] = 'ADMIN_BOOTSTRAP_ENABLED must be false in production.';
         }
 
-        if (in_array(config('mail.default'), ['log', 'array'], true)) {
+        if ($isProductionProfile && in_array(config('mail.default'), ['log', 'array'], true)) {
             $failures[] = 'MAIL_MAILER must use a real transport in production.';
-        } else {
+        } elseif (! in_array(config('mail.default'), ['log', 'array'], true)) {
             $this->requireValue($failures, 'MAIL_HOST', config('mail.mailers.smtp.host'));
             $this->requireValue($failures, 'MAIL_USERNAME', config('mail.mailers.smtp.username'));
             $this->requireValue($failures, 'MAIL_PASSWORD', config('mail.mailers.smtp.password'));
@@ -64,13 +71,13 @@ class ProductionPreflight extends Command
         }
 
         if (
-            config('queue.default') === 'redis'
+            config('queue.default') !== 'sync'
             && ! (bool) config('operations.run_queue_worker')
         ) {
-            $failures[] = 'QUEUE_CONNECTION=redis requires YAZOO_RUN_QUEUE_WORKER=true.';
+            $failures[] = 'An asynchronous QUEUE_CONNECTION requires YAZOO_RUN_QUEUE_WORKER=true.';
         }
 
-        if (! (bool) config('operations.run_scheduler')) {
+        if ($isProductionProfile && ! (bool) config('operations.run_scheduler')) {
             $failures[] = 'YAZOO_RUN_SCHEDULER=true is required for retention and heartbeat tasks.';
         }
 
@@ -92,15 +99,17 @@ class ProductionPreflight extends Command
             $failures[] = 'YAZOO_ACCOUNT_DELETION_PROCESSING_LEASE_SECONDS must be at least 60.';
         }
 
-        if (! (bool) config('operations.app_service_storage_enabled')) {
-            $failures[] = 'WEBSITES_ENABLE_APP_SERVICE_STORAGE=true is required for persistent App Service media.';
+        if ((bool) config('operations.require_persistent_storage')) {
+            $path = rtrim((string) config('operations.persistent_storage_path'), '/\\');
+
+            if ($path === '') {
+                $failures[] = 'YAZOO_PERSISTENT_STORAGE_PATH is required when YAZOO_REQUIRE_PERSISTENT_STORAGE=true.';
+            } elseif (! $configurationOnly && (! is_dir($path) || ! is_readable($path) || ! is_writable($path))) {
+                $failures[] = 'YAZOO_PERSISTENT_STORAGE_PATH must exist and be readable and writable.';
+            }
         }
 
-        if ((string) config('operations.persistent_storage_path') !== '/home/site/yazoo-storage') {
-            $failures[] = 'YAZOO_PERSISTENT_STORAGE_PATH must be /home/site/yazoo-storage.';
-        }
-
-        if ((bool) config('media.scanning.required_in_production')) {
+        if ($isProductionProfile && (bool) config('media.scanning.required_in_production')) {
             $mediaLockStore = (string) config('media.scanning.unique_lock_store');
             $mediaLockDriver = (string) config("cache.stores.{$mediaLockStore}.driver");
 
@@ -138,7 +147,7 @@ class ProductionPreflight extends Command
             $failures[] = 'At least one active administrator is required.';
         }
 
-        if (! (bool) config('auth.admin_mfa.enforced')) {
+        if (($isProductionProfile || $isShowcaseProfile) && ! (bool) config('auth.admin_mfa.enforced')) {
             $failures[] = 'ADMIN_MFA_ENFORCED must be true in production.';
         } elseif (! $configurationOnly && ! User::query()
             ->where('is_admin', true)

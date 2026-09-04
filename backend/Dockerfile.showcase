@@ -1,7 +1,8 @@
 ARG BASE_IMAGE=yazoo-api:local
 FROM ${BASE_IMAGE}
 
-COPY backend/app/Console/Commands/BootstrapAzureShowcase.php /var/www/html/app/Console/Commands/BootstrapAzureShowcase.php
+COPY backend/app/Console/Commands/BootstrapShowcase.php /var/www/html/app/Console/Commands/BootstrapShowcase.php
+COPY backend/app/Console/Commands/EnsureShowcaseMedia.php /var/www/html/app/Console/Commands/EnsureShowcaseMedia.php
 COPY backend/app/Support/ShowcaseBootstrapGuard.php /var/www/html/app/Support/ShowcaseBootstrapGuard.php
 COPY backend/config/operations.php /var/www/html/config/operations.php
 COPY backend/database/seeders/DemoContentSeeder.php /var/www/html/database/seeders/DemoContentSeeder.php

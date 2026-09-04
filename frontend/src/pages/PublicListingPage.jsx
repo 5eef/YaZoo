@@ -14,6 +14,7 @@ import {
   isPublicMarketplaceSection,
 } from '../components/marketplace/publicMarketplaceConfig'
 import Avatar from '../components/ui/Avatar'
+import { SITE_URL } from '../components/seo/seoConfig'
 import { useI18n } from '../hooks/useI18n'
 
 function PublicListingPage() {
@@ -76,7 +77,7 @@ function PublicListingPage() {
       .slice(0, 160)
     const locationSuffix = listing.location ? ` · ${listing.location}` : ''
     const title = `${listing.title}${locationSuffix} | YaZoo`
-    const canonicalUrl = `https://yazoo.azurewebsites.net/discover/${section}/${listingId}`
+    const canonicalUrl = `${SITE_URL}/discover/${section}/${listingId}`
 
     document.title = title
     setMetaContent('meta[name="description"]', description)

@@ -9,6 +9,7 @@ use App\Http\Middleware\EnsureUserIsAdmin;
 use App\Http\Middleware\EnsureUserIsNotSuspended;
 use App\Http\Middleware\ForceHttps;
 use App\Http\Middleware\ForceJsonResponse;
+use App\Http\Middleware\RejectDisabledShowcaseUploads;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\UseSanctumTokenFromCookie;
 use App\Support\OperationsSchedule;
@@ -72,6 +73,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->append(ForceHttps::class);
         $middleware->append(SecurityHeaders::class);
+        $middleware->append(RejectDisabledShowcaseUploads::class);
 
         $middleware->prependToPriorityList(
             AuthenticatesRequests::class,

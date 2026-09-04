@@ -1,4 +1,6 @@
-# Deploiement Azure de production YaZoo
+# Archive — deploiement Azure de production YaZoo
+
+> Historique uniquement. Cet environnement a ete decommissionne et ne constitue plus la cible active.
 
 La cible canonique est:
 

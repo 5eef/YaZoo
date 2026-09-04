@@ -33,6 +33,7 @@ class MediaStorage
         $driver = (string) config('media.driver', 'filesystem');
 
         if ($driver === 'mongodb') {
+            self::assertMongoConfiguration();
             self::assertMongoDriverAvailable();
 
             return self::storeUploadedFileInMongo($file, $directory);
@@ -51,7 +52,7 @@ class MediaStorage
         }
 
         if (self::isMongoReference($path)) {
-            return rtrim((string) config('app.url'), '/').'/api/media/'.self::extractMongoFileId($path);
+            return '/api/media/'.self::extractMongoFileId($path);
         }
 
         if (Str::startsWith($path, ['http://', 'https://', '/'])) {
@@ -154,6 +155,7 @@ class MediaStorage
      */
     public static function openMongoDownload(string $fileId): array
     {
+        self::assertMongoConfiguration();
         self::assertMongoDriverAvailable();
 
         $objectId = new ObjectId($fileId);
@@ -200,6 +202,13 @@ class MediaStorage
         }
     }
 
+    protected static function assertMongoConfiguration(): void
+    {
+        if (trim((string) config('media.mongodb.uri', '')) === '') {
+            throw new RuntimeException("L'URI MongoDB media n'est pas configuree.");
+        }
+    }
+
     /**
      * Store an uploaded file in MongoDB GridFS.
      */
@@ -233,6 +242,7 @@ class MediaStorage
      */
     public static function importPublicDiskPath(string $path, ?string $directory = null): string
     {
+        self::assertMongoConfiguration();
         self::assertMongoDriverAvailable();
 
         $relativePath = ltrim($path, '/\\');

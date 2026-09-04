@@ -56,7 +56,7 @@ class MarketplaceDemoSeederTest extends TestCase
     public function test_command_refuses_production_environment(): void
     {
         app()['env'] = 'production';
-        config(['app.url' => 'https://yazoo-api.azurewebsites.net']);
+        config(['app.url' => 'https://demo.example']);
 
         $exit = Artisan::call('yazoo:seed-marketplace-demo', ['--images' => $this->imagesPath]);
 

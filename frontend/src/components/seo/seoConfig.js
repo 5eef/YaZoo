@@ -1,5 +1,9 @@
 export const SITE_NAME = 'YaZoo'
-export const SITE_URL = 'https://yazoo.azurewebsites.net'
+const configuredSiteUrl = (
+  import.meta.env?.VITE_SITE_URL ?? globalThis.process?.env?.VITE_SITE_URL ?? ''
+).trim()
+export const SITE_URL = configuredSiteUrl.replace(/\/$/, '') ||
+  (typeof globalThis.location === 'undefined' ? '' : globalThis.location.origin)
 export const SOCIAL_IMAGE_URL = `${SITE_URL}/icon-512.png`
 export const INDEX_ROBOTS =
   'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1'

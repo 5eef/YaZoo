@@ -175,16 +175,8 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Validate release guard policies
-        run: node scripts/validate-release-guards.mjs
-
-      - name: Test Azure script mutation guards
-        shell: pwsh
-        run: ./scripts/test-azure-script-guards.ps1
-
-      - name: Test Azure showcase reset guards
-        shell: pwsh
-        run: ./scripts/test-azure-showcase-reset.ps1
+      - name: Validate provider-neutral showcase deployment
+        run: node scripts/validate-showcase-deployment.mjs
 
       - name: Test production preflight startup gate
         run: sh backend/tests/scripts/production-preflight-gate.sh

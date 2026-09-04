@@ -85,7 +85,32 @@ class MarketplaceTestSeeder extends Seeder
     }
 
     /**
-     * Seed the guarded Azure DATABASE #2 target with the same marketplace data
+     * Restore only the versioned showcase media paths. Database rows are never
+     * created or changed by this operation.
+     *
+     * @return array{created: int, updated: int, unchanged: int}
+     */
+    public function ensureShowcaseMedia(string $imagesPath): array
+    {
+        $this->stats = [];
+        $this->storageBackup = [];
+        $this->validatedImages = $this->validateImages($imagesPath);
+
+        foreach ($this->validatedImages as $file => $image) {
+            $contents = file_get_contents($image['path']);
+
+            if ($contents === false) {
+                throw new RuntimeException("Impossible de lire l'image {$file}.");
+            }
+
+            $this->syncStorageFile('public', $this->mediaPath($file), $contents, 'media_files');
+        }
+
+        return $this->stats['media_files'] ?? ['created' => 0, 'updated' => 0, 'unchanged' => 0];
+    }
+
+    /**
+     * Seed a guarded showcase target with the same marketplace data
      * as the local demonstration database, while rotating non-admin passwords.
      *
      * @return array{dryRun: bool, images: array<int, array<string, mixed>>, stats: array<string, array{created: int, updated: int, unchanged: int}>}
