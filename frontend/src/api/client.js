@@ -104,6 +104,10 @@ function shouldShowGlobalErrorToast(error) {
     return false
   }
 
+  if (error?.response?.data?.code === 'DEMO_BACKEND_WAKING') {
+    return false
+  }
+
   const status = error?.response?.status
   const requestUrl = String(error?.config?.url ?? '')
 

@@ -127,17 +127,18 @@ Docker Compose keeps the frontend, API, Nginx, MySQL, Redis, queue worker, sched
 
 ```mermaid
 flowchart LR
-    V[Recruiter browser] -->|HTTPS| E[Render edge]
-    E --> N2
-    subgraph BOX[Single Docker image]
-      N2[Nginx :8080] --> SPA[React static build]
-      N2 --> PHP[Laravel on PHP-FPM]
-      I[21 versioned demo images] --> PHP
-    end
+    V[Recruiter browser] -->|HTTPS| C[Cloudflare Pages CDN]
+    C --> SPA[React static build]
+    SPA -->|same-origin API, CSRF and media| F[Pages Functions]
+    F -->|fixed BACKEND_ORIGIN| R[Render Free origin]
+    R --> PHP[Laravel on PHP-FPM]
+    I[21 versioned demo images] --> PHP
     PHP -->|MySQL protocol + TLS| T[(TiDB Cloud Starter)]
 ```
 
-The showcase keeps React and Laravel on the same origin. Database-backed cache and sessions remove the Redis requirement; synchronous queues remove the worker requirement; versioned media can be restored after the ephemeral container filesystem is reset.
+Cloudflare serves the React shell independently of the sleeping backend. Pages Functions keep browser traffic same-origin while proxying only the API, Sanctum, storage, and broadcasting routes to a fixed Render origin. Database-backed cache and sessions remove the Redis requirement; synchronous queues remove the worker requirement; versioned media can be restored after the ephemeral container filesystem is reset.
+
+The React interface is delivered instantly from Cloudflare's CDN. The free Laravel demo API may take up to about one minute to wake after inactivity.
 
 ## Security design
 
@@ -165,6 +166,7 @@ The following results were reproduced on the current showcase candidate on 4 Sep
 | Dependency audits | Composer and npm reported no known advisories |
 | Frontend build | Vite production build passed |
 | Showcase container | `Dockerfile.demo` built; two bootstraps, health endpoints, deep links, register/login/CSRF/logout, and 21 media files passed |
+| Split frontend candidate | **143/143 Vitest** and **98/98 Playwright** scenarios passed; Cloudflare static, public API, deep-link, and 21/21 media checks passed |
 
 Reproduce the main checks:
 
@@ -263,9 +265,23 @@ The default local mapping uses frontend port `4173`, API port `8000`, and Docker
 - [`backend/Dockerfile`](backend/Dockerfile) builds the Laravel API runtime.
 - [`frontend/Dockerfile`](frontend/Dockerfile) builds the standalone frontend runtime.
 - [`Dockerfile.demo`](Dockerfile.demo) assembles the React build, Laravel, PHP-FPM, Nginx, and versioned demo media into one lightweight recruiter-showcase service on port `8080`.
+- [`Dockerfile.api-demo`](Dockerfile.api-demo) builds the backend-only Laravel showcase candidate used after the Cloudflare frontend cutover.
 - [`docker-compose.yml`](docker-compose.yml) runs the fuller multi-service local topology.
 
 ## Public showcase deployment
+
+The verified Render monolith remains the published rollback while the Cloudflare split candidate completes its authentication cutover. The candidate frontend is deployed at `https://yazoo-showcase.pages.dev`; it must not replace the portfolio link until register/login/current-user/logout all pass through the same-origin proxy.
+
+Target split topology:
+
+```text
+Cloudflare Pages static React
+        -> Cloudflare Pages Functions (same-origin proxy)
+        -> Render Free Laravel API
+        -> TiDB Cloud Starter over TLS
+```
+
+The Pages project uses `frontend` as its root, `npm run build` as its build command, and `dist` as its output directory. Its only server-side origin binding is `BACKEND_ORIGIN=https://yazoo-showcase.onrender.com`; no Render URL or secret is compiled into the browser bundle.
 
 The deployment target is intentionally small:
 

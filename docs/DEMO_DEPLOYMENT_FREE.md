@@ -14,6 +14,62 @@ Portfolio -> Render Free Web Service -> immutable Docker Hub image
 
 React and Laravel share one HTTPS origin. Nginx routes `/api`, `/sanctum`, `/health`, `/storage`, and `/broadcasting` to Laravel or its storage path; all other deep links fall back to the React SPA.
 
+## Cloudflare split-frontend candidate
+
+The current Render monolith remains the rollback deployment until the split architecture passes the full authentication checklist. The migration candidate is:
+
+```text
+Recruiter browser
+  -> Cloudflare Pages: instant static React frontend
+  -> Cloudflare Pages Functions: same-origin API proxy and wake handling
+  -> Render Free: Laravel API, which may sleep after inactivity
+  -> TiDB Cloud Starter: persistent showcase database
+```
+
+The React interface is delivered instantly from Cloudflare's CDN. The free Laravel demo API may take up to about one minute to wake after inactivity.
+
+Cloudflare Pages settings:
+
+| Setting | Value |
+| --- | --- |
+| Project | `yazoo-showcase` |
+| Root directory | `frontend` |
+| Build command | `npm run build` |
+| Build output | `dist` |
+| Production URL | `https://yazoo-showcase.pages.dev` |
+| Server-side secret | `BACKEND_ORIGIN=https://yazoo-showcase.onrender.com` |
+
+Production build variables must keep browser traffic same-origin:
+
+```text
+VITE_API_URL=/api
+VITE_STORAGE_URL=/storage
+VITE_SITE_URL=https://yazoo-showcase.pages.dev
+VITE_GOOGLE_AUTH_ENABLED=false
+VITE_REALTIME_ENABLED=false
+VITE_MONITORING_ENABLED=false
+```
+
+Pages Functions are restricted by `frontend/public/_routes.json` to `/api/*`, `/sanctum/*`, `/storage/*`, `/broadcasting/*`, and `/demo-backend-status`. The proxy accepts no caller-selected target, forwards only allowlisted headers, does not replay mutations, converts expected JSON cold-start HTML to a controlled `503`, and makes origin cookies host-only for the Cloudflare domain.
+
+Before the authentication cutover, update the existing Render environment without removing the Render hostname:
+
+```text
+APP_URL=https://yazoo-showcase.pages.dev
+FRONTEND_URL=https://yazoo-showcase.pages.dev
+YAZOO_SHOWCASE_APP_HOST=yazoo-showcase.pages.dev
+SANCTUM_STATEFUL_DOMAINS=yazoo-showcase.pages.dev,yazoo-showcase.onrender.com
+CORS_ALLOWED_ORIGINS=https://yazoo-showcase.pages.dev,https://yazoo-showcase.onrender.com
+SESSION_DOMAIN=
+SESSION_SECURE_COOKIE=true
+SESSION_SAME_SITE=lax
+GOOGLE_REDIRECT_URI=https://yazoo-showcase.pages.dev/api/auth/google/callback
+GOOGLE_FRONTEND_REDIRECT=https://yazoo-showcase.pages.dev/feed
+GOOGLE_LOGIN_REDIRECT=https://yazoo-showcase.pages.dev/login
+```
+
+Keep the Cloudflare URL out of the portfolio until CSRF acquisition, registration/login, `/api/auth/me`, and logout all pass through Cloudflare. Do not use cron pings or external uptime monitors to prevent normal Free-tier sleep.
+
 ## Financial guardrails
 
 - Select only the Render compute plan identified as `free`.

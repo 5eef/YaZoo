@@ -12,7 +12,7 @@ import { useAuth } from '../hooks/useAuth'
 import { useI18n } from '../hooks/useI18n'
 
 function LandingPage() {
-  const { isAuthenticated, isBootstrapping } = useAuth()
+  const { isAuthenticated } = useAuth()
   const { t } = useI18n()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const navItems = [
@@ -64,14 +64,6 @@ function LandingPage() {
       globalThis.removeEventListener('keydown', handleKeyDown)
     }
   }, [isMobileMenuOpen])
-
-  if (isBootstrapping) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-[linear-gradient(180deg,_#fffaff_0%,_#f5eeff_100%)] px-4 py-10 dark:bg-[linear-gradient(180deg,_#05030a_0%,_#180b2b_100%)]">
-        <p className="text-sm text-stone-600 dark:text-violet-100/80">{t('common.loadingSession')}</p>
-      </main>
-    )
-  }
 
   if (isAuthenticated) {
     return <Navigate to="/feed" replace />

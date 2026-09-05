@@ -71,6 +71,7 @@ backend/.phpunit.result.cache
 backend/curl-cookie-jar.txt
 backend/smoke-*
 frontend/.vite/
+frontend/.wrangler/
 frontend/playwright-report/
 frontend/test-results/
 *.log

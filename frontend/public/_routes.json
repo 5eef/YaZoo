@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "include": [
+    "/api/*",
+    "/sanctum/*",
+    "/storage/*",
+    "/broadcasting/*",
+    "/demo-backend-status"
+  ],
+  "exclude": []
+}

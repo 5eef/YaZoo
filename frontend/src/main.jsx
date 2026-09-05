@@ -5,6 +5,7 @@ import { BrowserRouter } from 'react-router'
 import './index.css'
 import App from './App.jsx'
 import { AuthProvider } from './contexts/AuthContext.jsx'
+import { DemoBackendProvider } from './contexts/DemoBackendContext.jsx'
 import { I18nProvider } from './contexts/I18nContext.jsx'
 import { NotificationProvider } from './contexts/NotificationContext.jsx'
 import { ThemeProvider } from './contexts/ThemeContext.jsx'
@@ -29,13 +30,15 @@ createRoot(document.getElementById('root')).render(
     >
       <I18nProvider>
         <ThemeProvider>
-          <AuthProvider>
-            <ToastProvider>
-              <NotificationProvider>
-                <App />
-              </NotificationProvider>
-            </ToastProvider>
-          </AuthProvider>
+          <DemoBackendProvider>
+            <AuthProvider>
+              <ToastProvider>
+                <NotificationProvider>
+                  <App />
+                </NotificationProvider>
+              </ToastProvider>
+            </AuthProvider>
+          </DemoBackendProvider>
         </ThemeProvider>
       </I18nProvider>
     </BrowserRouter>

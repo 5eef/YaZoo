@@ -10,7 +10,7 @@
   },
   "scripts": {
     "dev": "vite --configLoader native",
-    "build": "vite build && node scripts/generate-static-seo-pages.mjs && node scripts/check-legal-placeholders.mjs",
+    "build": "vite build --configLoader native && node scripts/generate-static-seo-pages.mjs && node scripts/check-legal-placeholders.mjs",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "audit:i18n": "node ../scripts/audit-i18n-completeness.mjs",

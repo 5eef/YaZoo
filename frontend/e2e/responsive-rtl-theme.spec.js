@@ -276,6 +276,7 @@ async function assertPageHealth(page, mode, consoleErrors) {
 }
 
 async function mockApi(page, authenticated) {
+  await page.route('**/demo-backend-status', async (route) => json(route, { status: 'ready' }))
   await page.route('**/sanctum/csrf-cookie', async (route) => route.fulfill({ status: 204 }))
   await page.route('**/api/**', async (route) => {
     const url = new URL(route.request().url())

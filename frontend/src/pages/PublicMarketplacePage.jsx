@@ -9,6 +9,7 @@ import {
   isPublicMarketplaceSection,
 } from '../components/marketplace/publicMarketplaceConfig'
 import { useI18n } from '../hooks/useI18n'
+import { useDemoBackendStatus } from '../hooks/useDemoBackendStatus'
 
 const EMPTY_META = {
   currentPage: 1,
@@ -20,6 +21,7 @@ const EMPTY_META = {
 function PublicMarketplacePage() {
   const { section } = useParams()
   const { locale, t } = useI18n()
+  const { retry: retryBackend, status: backendStatus } = useDemoBackendStatus()
   const [page, setPage] = useState(1)
   const [listings, setListings] = useState([])
   const [meta, setMeta] = useState(EMPTY_META)
@@ -33,7 +35,7 @@ function PublicMarketplacePage() {
   }, [section])
 
   useEffect(() => {
-    if (!isPublicMarketplaceSection(section)) {
+    if (!isPublicMarketplaceSection(section) || backendStatus !== 'ready') {
       return undefined
     }
 
@@ -69,7 +71,7 @@ function PublicMarketplacePage() {
     return () => {
       cancelled = true
     }
-  }, [page, reloadKey, section])
+  }, [backendStatus, page, reloadKey, section])
 
   if (!definition) {
     return <Navigate to="/" replace />
@@ -93,15 +95,18 @@ function PublicMarketplacePage() {
       </section>
 
       <section
-        aria-busy={isLoading}
+        aria-busy={isLoading || backendStatus !== 'ready'}
         className="mt-5 rounded-[30px] border border-white/76 bg-white/72 p-4 shadow-[0_20px_50px_rgba(124,58,237,0.07)] dark:border-violet-300/12 dark:bg-white/6 sm:p-6"
       >
-        {hasError ? (
+        {hasError || backendStatus === 'unavailable' ? (
           <MarketplaceState>
             <p>{t('publicMarketplace.loadError')}</p>
             <button
               type="button"
-              onClick={() => setReloadKey((current) => current + 1)}
+              onClick={() => {
+                retryBackend()
+                setReloadKey((current) => current + 1)
+              }}
               className="mt-4 rounded-full bg-violet-700 px-5 py-2.5 font-semibold text-white"
             >
               {t('landing.marketplaceRetry')}
@@ -109,7 +114,7 @@ function PublicMarketplacePage() {
           </MarketplaceState>
         ) : null}
 
-        {!hasError && isLoading ? (
+        {!hasError && backendStatus !== 'unavailable' && (isLoading || backendStatus !== 'ready') ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {Array.from({ length: 8 }, (_, index) => (
               <ListingSkeleton key={index} />
@@ -117,11 +122,11 @@ function PublicMarketplacePage() {
           </div>
         ) : null}
 
-        {!hasError && !isLoading && listings.length === 0 ? (
+        {!hasError && backendStatus === 'ready' && !isLoading && listings.length === 0 ? (
           <MarketplaceState>{t('landing.marketplaceSectionEmpty')}</MarketplaceState>
         ) : null}
 
-        {!hasError && !isLoading && listings.length > 0 ? (
+        {!hasError && backendStatus === 'ready' && !isLoading && listings.length > 0 ? (
           <>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {listings.map((listing) => (

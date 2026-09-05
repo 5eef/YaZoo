@@ -42,6 +42,7 @@ for (const entry of cases) {
 }
 
 async function mockApi(page, authenticated) {
+  await page.route('**/demo-backend-status', (route) => json(route, { status: 'ready' }))
   await page.route('**/sanctum/csrf-cookie', (route) => route.fulfill({ status: 204 }))
   await page.route('**/api/**', async (route) => {
     const pathname = new URL(route.request().url()).pathname

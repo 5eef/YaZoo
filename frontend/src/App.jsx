@@ -7,6 +7,7 @@ import CookieConsentBanner from './components/privacy/CookieConsentBanner'
 import SeoManager from './components/seo/SeoManager'
 import AdminRoute from './components/auth/AdminRoute'
 import AppErrorBoundary from './components/errors/AppErrorBoundary'
+import DemoServerStatus from './components/ui/DemoServerStatus'
 
 const AdminModerationPage = lazy(() => import('./pages/AdminModerationPage'))
 const AdminAnimalReviewPage = lazy(() => import('./pages/AdminAnimalReviewPage'))
@@ -63,6 +64,7 @@ function App() {
   return (
     <AppErrorBoundary>
       <SeoManager />
+      <DemoServerStatus />
       <Suspense fallback={<RouteLoader />}>
         <Routes>
         <Route

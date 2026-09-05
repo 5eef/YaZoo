@@ -9,12 +9,14 @@ import PasswordField from '../components/ui/PasswordField'
 import { I18nContext } from '../contexts/i18n-context'
 import { useAuth } from '../hooks/useAuth'
 import { useSmsAvailability } from '../hooks/useSmsAvailability'
+import { useDemoBackendStatus } from '../hooks/useDemoBackendStatus'
 import { getGoogleAuthErrorMessage } from '../lib/googleAuthErrors'
 import { translate } from '../lib/i18n'
 import { getErrorMessage } from '../utils/getErrorMessage'
 
 function LoginPage() {
-  const { isAuthenticated, isBootstrapping, login } = useAuth()
+  const { isAuthenticated, login } = useAuth()
+  const { status: backendStatus } = useDemoBackendStatus()
   const i18n = useContext(I18nContext)
   const t = useMemo(
     () => i18n?.t ?? ((key, replacements) => translate('fr', key, replacements)),
@@ -37,16 +39,6 @@ function LoginPage() {
     ],
     [t],
   )
-
-  if (isBootstrapping) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-[linear-gradient(180deg,_#fffaff_0%,_#f6efff_100%)] px-4 py-10 dark:bg-[radial-gradient(circle_at_top_left,_rgba(124,58,237,0.28),_transparent_28%),linear-gradient(180deg,_#090011_0%,_#13071f_56%,_#08000f_100%)]">
-        <p className="text-sm text-stone-600 dark:text-violet-100">
-          {t('common.loadingSession')}
-        </p>
-      </main>
-    )
-  }
 
   if (isAuthenticated) {
     return <Navigate to="/feed" replace />
@@ -168,9 +160,22 @@ function LoginPage() {
               </p>
             ) : null}
 
-            <Button type="submit" className="w-full py-3" disabled={isSubmitting}>
+            <Button
+              type="submit"
+              className="w-full py-3"
+              disabled={isSubmitting || backendStatus !== 'ready'}
+              aria-describedby={backendStatus === 'ready' ? undefined : 'demo-login-backend-status'}
+            >
               {isSubmitting ? t('auth.login.loading') : t('auth.login.submit')}
             </Button>
+            {backendStatus !== 'ready' ? (
+              <p
+                id="demo-login-backend-status"
+                className="text-center text-xs text-stone-600 dark:text-violet-100/75"
+              >
+                Demo server is starting…
+              </p>
+            ) : null}
           </form>
 
           <div className="my-5 flex items-center gap-3">

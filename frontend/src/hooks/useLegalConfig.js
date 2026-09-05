@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 
 import api from '../api/client'
+import { useDemoBackendStatus } from './useDemoBackendStatus'
 
 const emptyLegalConfig = Object.freeze({
   entityName: '',
@@ -43,8 +44,13 @@ export function useLegalConfig() {
   const [config, setConfig] = useState(() => cachedConfig ?? emptyLegalConfig)
   const [isLoading, setIsLoading] = useState(() => cachedConfig === null)
   const [error, setError] = useState(null)
+  const { status: backendStatus } = useDemoBackendStatus()
 
   useEffect(() => {
+    if (backendStatus !== 'ready') {
+      return undefined
+    }
+
     let cancelled = false
 
     loadLegalConfig()
@@ -68,7 +74,7 @@ export function useLegalConfig() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [backendStatus])
 
   return { config, isLoading, error }
 }

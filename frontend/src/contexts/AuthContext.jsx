@@ -13,6 +13,7 @@ import { disconnectRealtime } from '../lib/realtime'
 import { normalizeAuthUserMedia } from '../utils/media'
 import { AuthContext } from './auth-context'
 import { I18nContext } from './i18n-context'
+import { useDemoBackendStatus } from '../hooks/useDemoBackendStatus'
 
 const DEVICE_NAME = 'yazoo-web'
 
@@ -20,9 +21,11 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isBootstrapping, setIsBootstrapping] = useState(true)
+  const { status: backendStatus } = useDemoBackendStatus()
   const i18n = useContext(I18nContext)
   const setLocale = useMemo(() => i18n?.setLocale ?? (() => {}), [i18n?.setLocale])
   const authRevision = useRef(0)
+  const bootstrapPromiseRef = useRef(null)
 
   const applyAuthenticatedUser = useCallback((nextUser) => {
     const normalizedUser = normalizeAuthUserMedia(nextUser)
@@ -35,36 +38,55 @@ export function AuthProvider({ children }) {
   }, [setLocale])
 
   useEffect(() => {
+    if (backendStatus === 'unavailable') {
+      setIsBootstrapping(false)
+      return undefined
+    }
+
+    if (backendStatus !== 'ready') {
+      return undefined
+    }
+
     let cancelled = false
 
-    const bootstrap = async () => {
-      try {
-        const revisionAtStart = authRevision.current
+    if (!bootstrapPromiseRef.current) {
+      const revisionAtStart = authRevision.current
+      bootstrapPromiseRef.current = (async () => {
         await ensureCsrfCookie()
         const response = await meRequest()
 
-        if (!cancelled && authRevision.current === revisionAtStart) {
-          applyAuthenticatedUser(response.data.user)
-          setIsAuthenticated(true)
+        return {
+          authenticated: true,
+          revisionAtStart,
+          user: response.data.user,
         }
-      } catch {
-        if (!cancelled && authRevision.current === 0) {
+      })().catch(() => ({ authenticated: false, revisionAtStart }))
+    }
+
+    bootstrapPromiseRef.current
+      .then((result) => {
+        if (cancelled || authRevision.current !== result.revisionAtStart) {
+          return
+        }
+
+        if (result.authenticated) {
+          applyAuthenticatedUser(result.user)
+          setIsAuthenticated(true)
+        } else if (authRevision.current === 0) {
           setUser(null)
           setIsAuthenticated(false)
         }
-      } finally {
+      })
+      .finally(() => {
         if (!cancelled) {
           setIsBootstrapping(false)
         }
-      }
-    }
-
-    bootstrap()
+      })
 
     return () => {
       cancelled = true
     }
-  }, [applyAuthenticatedUser])
+  }, [applyAuthenticatedUser, backendStatus])
 
   useEffect(() => {
     const handleSessionExpired = () => {

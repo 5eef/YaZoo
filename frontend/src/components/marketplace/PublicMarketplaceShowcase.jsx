@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 
 import { getPublicMarketplacePreviewRequest } from '../../api/publicMarketplace'
 import { useI18n } from '../../hooks/useI18n'
+import { useDemoBackendStatus } from '../../hooks/useDemoBackendStatus'
 import PublicListingCard from './PublicListingCard'
 import {
   PUBLIC_MARKETPLACE_SECTIONS,
@@ -18,12 +19,17 @@ const EMPTY_SECTIONS = {
 
 function PublicMarketplaceShowcase() {
   const { isRtl, locale, t } = useI18n()
+  const { retry: retryBackend, status: backendStatus } = useDemoBackendStatus()
   const [sections, setSections] = useState(EMPTY_SECTIONS)
   const [isLoading, setIsLoading] = useState(true)
   const [hasError, setHasError] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
+    if (backendStatus !== 'ready') {
+      return undefined
+    }
+
     let cancelled = false
 
     const loadPreview = async () => {
@@ -55,13 +61,16 @@ function PublicMarketplaceShowcase() {
     return () => {
       cancelled = true
     }
-  }, [reloadKey])
+  }, [backendStatus, reloadKey])
+
+  const showError = hasError || backendStatus === 'unavailable'
+  const showLoading = isLoading || backendStatus !== 'ready'
 
   return (
     <section
       id="marketplace-preview"
       aria-labelledby="marketplace-preview-title"
-      aria-busy={isLoading}
+      aria-busy={showLoading}
       className="mb-8 mt-8 min-w-0 max-w-full overflow-hidden rounded-[30px] border border-white/80 bg-white/90 p-5 shadow-[0_20px_60px_rgba(124,58,237,0.08)] backdrop-blur dark:border-violet-300/16 dark:bg-[linear-gradient(135deg,_rgba(5,3,10,0.98),_rgba(30,15,52,0.92))] sm:rounded-[34px] sm:p-7 lg:p-8"
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -87,7 +96,7 @@ function PublicMarketplaceShowcase() {
         </Link>
       </div>
 
-      {hasError ? (
+      {showError ? (
         <div
           className="mt-6 flex flex-col items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800 dark:border-amber-300/20 dark:bg-amber-950/60 dark:text-amber-100 sm:flex-row sm:items-center sm:justify-between"
           role="alert"
@@ -95,7 +104,10 @@ function PublicMarketplaceShowcase() {
           <p>{t('landing.marketplaceLoadError')}</p>
           <button
             type="button"
-            onClick={() => setReloadKey((current) => current + 1)}
+            onClick={() => {
+              retryBackend()
+              setReloadKey((current) => current + 1)
+            }}
             className="shrink-0 rounded-full border border-amber-300/70 bg-white px-4 py-2 font-semibold text-amber-900 transition hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 dark:border-amber-200/25 dark:bg-white/10 dark:text-amber-50 dark:hover:bg-white/15"
           >
             {t('landing.marketplaceRetry')}
@@ -109,7 +121,7 @@ function PublicMarketplaceShowcase() {
               title={t(definition.titleKey)}
               section={definition.key}
               listings={sections[definition.key]}
-              isLoading={isLoading}
+              isLoading={showLoading}
               isRtl={isRtl}
               locale={locale}
               t={t}
