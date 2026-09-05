@@ -44,6 +44,7 @@ WORKDIR /var/www/html
 COPY --from=composer:2@sha256:4d71c3c2109c61d5415544264b59ad4087e4c5b7244481723664138fd36d5040 /usr/bin/composer /usr/bin/composer
 RUN set -eux; \
     apk add --no-cache bash ca-certificates icu-libs libzip nginx su-exec; \
+    apk upgrade --no-cache libcrypto3 libssl3 openssl; \
     apk add --no-cache --virtual .build-deps $PHPIZE_DEPS icu-dev libzip-dev linux-headers; \
     docker-php-ext-install bcmath intl opcache pcntl pdo_mysql zip; \
     pecl install redis-6.3.0 mongodb-2.3.3; \

@@ -16,7 +16,7 @@ export default defineConfig({
   },
   webServer: shouldStartWebServer
     ? {
-        command: 'node ./node_modules/vite/bin/vite.js --host 127.0.0.1',
+        command: 'node ./node_modules/vite/bin/vite.js --configLoader native --host 127.0.0.1',
         url: baseURL,
         reuseExistingServer: true,
         timeout: 120000,

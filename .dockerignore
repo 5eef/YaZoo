@@ -5,6 +5,7 @@
 !**/.env.production.example
 !**/.env.showcase.example
 **/node_modules
+**/.vite-cache
 **/vendor
 **/coverage
 **/dist

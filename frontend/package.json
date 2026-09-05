@@ -16,11 +16,11 @@
     "audit:i18n": "node ../scripts/audit-i18n-completeness.mjs",
     "audit:legal": "node scripts/check-legal-placeholders.mjs",
     "audit:tailwind": "node scripts/check-tailwind-classes.mjs",
-    "test": "vitest",
+    "test": "vitest --configLoader native",
     "test:e2e": "node e2e/run-smoke.mjs",
     "screenshots:showcase": "node e2e/capture-showcase-screenshots.mjs",
     "test:e2e:ui": "playwright test --ui",
-    "test:coverage": "vitest run --coverage",
+    "test:coverage": "vitest run --coverage --configLoader native",
     "preview": "vite preview"
   },
   "dependencies": {
