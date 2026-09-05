@@ -119,6 +119,7 @@ class ShowcaseBootstrapTest extends TestCase
 
             $this->assertStringNotContainsString('::factory(', $source, $seeder);
             $this->assertStringNotContainsString('fake()', $source, $seeder);
+            $this->assertStringNotContainsString('images.unsplash.com', $source, $seeder);
         }
     }
 

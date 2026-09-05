@@ -30,7 +30,7 @@ class DemoContentSeeder extends Seeder
             'country' => 'Maroc',
             'city' => 'Casablanca',
             'bio' => 'Administration de la plateforme YaZoo.',
-            'avatar' => 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=80',
+            'avatar' => null,
         ], isAdmin: true);
 
         $sellerAnimal = $this->createUser([
@@ -40,7 +40,7 @@ class DemoContentSeeder extends Seeder
             'country' => 'Maroc',
             'city' => 'Rabat',
             'bio' => 'Je partage des annonces d adoption et des conseils pour les chats et chiens.',
-            'avatar' => 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=400&q=80',
+            'avatar' => null,
         ]);
 
         $sellerProduct = $this->createUser([
@@ -50,7 +50,7 @@ class DemoContentSeeder extends Seeder
             'country' => 'Maroc',
             'city' => 'Marrakech',
             'bio' => 'Accessoires et produits premium pour animaux.',
-            'avatar' => 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80',
+            'avatar' => null,
         ]);
 
         $buyer = $this->createUser([
@@ -60,7 +60,7 @@ class DemoContentSeeder extends Seeder
             'country' => 'Maroc',
             'city' => 'Fes',
             'bio' => 'Passionnee par les adoptions responsables et les accessoires utiles.',
-            'avatar' => 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
+            'avatar' => null,
         ]);
 
         $communityLead = $this->createUser([
@@ -70,7 +70,7 @@ class DemoContentSeeder extends Seeder
             'country' => 'Maroc',
             'city' => 'Tanger',
             'bio' => 'J anime des groupes autour des soins, de l adoption et de la vie animale.',
-            'avatar' => 'https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=400&q=80',
+            'avatar' => null,
         ]);
 
         $guestMember = $this->createUser([
@@ -80,7 +80,7 @@ class DemoContentSeeder extends Seeder
             'country' => 'Maroc',
             'city' => 'Agadir',
             'bio' => 'Je rejoins les groupes prives pour apprendre et partager.',
-            'avatar' => 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=400&q=80',
+            'avatar' => null,
         ]);
 
         $postOne = $communityLead->posts()->create([
@@ -128,11 +128,8 @@ class DemoContentSeeder extends Seeder
             'age' => 2,
             'sex' => 'male',
             'location' => 'Rabat',
-            'photo_url' => 'https://images.unsplash.com/photo-1511044568932-338cba0ad803?auto=format&fit=crop&w=900&q=80',
-            'gallery_urls' => [
-                'https://images.unsplash.com/photo-1511044568932-338cba0ad803?auto=format&fit=crop&w=900&q=80',
-                'https://images.unsplash.com/photo-1519052537078-e6302a4968d4?auto=format&fit=crop&w=900&q=80',
-            ],
+            'photo_url' => null,
+            'gallery_urls' => [],
             'price' => 1200,
             'is_for_adoption' => false,
             'listing_status' => 'reserved',
@@ -147,10 +144,8 @@ class DemoContentSeeder extends Seeder
             'age' => 1,
             'sex' => 'female',
             'location' => 'Rabat',
-            'photo_url' => 'https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=900&q=80',
-            'gallery_urls' => [
-                'https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=900&q=80',
-            ],
+            'photo_url' => null,
+            'gallery_urls' => [],
             'price' => 0,
             'is_for_adoption' => true,
             'listing_status' => 'available',
@@ -162,11 +157,8 @@ class DemoContentSeeder extends Seeder
             'category' => 'food',
             'description' => 'Selection de croquettes et friandises pour un demarrage en douceur.',
             'price' => 180,
-            'image_url' => 'https://images.unsplash.com/photo-1583512603806-077998240c7a?auto=format&fit=crop&w=900&q=80',
-            'gallery_urls' => [
-                'https://images.unsplash.com/photo-1583512603806-077998240c7a?auto=format&fit=crop&w=900&q=80',
-                'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&w=900&q=80',
-            ],
+            'image_url' => null,
+            'gallery_urls' => [],
             'location' => 'Marrakech',
             'stock' => 8,
             'listing_status' => 'available',
@@ -178,10 +170,8 @@ class DemoContentSeeder extends Seeder
             'category' => 'habitat',
             'description' => 'Panier confortable avec coussin epais et texture douce.',
             'price' => 260,
-            'image_url' => 'https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?auto=format&fit=crop&w=900&q=80',
-            'gallery_urls' => [
-                'https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?auto=format&fit=crop&w=900&q=80',
-            ],
+            'image_url' => null,
+            'gallery_urls' => [],
             'location' => 'Marrakech',
             'stock' => 3,
             'listing_status' => 'reserved',
@@ -191,7 +181,7 @@ class DemoContentSeeder extends Seeder
         $publicCommunity = $communityLead->createdCommunities()->create([
             'name' => 'Conseils adoption Maroc',
             'description' => 'Conseils, retours d experience et entraide autour des adoptions responsables.',
-            'image_url' => 'https://images.unsplash.com/photo-1526336024174-e58f5cdd8e13?auto=format&fit=crop&w=900&q=80',
+            'image_url' => null,
             'is_private' => false,
         ]);
 
@@ -210,7 +200,7 @@ class DemoContentSeeder extends Seeder
         $privateCommunity = $admin->createdCommunities()->create([
             'name' => 'Moderation refuges prives',
             'description' => 'Espace prive pour l organisation des demandes, des refuges et des validations sensibles.',
-            'image_url' => 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=900&q=80',
+            'image_url' => null,
             'is_private' => true,
         ]);
 
