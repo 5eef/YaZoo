@@ -2,21 +2,22 @@
 
 This runbook describes the zero-cost recruiter showcase. It is not the commercial production topology and provides no SLA.
 
-**Live showcase:** [https://yazoo-showcase.onrender.com/](https://yazoo-showcase.onrender.com/)
+**Live showcase:** [https://yazoo-showcase.pages.dev/](https://yazoo-showcase.pages.dev/)
 
-Verified deployment (5 September 2026): Render Free, Frankfurt, immutable image `docker.io/5eef/yazoo-demo:beca3d278146`, TiDB TLS readiness healthy, public/authenticated browser flows operational, and restart idempotence confirmed.
+Verified deployment (5 September 2026): Cloudflare Pages frontend and same-origin Functions proxy, Render Free backend in Frankfurt, immutable image `docker.io/5eef/yazoo-api-demo:829f44fb697dc7bc01104dd5aa8c8520b56aebb6`, healthy TiDB TLS readiness, and working public and cookie-authenticated flows.
 
 ```text
-Portfolio -> Render Free Web Service -> immutable Docker Hub image
-                                    -> React + Laravel behind Nginx
-                                    -> TiDB Cloud Starter over TLS
+Portfolio -> Cloudflare Pages static React
+          -> Cloudflare Pages Functions same-origin proxy
+          -> Render Free Laravel API -> immutable Docker Hub image
+                                     -> TiDB Cloud Starter over TLS
 ```
 
-React and Laravel share one HTTPS origin. Nginx routes `/api`, `/sanctum`, `/health`, `/storage`, and `/broadcasting` to Laravel or its storage path; all other deep links fall back to the React SPA.
+The browser sees one Cloudflare HTTPS origin. Pages Functions proxy the allowlisted dynamic routes to Render, while Cloudflare serves the static SPA and its deep links independently of backend sleep.
 
-## Cloudflare split-frontend candidate
+## Active Cloudflare split frontend
 
-The current Render monolith remains the rollback deployment until the split architecture passes the full authentication checklist. The migration candidate is:
+The split architecture passed the full authentication checklist and is the published portfolio deployment:
 
 ```text
 Recruiter browser
@@ -52,7 +53,7 @@ VITE_MONITORING_ENABLED=false
 
 Pages Functions are restricted by `frontend/public/_routes.json` to `/api/*`, `/sanctum/*`, `/storage/*`, `/broadcasting/*`, and `/demo-backend-status`. The proxy accepts no caller-selected target, forwards only allowlisted headers, does not replay mutations, converts expected JSON cold-start HTML to a controlled `503`, and makes origin cookies host-only for the Cloudflare domain.
 
-Before the authentication cutover, update the existing Render environment without removing the Render hostname:
+The active Render environment keeps both the Cloudflare and Render hostnames where required:
 
 ```text
 APP_URL=https://yazoo-showcase.pages.dev
@@ -68,7 +69,7 @@ GOOGLE_FRONTEND_REDIRECT=https://yazoo-showcase.pages.dev/feed
 GOOGLE_LOGIN_REDIRECT=https://yazoo-showcase.pages.dev/login
 ```
 
-Keep the Cloudflare URL out of the portfolio until CSRF acquisition, registration/login, `/api/auth/me`, and logout all pass through Cloudflare. Do not use cron pings or external uptime monitors to prevent normal Free-tier sleep.
+The cutover gate passed: CSRF acquisition, registration, login, `/api/auth/me`, and logout all succeeded through Cloudflare. Do not use cron pings or external uptime monitors to prevent normal Free-tier sleep.
 
 ## Financial guardrails
 
@@ -84,10 +85,10 @@ Render documents a 512 MiB / 0.1 CPU Free web service, 750 workspace hours per m
 ## Local verification
 
 ```powershell
-docker build --pull -f Dockerfile.demo -t yazoo-demo:test .
+docker build --pull -f Dockerfile.api-demo -t yazoo-api-demo:test .
 ```
 
-Start the image against a disposable MySQL database with untracked test secrets. Verify two consecutive starts, `/`, `/health/live`, `/health/ready`, registration, login, CSRF-protected requests, logout, marketplace routes, deep links, assets, and the 21 bundled marketplace images.
+Start the image against a disposable MySQL database with untracked test secrets. Verify two consecutive starts, `/health/live`, `/health/ready`, registration, login, CSRF-protected requests, logout, API routes, and the 21 bundled marketplace images. Verify SPA assets and deep links separately from the Cloudflare build.
 
 The runtime configuration names are defined in [`backend/.env.showcase.example`](../backend/.env.showcase.example). Never commit a filled environment file.
 
@@ -119,18 +120,16 @@ Recheck the current Starter limits before deployment: [TiDB Cloud Starter limita
 After the working tree and all tests are validated, tag the exact source commit:
 
 ```powershell
-$sha = git rev-parse --short=12 HEAD
-docker tag yazoo-demo:test 5eef/yazoo-demo:$sha
-docker tag yazoo-demo:test 5eef/yazoo-demo:latest
-docker push 5eef/yazoo-demo:$sha
-docker push 5eef/yazoo-demo:latest
+$sha = git rev-parse HEAD
+docker tag yazoo-api-demo:test 5eef/yazoo-api-demo:$sha
+docker push 5eef/yazoo-api-demo:$sha
 ```
 
-Deploy the immutable SHA tag. Treat `latest` only as a convenience alias and verify the pushed digest.
+Deploy only the immutable full-SHA tag and verify the pushed digest. The current Docker Hub index digest is `sha256:f53e323ad21869195019af0fc7b97ab83f8dbb441af1d29c8aec66cefba1e770`.
 
 ## Render Free Web Service
 
-Create exactly one service from `docker.io/5eef/yazoo-demo:<commit-sha>`:
+Create exactly one service from `docker.io/5eef/yazoo-api-demo:<full-commit-sha>`:
 
 | Setting | Value |
 | --- | --- |
@@ -172,7 +171,7 @@ YAZOO_REQUIRE_PERSISTENT_STORAGE=false
 
 ## Bootstrap and ephemeral storage
 
-`Dockerfile.demo` embeds exactly 21 versioned marketplace images at `/opt/yazoo-showcase-images`. On every start:
+`Dockerfile.api-demo` embeds exactly 21 versioned marketplace images at `/opt/yazoo-showcase-images`. On every start:
 
 1. the expected-database guard validates host, port, and database name;
 2. production migrations run under a database lock;
@@ -185,9 +184,10 @@ Visitor uploads remain disabled because the Render Free filesystem is ephemeral.
 
 ## Post-deployment validation
 
-Validate the real Render URL before adding it to the README or portfolio:
+Validate the Cloudflare public URL and the Render backend origin before adding the Cloudflare URL to the README or portfolio:
 
-- HTTP 200 for `/`, `/health/live`, and `/health/ready`;
+- HTTP 200 for Cloudflare `/`, `/about`, `/demo-backend-status`, and the public marketplace preview;
+- HTTP 200 for Render `/health/live` and `/health/ready`;
 - API root, public marketplace sections, and versioned media;
 - register, login, `/api/auth/me`, CSRF rejection and success paths, and logout;
 - feed, profile, messages, notifications, reservations, and marketplace navigation;
@@ -196,4 +196,4 @@ Validate the real Render URL before adding it to the README or portfolio:
 - no critical console errors, 5xx responses, CORS failures, mixed content, or broken assets;
 - one explicit restart followed by the same health and data-count checks.
 
-Only then publish the Render URL and update repository metadata.
+Only then publish the Cloudflare URL and update repository metadata. Keep the previous monolith image `docker.io/5eef/yazoo-demo:beca3d278146` as the explicit rollback reference until a later reviewed cleanup.

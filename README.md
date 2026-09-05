@@ -11,13 +11,13 @@ YaZoo is a full-stack platform that brings animal-focused communities, social pu
 ![Docker](https://img.shields.io/badge/Runtime-Docker-2496ED?logo=docker&logoColor=white)
 [![CI](https://github.com/5eef/YaZoo/actions/workflows/ci.yml/badge.svg)](https://github.com/5eef/YaZoo/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-Open%20YaZoo-7C3AED?logo=render&logoColor=white)](https://yazoo-showcase.onrender.com/)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Open%20YaZoo-F38020?logo=cloudflare&logoColor=white)](https://yazoo-showcase.pages.dev/)
 
 ![YaZoo home page with demonstration content](docs/screenshots/yazoo-home.png)
 
 ## Live portfolio demo
 
-**[Open the YaZoo public showcase](https://yazoo-showcase.onrender.com/)**
+**[Open the YaZoo public showcase](https://yazoo-showcase.pages.dev/)**
 
 The hosted application is a real React and Laravel deployment backed by TiDB Cloud over TLS. Public marketplace pages can be explored without an account. A controlled reviewer account is also available:
 
@@ -26,7 +26,7 @@ Email: client.fes@yazoo.test
 Password: provided privately to reviewers; never stored in this repository
 ```
 
-Because this showcase runs on Render's Free plan, the first visit after inactivity can take about one minute while the service wakes up. Refresh once when the loading page disappears.
+The React interface loads immediately from Cloudflare. After backend inactivity, data-backed actions can take about one minute while the free Render API wakes; the interface reports that state and reconnects automatically.
 
 ### Three-minute reviewer tour
 
@@ -100,7 +100,7 @@ YaZoo demonstrates the work of **Youssef Boughioul, Junior Full-Stack Developer*
 | Frontend | React 19, Vite 8, JavaScript, Tailwind CSS 3, React Router 8, Axios, i18n |
 | Backend | PHP 8.4 runtime, Laravel 12, REST API, Sanctum, Socialite |
 | Data | MySQL-compatible relational model, TiDB Cloud for the showcase, SQLite for fast automated tests |
-| Infrastructure | Docker, Docker Compose, Nginx, PHP-FPM, Docker Hub, Render, GitHub Actions |
+| Infrastructure | Docker, Docker Compose, Nginx, PHP-FPM, Docker Hub, Cloudflare Pages, Render, GitHub Actions |
 | Quality | PHPUnit, Vitest, Playwright, Axe, ESLint, TypeScript checks, Pint, Composer/npm audits, SonarCloud integration |
 
 ## Architecture
@@ -154,7 +154,7 @@ No system is described as perfectly secure. The repository documents controls th
 
 ## Testing and verified results
 
-The following results were reproduced on the current showcase candidate on 4 September 2026:
+The following results were reproduced for the verified split showcase on 5 September 2026:
 
 | Check | Verified result |
 | --- | --- |
@@ -166,7 +166,7 @@ The following results were reproduced on the current showcase candidate on 4 Sep
 | Dependency audits | Composer and npm reported no known advisories |
 | Frontend build | Vite production build passed |
 | Showcase container | `Dockerfile.demo` built; two bootstraps, health endpoints, deep links, register/login/CSRF/logout, and 21 media files passed |
-| Split frontend candidate | **143/143 Vitest** and **98/98 Playwright** scenarios passed; Cloudflare static, public API, deep-link, and 21/21 media checks passed |
+| Split deployment | **143/143 Vitest** and **98/98 Playwright** scenarios passed; Cloudflare static, public API, deep-link, cookie-authentication, and 21/21 media checks passed |
 
 Reproduce the main checks:
 
@@ -265,14 +265,14 @@ The default local mapping uses frontend port `4173`, API port `8000`, and Docker
 - [`backend/Dockerfile`](backend/Dockerfile) builds the Laravel API runtime.
 - [`frontend/Dockerfile`](frontend/Dockerfile) builds the standalone frontend runtime.
 - [`Dockerfile.demo`](Dockerfile.demo) assembles the React build, Laravel, PHP-FPM, Nginx, and versioned demo media into one lightweight recruiter-showcase service on port `8080`.
-- [`Dockerfile.api-demo`](Dockerfile.api-demo) builds the backend-only Laravel showcase candidate used after the Cloudflare frontend cutover.
+- [`Dockerfile.api-demo`](Dockerfile.api-demo) builds the active backend-only Laravel showcase used behind the Cloudflare proxy.
 - [`docker-compose.yml`](docker-compose.yml) runs the fuller multi-service local topology.
 
 ## Public showcase deployment
 
-The verified Render monolith remains the published rollback while the Cloudflare split candidate completes its authentication cutover. The candidate frontend is deployed at `https://yazoo-showcase.pages.dev`; it must not replace the portfolio link until register/login/current-user/logout all pass through the same-origin proxy.
+The verified public entry point is `https://yazoo-showcase.pages.dev`. Cloudflare serves the static React application immediately and proxies only the dynamic routes to the sleeping Render Free Laravel API.
 
-Target split topology:
+Verified split topology:
 
 ```text
 Cloudflare Pages static React
@@ -283,17 +283,11 @@ Cloudflare Pages static React
 
 The Pages project uses `frontend` as its root, `npm run build` as its build command, and `dist` as its output directory. Its only server-side origin binding is `BACKEND_ORIGIN=https://yazoo-showcase.onrender.com`; no Render URL or secret is compiled into the browser bundle.
 
-The deployment target is intentionally small:
+The verified showcase is available at **[https://yazoo-showcase.pages.dev/](https://yazoo-showcase.pages.dev/)**. The backend origin remains available at `https://yazoo-showcase.onrender.com`; it is not the portfolio entry point. The exact zero-cost runbook is available in [`docs/DEMO_DEPLOYMENT_FREE.md`](docs/DEMO_DEPLOYMENT_FREE.md).
 
-```text
-Docker Hub immutable image
-        -> Render Free Web Service
-        -> TiDB Cloud Starter over TLS
-```
+Render runs the immutable backend-only image `docker.io/5eef/yazoo-api-demo:829f44fb697dc7bc01104dd5aa8c8520b56aebb6` on the Free plan in Frankfurt. Its Docker Hub index digest is `sha256:f53e323ad21869195019af0fc7b97ab83f8dbb441af1d29c8aec66cefba1e770`; Render pulled the Linux AMD64 manifest `sha256:7423fe5f54b80a2a4409410cca5e8b1c2f5c83105baf5420241af436e51ebdfe`. On 5 September 2026, both health probes and TiDB readiness passed, Cloudflare public routes returned HTTP 200, all 21 versioned media files loaded, and CSRF, registration, cookie session, current-user, logout, and login flows passed through the same-origin proxy.
 
-The verified showcase is available at **[https://yazoo-showcase.onrender.com/](https://yazoo-showcase.onrender.com/)**. The exact zero-cost runbook is available in [`docs/DEMO_DEPLOYMENT_FREE.md`](docs/DEMO_DEPLOYMENT_FREE.md).
-
-The deployed service uses the immutable Docker image `docker.io/5eef/yazoo-demo:beca3d278146` in Render's Frankfurt region. On 5 September 2026, both health probes reported `status: ok`, the TiDB readiness check passed, public routes returned HTTP 200, and real reviewer-account login, authenticated navigation, and logout were exercised against the public URL. A controlled restart also passed with no pending migrations, no repeated data bootstrap, all 21 versioned media files restored, and the production preflight successful.
+The previous monolithic image `docker.io/5eef/yazoo-demo:beca3d278146` remains an explicit rollback reference and was not deleted.
 
 The showcase intentionally disables integrations that require external paid or persistent infrastructure:
 
@@ -331,14 +325,15 @@ YaZoo/
 ├── docs/                 Architecture, security, compliance, and operations
 ├── .github/workflows/    CI and release workflows
 ├── docker-compose.yml    Full local topology
-└── Dockerfile.demo       Single-container public showcase
+├── Dockerfile.demo       Rollback single-container showcase
+└── Dockerfile.api-demo   Active backend-only showcase image
 ```
 
 ## CI/CD
 
 GitHub Actions validates pull requests with Composer and npm audits, PHP tests and coverage, frontend static checks, Vitest coverage, the Vite build, Playwright/Axe scenarios, deployment guards, Docker Compose validation, container builds, secret scanning, SBOM generation, and container vulnerability scanning.
 
-Deployment is not presented as automatic: Docker Hub publication and Render promotion remain explicit, gated release steps after all checks pass.
+Docker Hub publication and Render promotion are explicit, gated release steps. The currently documented immutable backend image was published and promoted only after the release checks passed.
 
 ## Roadmap
 
