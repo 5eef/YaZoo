@@ -85,18 +85,24 @@ class DemoContentSeeder extends Seeder
 
         $postOne = $communityLead->posts()->create([
             'content' => 'Premiere rencontre ce matin avec trois chatons sauves. Ils s habituent doucement a leur nouvel espace.',
+            'media_path' => 'marketplace/demo/cafe_chat.png',
+            'media_kind' => 'image',
             'location' => 'Tanger',
             'tags' => ['adoption', 'chatons', 'refuge'],
         ]);
 
         $postTwo = $sellerAnimal->posts()->create([
             'content' => 'Routine douceur avant visite veterinaire: eau, calme et friandises. Vos astuces ?',
+            'media_path' => 'marketplace/demo/dresseur_chien.png',
+            'media_kind' => 'image',
             'location' => 'Rabat',
             'tags' => ['soins', 'chiens', 'conseils'],
         ]);
 
         $postThree = $buyer->posts()->create([
             'content' => 'Mon panier YaZoo commence a prendre forme: gamelles, jouets et coin nuit pour accueillir un nouveau compagnon.',
+            'media_path' => 'marketplace/demo/produit_oiseau_cage.png',
+            'media_kind' => 'image',
             'location' => 'Fes',
             'tags' => ['preparation', 'maison', 'adoption'],
         ]);

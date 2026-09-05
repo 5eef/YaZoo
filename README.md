@@ -31,7 +31,7 @@ Because this showcase runs on Render's Free plan, the first visit after inactivi
 ### Three-minute reviewer tour
 
 1. Browse the public animal, product, service, and veterinarian catalogs.
-2. Sign in with the reviewer account and inspect the social feed and profile.
+2. Sign in with the reviewer account and scroll through the image-rich social feed and profile.
 3. Open marketplace details, favorites, communities, reservations, messages, and notifications.
 4. Resize the browser or use mobile emulation to review the responsive interface.
 5. Administrative moderation, statistics, professional verification, and MFA flows are available in a supervised review.

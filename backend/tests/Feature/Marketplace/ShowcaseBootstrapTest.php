@@ -76,6 +76,15 @@ class ShowcaseBootstrapTest extends TestCase
         $this->assertDatabaseCount('service_listings', 10);
         $this->assertDatabaseCount('reservations', 6);
         $this->assertDatabaseCount('payments', 2);
+        $feedMedia = Post::query()->pluck('media_kind', 'media_path');
+        $this->assertSame([
+            'marketplace/demo/cafe_chat.png' => 'image',
+            'marketplace/demo/dresseur_chien.png' => 'image',
+            'marketplace/demo/produit_oiseau_cage.png' => 'image',
+        ], $feedMedia->all());
+        $feedMedia->keys()->each(
+            fn (string $path) => $this->assertTrue(Storage::disk('public')->exists($path), $path),
+        );
         $this->assertSame('complete', Cache::store('database')->get('yazoo_showcase_bootstrap_v1'));
         $this->assertTrue(User::query()->get()->every(
             fn (User $user): bool => Hash::check($this->password, $user->password),
