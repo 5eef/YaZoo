@@ -164,16 +164,16 @@ function LoginPage() {
               type="submit"
               className="w-full py-3"
               disabled={isSubmitting || backendStatus !== 'ready'}
-              aria-describedby={backendStatus === 'ready' ? undefined : 'demo-login-backend-status'}
+              aria-describedby={backendStatus === 'ready' ? undefined : 'login-backend-status'}
             >
               {isSubmitting ? t('auth.login.loading') : t('auth.login.submit')}
             </Button>
             {backendStatus !== 'ready' ? (
               <p
-                id="demo-login-backend-status"
+                id="login-backend-status"
                 className="text-center text-xs text-stone-600 dark:text-violet-100/75"
               >
-                Demo server is starting…
+                {t('common.backendStartingDetail')}
               </p>
             ) : null}
           </form>

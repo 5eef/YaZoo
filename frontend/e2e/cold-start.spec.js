@@ -48,10 +48,10 @@ test('le shell React reste visible pendant le reveil puis charge les donnees', a
 
   await page.goto('/')
 
-  await expect(page.getByRole('heading', { name: /communauté animalière marocaine|Moroccan animal community/i })).toBeVisible()
-  await expect(page.getByText(/Connecting to demo server|Connexion au serveur de démonstration/i)).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Les bons professionnels|The right professionals/i })).toBeVisible()
+  await expect(page.getByText(/Connexion au service YaZoo|Connecting to YaZoo/i)).toBeVisible()
   await expect(page.getByText('Cold start animal')).toBeVisible({ timeout: 15_000 })
-  await expect(page.getByText(/Connecting to demo server|Connexion au serveur de démonstration/i)).toHaveCount(0)
+  await expect(page.getByText(/Connexion au service YaZoo|Connecting to YaZoo/i)).toHaveCount(0)
   await expect(page.getByText(/Application broken|Server error/i)).toHaveCount(0)
   expect(healthCalls).toBe(3)
 })

@@ -31,10 +31,6 @@ const PUBLIC_ROUTE_METADATA = {
     titleKey: 'contact.title',
     descriptionKey: 'contact.description',
   },
-  '/demo-mobile': {
-    titleKey: 'proPages.mobile.title',
-    descriptionKey: 'proPages.mobile.intro',
-  },
   '/discover/animals': {
     titleKey: 'publicMarketplace.animalsTitle',
     descriptionKey: 'publicMarketplace.animalsDescription',

@@ -1,5 +1,17 @@
 export const PUBLIC_MARKETPLACE_SECTIONS = Object.freeze([
   {
+    key: 'veterinarians',
+    titleKey: 'landing.marketplaceVeterinarians',
+    pageTitleKey: 'publicMarketplace.veterinariansTitle',
+    descriptionKey: 'publicMarketplace.veterinariansDescription',
+  },
+  {
+    key: 'services',
+    titleKey: 'landing.marketplaceServices',
+    pageTitleKey: 'publicMarketplace.servicesTitle',
+    descriptionKey: 'publicMarketplace.servicesDescription',
+  },
+  {
     key: 'animals',
     titleKey: 'landing.marketplaceAnimals',
     pageTitleKey: 'publicMarketplace.animalsTitle',
@@ -10,18 +22,6 @@ export const PUBLIC_MARKETPLACE_SECTIONS = Object.freeze([
     titleKey: 'landing.marketplaceProducts',
     pageTitleKey: 'publicMarketplace.productsTitle',
     descriptionKey: 'publicMarketplace.productsDescription',
-  },
-  {
-    key: 'services',
-    titleKey: 'landing.marketplaceServices',
-    pageTitleKey: 'publicMarketplace.servicesTitle',
-    descriptionKey: 'publicMarketplace.servicesDescription',
-  },
-  {
-    key: 'veterinarians',
-    titleKey: 'landing.marketplaceVeterinarians',
-    pageTitleKey: 'publicMarketplace.veterinariansTitle',
-    descriptionKey: 'publicMarketplace.veterinariansDescription',
   },
 ])
 

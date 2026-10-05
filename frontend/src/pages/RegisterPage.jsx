@@ -232,16 +232,16 @@ function RegisterPage() {
               type="submit"
               className="w-full py-3"
               disabled={isSubmitting || backendStatus !== 'ready'}
-              aria-describedby={backendStatus === 'ready' ? undefined : 'demo-register-backend-status'}
+              aria-describedby={backendStatus === 'ready' ? undefined : 'register-backend-status'}
             >
               {isSubmitting ? t('auth.register.loading') : t('auth.register.submit')}
             </Button>
             {backendStatus !== 'ready' ? (
               <p
-                id="demo-register-backend-status"
+                id="register-backend-status"
                 className="text-center text-xs text-stone-600 dark:text-violet-100/75"
               >
-                Demo server is starting…
+                {t('common.backendStartingDetail')}
               </p>
             ) : null}
           </form>

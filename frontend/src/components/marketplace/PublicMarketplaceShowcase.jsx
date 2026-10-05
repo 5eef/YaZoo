@@ -90,7 +90,7 @@ function PublicMarketplaceShowcase() {
         </div>
         <Link
           to="/register"
-          className="inline-flex shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#7c3aed,#a855f7)] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(124,58,237,0.18)] transition hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2"
+          className="inline-flex shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#6d28d9,#7c3aed)] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(124,58,237,0.18)] transition hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2"
         >
           {t('landing.marketplacePublish')}
         </Link>

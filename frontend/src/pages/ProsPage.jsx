@@ -6,11 +6,13 @@ export default function ProsPage() {
       eyebrowKey="proPages.pros.eyebrow"
       titleKey="proPages.pros.title"
       introKey="proPages.pros.intro"
+      ctaKey="proPages.pros.registerCta"
+      ctaTo="/register"
       sections={[
         { titleKey: 'proPages.pros.vetsTitle', bodyKey: 'proPages.pros.vetsBody' },
         { titleKey: 'proPages.pros.servicesTitle', bodyKey: 'proPages.pros.servicesBody' },
         { titleKey: 'proPages.pros.storesTitle', bodyKey: 'proPages.pros.storesBody' },
-        { titleKey: 'proPages.pros.contactTitle', bodyKey: 'proPages.pros.contactBody' },
+        { titleKey: 'proPages.pros.verificationTitle', bodyKey: 'proPages.pros.verificationBody' },
       ]}
     />
   )
