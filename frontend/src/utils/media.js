@@ -21,7 +21,7 @@ export function getMediaUrl(value) {
     .replace(/^public\//, '')
     .replace(/^storage\//, 'storage/')
 
-  if (normalizedPath.startsWith('storage/')) {
+  if (normalizedPath.startsWith('storage/') || normalizedPath.startsWith('api/media/')) {
     return `${backendBaseUrl}/${normalizedPath}`
   }
 

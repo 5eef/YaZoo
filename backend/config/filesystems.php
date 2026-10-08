@@ -40,7 +40,7 @@ return [
 
         'private' => [
             'driver' => 'local',
-            'root' => env('PRIVATE_STORAGE_PATH', storage_path('app/private')),
+            'root' => env('PRIVATE_STORAGE_PATH') ?: storage_path('app/private'),
             'serve' => false,
             'throw' => false,
             'report' => false,

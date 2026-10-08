@@ -1,3 +1,5 @@
+import { brand } from '../lib/brand'
+import { features } from '../lib/features'
 import { useEffect, useState } from 'react'
 import { Link, Navigate } from 'react-router'
 
@@ -67,7 +69,7 @@ function LandingPage() {
   }, [isMobileMenuOpen])
 
   if (isAuthenticated) {
-    return <Navigate to="/feed" replace />
+    return <Navigate to={features.startupPilot ? "/marketplace/veterinarians" : "/feed"} replace />
   }
 
   return (
@@ -89,7 +91,7 @@ function LandingPage() {
                 className="h-12 w-12 object-contain sm:h-14 sm:w-14"
               />
               <div className="min-w-0">
-                <p className="yz-wordmark text-base">YaZoo</p>
+                <p className="yz-wordmark text-base">{brand.name}</p>
                 <p className="max-w-[16rem] text-xs leading-5 text-stone-700 dark:text-violet-100/80 sm:max-w-none">
                   {t('common.tagline')}
                 </p>
@@ -215,6 +217,8 @@ function LandingPage() {
             </div>
           </div>
         </section>
+
+        {features.startupPilot ? <PublicMarketplaceShowcase careOnly /> : null}
 
         <section
           id="features"
@@ -349,7 +353,7 @@ function LandingPage() {
           </Link>
         </section>
 
-        <PublicMarketplaceShowcase />
+        {!features.startupPilot ? <PublicMarketplaceShowcase /> : null}
 
         <section
           id="communaute"

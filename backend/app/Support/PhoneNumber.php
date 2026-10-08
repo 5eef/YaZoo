@@ -9,9 +9,9 @@ class PhoneNumber
     /**
      * Normalize the given phone number for storage and OTP lookup.
      */
-    public static function normalize(?string $phone): ?string
+    public static function normalize(mixed $phone): ?string
     {
-        if ($phone === null) {
+        if (! is_string($phone)) {
             return null;
         }
 

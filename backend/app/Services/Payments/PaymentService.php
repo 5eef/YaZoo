@@ -460,6 +460,7 @@ class PaymentService
 
     protected function validateProvider(string $provider, bool $requireInitiationReady = true): void
     {
+        abort_if($provider === Payment::PROVIDER_CMI && ! config('features.payments'), 422, 'Automated payments disabled.');
         abort_unless(in_array($provider, Payment::PROVIDERS, true), 422, 'Provider paiement invalide.');
         abort_unless((bool) config("payments.providers.{$provider}.enabled", false), 422, 'Provider paiement desactive.');
 

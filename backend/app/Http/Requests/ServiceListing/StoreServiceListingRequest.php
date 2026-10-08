@@ -4,6 +4,7 @@ namespace App\Http\Requests\ServiceListing;
 
 use App\Models\ServiceListing;
 use App\Support\MarketplaceContact;
+use App\Support\RequestInput;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -38,15 +39,15 @@ class StoreServiceListingRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->merge([
-            'type' => trim((string) $this->input('type')),
-            'title' => trim((string) $this->input('title')),
-            'description' => trim((string) $this->input('description')),
-            'city' => trim((string) $this->input('city')),
-            'address' => trim((string) $this->input('address')),
+            'type' => RequestInput::trim($this->input('type')),
+            'title' => RequestInput::trim($this->input('title')),
+            'description' => RequestInput::trim($this->input('description')),
+            'city' => RequestInput::trim($this->input('city')),
+            'address' => RequestInput::trim($this->input('address')),
             'price_type' => $this->input('price_type') ?: 'negotiable',
             'contact_visibility' => trim((string) ($this->input('contact_visibility') ?: 'messages_only')),
-            'contact_phone' => trim((string) $this->input('contact_phone')),
-            'contact_email' => trim((string) $this->input('contact_email')),
+            'contact_phone' => RequestInput::trim($this->input('contact_phone')),
+            'contact_email' => RequestInput::trim($this->input('contact_email')),
             'whatsapp_enabled' => $this->input('contact_visibility') === 'whatsapp',
         ]);
     }

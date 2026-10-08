@@ -13,11 +13,13 @@ export const getPublicMarketplaceSectionRequest = (
   section,
   page = 1,
   perPage = 12,
+  filters = {},
 ) =>
   api.get(`/marketplace/public/${section}`, {
     params: {
       page,
       per_page: perPage,
+      ...filters,
     },
     skipAuthSessionExpired: true,
     skipGlobalErrorToast: true,

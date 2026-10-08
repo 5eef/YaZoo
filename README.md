@@ -32,6 +32,10 @@ YaZoo profile review is an internal platform process. A profile badge does not m
 
 The marketplace, animal listings, social feed, and communities remain available as supporting features. Their presence does not replace professional discovery as the product’s primary purpose.
 
+The current architecture includes `frontend/` (React/Vite Web), `backend/` (Laravel API, PHP 8.4.1 minimum for the current lock), and `mobile/` (Expo/React Native Android). Mobile includes professional discovery, services, appointments, messages, Feed, Stories and Reels. Video posts share their identity and interactions between Feed and Reels; Stories remain distinct.
+
+See [the final readiness report](docs/PRODUCTION_READINESS_AFWAJ_2026.md) for tested gates and remaining blockers. AFWAJ candidate readiness does not constitute approval for public production, CNDP compliance, or Google Play distribution.
+
 ## Pilot status and limits
 
 - The repository contains no verified company registration details or confirmed professional partners.
@@ -127,3 +131,14 @@ Use local credentials only. Never copy hosted credentials into the repository or
 - `.github/workflows/` — repository CI, CodeQL, and image publishing workflows.
 
 Older audit, demo deployment, and database compatibility documents are retained as historical technical records. Their branch, test, hosting, and readiness statements must be checked against the current code before being reused.
+
+## Startup / pilote 2026
+
+Le parcours prioritaire est propriétaire → professionnel → demande → communication → expérience terminée → avis. `startup-2026` porte les évolutions ; `main` et `portfolio-showcase-2026-10` conservent le showcase historique. Les annonces animales publiques sont désactivées par défaut dans le profil pilote. Le showcase nécessite des flags explicites lors de reconstruction.
+
+- [Brief AFWAJ](docs/AFWAJ_2026_STARTUP_BRIEF.md) et [plan 90 jours](docs/PILOT_90_DAY_PLAN.md).
+- [Métriques](docs/PILOT_METRICS.md), [préparation juridique](docs/LEGAL_READINESS_MOROCCO.md), [décision de marque](docs/BRAND_DECISION.md).
+- [Mobile Android réel](mobile/README.md), [déploiement](docs/DEPLOYMENT_STARTUP_2026.md), [sécurité](docs/SECURITY_REVIEW.md).
+- [Audit final et résultats des commandes](docs/STARTUP_2026_FINAL_AUDIT.md).
+
+Aucun partenaire, revenu ou statut CNDP n’est revendiqué à partir de seeds. Les informations administratives réelles et les credentials de publication restent des actions du propriétaire.

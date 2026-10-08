@@ -23,6 +23,8 @@ function PublicMarketplacePage() {
   const { locale, t } = useI18n()
   const { retry: retryBackend, status: backendStatus } = useDemoBackendStatus()
   const [page, setPage] = useState(1)
+  const [filters, setFilters] = useState({ search: '', city: '', specialty: '' })
+  const [appliedFilters, setAppliedFilters] = useState(filters)
   const [listings, setListings] = useState([])
   const [meta, setMeta] = useState(EMPTY_META)
   const [isLoading, setIsLoading] = useState(true)
@@ -45,7 +47,7 @@ function PublicMarketplacePage() {
       setIsLoading(true)
 
       try {
-        const response = await getPublicMarketplaceSectionRequest(section, page)
+        const response = await getPublicMarketplaceSectionRequest(section, page, 12, appliedFilters)
 
         if (!cancelled) {
           setListings(response.data?.data ?? [])
@@ -71,7 +73,7 @@ function PublicMarketplacePage() {
     return () => {
       cancelled = true
     }
-  }, [backendStatus, page, reloadKey, section])
+  }, [appliedFilters, backendStatus, page, reloadKey, section])
 
   if (!definition) {
     return <Navigate to="/" replace />
@@ -98,6 +100,19 @@ function PublicMarketplacePage() {
         aria-busy={isLoading || backendStatus !== 'ready'}
         className="mt-5 rounded-[30px] border border-white/76 bg-white/72 p-4 shadow-[0_20px_50px_rgba(124,58,237,0.07)] dark:border-violet-300/12 dark:bg-white/6 sm:p-6"
       >
+        {['veterinarians', 'services'].includes(section) && (
+          <form className="mb-6 grid gap-3 sm:grid-cols-3" onSubmit={(event) => { event.preventDefault(); setPage(1); setAppliedFilters({ ...filters }) }}>
+            {['search', 'city', ...(section === 'veterinarians' ? ['specialty'] : [])].map((key) => (
+              <label key={key} className="text-sm font-medium">
+                {t(key === 'search' ? 'common.search' : key === 'city' ? 'veterinarians.city' : 'veterinarians.specialties')}
+                <input value={filters[key]} onChange={(event) => setFilters({ ...filters, [key]: event.target.value })} className="mt-1 block w-full rounded-xl border border-violet-300 bg-white p-3 text-stone-900" list={key === 'city' ? 'pilot-cities' : undefined} />
+              </label>
+            ))}
+            <datalist id="pilot-cities"><option value="Sefrou" /><option value="Fès" /><option value="Meknès" /></datalist>
+            <button type="submit" className="rounded-xl bg-violet-700 px-4 py-3 font-semibold text-white">{t('common.search')}</button>
+          </form>
+        )}
+
         {hasError || backendStatus === 'unavailable' ? (
           <MarketplaceState>
             <p>{t('publicMarketplace.loadError')}</p>

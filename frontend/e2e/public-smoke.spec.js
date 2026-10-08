@@ -9,7 +9,7 @@ test.beforeEach(async ({ context, page }) => {
 })
 
 async function mockGuestApi(page) {
-  await page.route('**/demo-backend-status', async (route) => {
+  await page.route('**/health/live', async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',

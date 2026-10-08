@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "YaZoo",
+    "slug": "yazoo-pilot",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "backgroundColor": "#7c3aed",
+        "foregroundImage": "./assets/android-icon-foreground.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "com.yazoo.pilot"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "./plugins/with-release-signing",
+      "expo-video",
+      ["expo-image-picker", { "cameraPermission": false, "microphonePermission": false }],
+      "expo-secure-store",
+      [
+        "expo-localization",
+        {
+          "supportsRTL": true
+        }
+      ],
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#7c3aed",
+          "image": "./assets/icon.png",
+          "imageWidth": 160
+        }
+      ]
+    ],
+    "scheme": "yazoo-pilot"
+  }
+}

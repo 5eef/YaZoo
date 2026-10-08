@@ -70,7 +70,7 @@ class RegisterRequest extends FormRequest
     {
         $this->merge([
             'email' => is_string($this->email) ? trim($this->email) : $this->email,
-            'phone' => PhoneNumber::normalize($this->phone),
+            'phone' => is_string($this->phone) ? PhoneNumber::normalize($this->phone) : $this->phone,
             'preferred_locale' => is_string($this->preferred_locale)
                 ? trim($this->preferred_locale)
                 : $this->preferred_locale,

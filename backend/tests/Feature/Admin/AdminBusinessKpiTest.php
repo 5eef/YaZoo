@@ -9,12 +9,21 @@ use App\Models\Reservation;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Schema;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class AdminBusinessKpiTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_existing_dashboard_remains_available_before_optional_counter_migration(): void
+    {
+        Cache::clear();
+        Schema::drop('pilot_daily_counters');
+        Sanctum::actingAs(User::factory()->create(['is_admin' => true]));
+        $this->getJson('/api/admin/stats?days=30')->assertOk()->assertJsonPath('revenue_yazoo', 'not_measured');
+    }
 
     public function test_admin_receives_honest_period_kpis_and_gmv_is_not_called_revenue(): void
     {

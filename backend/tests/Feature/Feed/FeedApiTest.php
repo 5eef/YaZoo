@@ -82,9 +82,27 @@ class FeedApiTest extends TestCase
         ]);
     }
 
+    public function test_profile_posts_are_paginated_by_author_without_exposing_private_posts(): void
+    {
+        $viewer = User::factory()->create();
+        $author = User::factory()->create();
+        $public = Post::factory()->create(['user_id' => $author->id, 'visibility' => 'public']);
+        Post::factory()->create(['user_id' => $author->id, 'visibility' => 'private']);
+        Post::factory()->count(12)->create(['user_id' => $viewer->id, 'visibility' => 'public']);
+        Sanctum::actingAs($viewer, ['*']);
+
+        $this->getJson('/api/posts?author_id='.$author->id)
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $public->id)
+            ->assertJsonPath('meta.total', 1);
+        $this->getJson('/api/posts?author_id=invalid')->assertUnprocessable();
+    }
+
     public function test_authenticated_user_can_create_post_with_uploaded_image(): void
     {
         Storage::fake('public');
+        Storage::fake('private');
         Sanctum::actingAs(User::factory()->create(), ['*']);
 
         $response = $this->post('/api/posts', [
@@ -102,12 +120,13 @@ class FeedApiTest extends TestCase
         $path = Post::query()->latest()->first()?->media_path;
 
         $this->assertNotNull($path);
-        Storage::disk('public')->assertExists($path);
+        Storage::disk('private')->assertExists($path);
     }
 
     public function test_feed_upload_accepts_product_limit_and_rejects_oversize_or_disguised_file(): void
     {
         Storage::fake('public');
+        Storage::fake('private');
         Sanctum::actingAs(User::factory()->create(), ['*']);
 
         $this->post('/api/posts', [
@@ -133,6 +152,7 @@ class FeedApiTest extends TestCase
     public function test_non_member_is_rejected_before_community_media_is_written(): void
     {
         Storage::fake('public');
+        Storage::fake('private');
         $user = User::factory()->create();
         $community = Community::factory()->create();
         Sanctum::actingAs($user, ['*']);
@@ -155,6 +175,7 @@ class FeedApiTest extends TestCase
     public function test_database_failure_after_upload_removes_only_the_new_media(): void
     {
         Storage::fake('public');
+        Storage::fake('private');
         Storage::disk('public')->put('feed/posts/existing.jpg', 'existing-content');
         $user = User::factory()->create();
         Sanctum::actingAs($user, ['*']);
@@ -180,6 +201,7 @@ class FeedApiTest extends TestCase
     public function test_authenticated_user_can_create_post_with_uploaded_video_only(): void
     {
         Storage::fake('public');
+        Storage::fake('private');
         Sanctum::actingAs(User::factory()->create(), ['*']);
 
         $response = $this->post('/api/posts', [

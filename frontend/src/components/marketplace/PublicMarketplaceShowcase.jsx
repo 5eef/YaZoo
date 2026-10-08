@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 
@@ -17,7 +18,7 @@ const EMPTY_SECTIONS = {
   veterinarians: [],
 }
 
-function PublicMarketplaceShowcase() {
+function PublicMarketplaceShowcase({ careOnly = false }) {
   const { isRtl, locale, t } = useI18n()
   const { retry: retryBackend, status: backendStatus } = useDemoBackendStatus()
   const [sections, setSections] = useState(EMPTY_SECTIONS)
@@ -115,7 +116,7 @@ function PublicMarketplaceShowcase() {
         </div>
       ) : (
         <div className="mt-7 min-w-0 space-y-8">
-          {PUBLIC_MARKETPLACE_SECTIONS.map((definition) => (
+          {PUBLIC_MARKETPLACE_SECTIONS.filter((definition) => !careOnly || ['veterinarians', 'services'].includes(definition.key)).map((definition) => (
             <PreviewRow
               key={definition.key}
               title={t(definition.titleKey)}
@@ -244,5 +245,7 @@ function PreviewSkeleton() {
     </div>
   )
 }
+
+PublicMarketplaceShowcase.propTypes = { careOnly: PropTypes.bool }
 
 export default PublicMarketplaceShowcase

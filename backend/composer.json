@@ -19,7 +19,7 @@
         "laravel/sanctum": "^4.0",
         "laravel/socialite": "^5.27",
         "laravel/tinker": "^2.10.1",
-        "mongodb/mongodb": "^2.2",
+        "mongodb/mongodb": "~2.4.2",
         "predis/predis": "^3.5",
         "pusher/pusher-php-server": "^7.2"
     },

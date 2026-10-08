@@ -98,6 +98,11 @@ class ReportController extends Controller
         $modelClass = self::REPORTABLE_MAP[$type] ?? null;
         abort_unless($modelClass, 422);
 
-        return $modelClass::query()->findOrFail($id);
+        $query = $modelClass::query();
+        if ($modelClass === Post::class) {
+            $query->visibleTo(request()->user());
+        }
+
+        return $query->findOrFail($id);
     }
 }

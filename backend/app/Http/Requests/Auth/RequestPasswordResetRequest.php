@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Support\RequestInput;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -23,8 +24,8 @@ class RequestPasswordResetRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->merge([
-            'channel' => strtolower(trim((string) $this->input('channel'))),
-            'identifier' => trim((string) $this->input('identifier')),
+            'channel' => RequestInput::lower($this->input('channel')),
+            'identifier' => RequestInput::trim($this->input('identifier')),
         ]);
     }
 }

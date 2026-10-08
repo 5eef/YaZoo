@@ -47,7 +47,11 @@ assert_no_root_processes() {
     label="$1"
     container="$2"
 
-    if docker top "$container" -eo user | tail -n +2 | grep -Eq '^[[:space:]]*root[[:space:]]*$'; then
+    process_list="$(docker top "$container" -eo user,pid,comm)" || {
+        echo "${label} process inspection failed." >&2
+        exit 1
+    }
+    if printf '%s\n' "$process_list" | tail -n +2 | grep -Eq '^[[:space:]]*root[[:space:]]'; then
         echo "${label} runtime unexpectedly contains a root process." >&2
         docker top "$container" -eo user,pid,comm >&2 || true
         exit 1

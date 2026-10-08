@@ -65,6 +65,24 @@ return new class extends Migration
      */
     public function down(): void
     {
+        // InnoDB may remove an implicit FK index when a composite index replaces it.
+        // Restore a single-column index before dropping the composite FK support.
+        foreach ([
+            'animals' => ['user_id'],
+            'products' => ['user_id'],
+            'posts' => ['user_id'],
+            'comments' => ['post_id'],
+            'messages' => ['conversation_id'],
+            'community_members' => ['community_id', 'user_id'],
+            'reservations' => ['seller_id', 'buyer_id'],
+        ] as $tableName => $columns) {
+            foreach ($columns as $column) {
+                if (! Schema::hasIndex($tableName, [$column])) {
+                    Schema::table($tableName, fn (Blueprint $table) => $table->index($column, "{$tableName}_{$column}_rollback_index"));
+                }
+            }
+        }
+
         Schema::table('animals', function (Blueprint $table): void {
             $table->dropIndex('animals_user_created_idx');
             $table->dropIndex('animals_marketplace_idx');

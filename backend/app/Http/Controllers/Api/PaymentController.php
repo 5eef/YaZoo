@@ -27,9 +27,9 @@ class PaymentController extends Controller
                 'cash_on_pickup' => ['enabled' => true, 'manual' => true],
                 'manual_bank_transfer' => ['enabled' => true, 'manual' => true],
                 'cmi' => [
-                    'enabled' => (bool) config('payments.providers.cmi.enabled', false) && $this->cmiConfigIsComplete(),
+                    'enabled' => (bool) config('features.payments') && (bool) config('payments.providers.cmi.enabled', false) && $this->cmiConfigIsComplete(),
                     'mode' => config('payments.providers.cmi.mode', 'sandbox'),
-                    'status' => (bool) config('payments.providers.cmi.enabled', false) && $this->cmiConfigIsComplete()
+                    'status' => (bool) config('features.payments') && (bool) config('payments.providers.cmi.enabled', false) && $this->cmiConfigIsComplete()
                         ? 'active'
                         : 'preparation',
                     'requirements' => [

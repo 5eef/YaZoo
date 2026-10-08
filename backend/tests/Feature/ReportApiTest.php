@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Animal;
+use App\Models\Post;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -11,6 +12,18 @@ use Tests\TestCase;
 class ReportApiTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_reporting_cannot_enumerate_another_users_private_post(): void
+    {
+        $post = Post::factory()->create(['visibility' => Post::VISIBILITY_PRIVATE]);
+        Sanctum::actingAs(User::factory()->create(), ['*']);
+        $this->postJson('/api/reports', [
+            'reportable_type' => 'post',
+            'reportable_id' => $post->id,
+            'reason' => 'other',
+        ])->assertNotFound();
+        $this->assertDatabaseCount('reports', 0);
+    }
 
     public function test_user_can_report_another_users_content_and_admin_can_update_status(): void
     {

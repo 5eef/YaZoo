@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Marketplace;
 
+use App\Support\RequestInput;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreVeterinarianRequest extends FormRequest
@@ -38,21 +39,21 @@ class StoreVeterinarianRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->merge([
-            'name' => trim((string) $this->input('name')),
-            'clinic_name' => trim((string) $this->input('clinic_name')) ?: null,
-            'description' => trim((string) $this->input('description')) ?: null,
-            'city' => trim((string) $this->input('city')) ?: null,
-            'address' => trim((string) $this->input('address')) ?: null,
-            'phone' => trim((string) $this->input('phone')) ?: null,
-            'whatsapp' => trim((string) $this->input('whatsapp')) ?: null,
-            'email' => trim((string) $this->input('email')) ?: null,
-            'location_url' => trim((string) $this->input('location_url')) ?: null,
+            'name' => RequestInput::trim($this->input('name')),
+            'clinic_name' => RequestInput::trim($this->input('clinic_name')) ?: null,
+            'description' => RequestInput::trim($this->input('description')) ?: null,
+            'city' => RequestInput::trim($this->input('city')) ?: null,
+            'address' => RequestInput::trim($this->input('address')) ?: null,
+            'phone' => RequestInput::trim($this->input('phone')) ?: null,
+            'whatsapp' => RequestInput::trim($this->input('whatsapp')) ?: null,
+            'email' => RequestInput::trim($this->input('email')) ?: null,
+            'location_url' => RequestInput::trim($this->input('location_url')) ?: null,
             'is_active' => $this->boolean('is_active', true),
         ]);
 
         if ($this->exists('image_path')) {
             $this->merge([
-                'image_path' => trim((string) $this->input('image_path')) ?: null,
+                'image_path' => RequestInput::trim($this->input('image_path')) ?: null,
             ]);
         }
     }

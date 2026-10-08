@@ -8,6 +8,7 @@ use App\Support\AccountDeletionRetryPolicy;
 use App\Support\DatabaseTargetGuard;
 use App\Support\Sms\SmsSender;
 use Illuminate\Console\Command;
+use Illuminate\Encryption\Encrypter;
 
 class ProductionPreflight extends Command
 {
@@ -30,7 +31,57 @@ class ProductionPreflight extends Command
 
         array_push($failures, ...$databaseTargetGuard->failures());
 
+        if (config('app.env') !== 'production') {
+            $failures[] = 'APP_ENV must be production for deployment preflight.';
+        }
+        if ((bool) config('app.debug')) {
+            $failures[] = 'APP_DEBUG must be false for deployment preflight.';
+        }
+        foreach (['APP_URL' => config('app.url'), 'FRONTEND_URL' => config('app.frontend_url')] as $name => $value) {
+            $this->requireValue($failures, $name, $value);
+            $parts = parse_url((string) $value);
+            $host = strtolower((string) ($parts['host'] ?? ''));
+            if (! is_array($parts) || ($parts['scheme'] ?? '') !== 'https' || empty($parts['host']) || isset($parts['user']) || isset($parts['pass'])
+                || isset($parts['query']) || isset($parts['fragment']) || preg_match('/[<>\s]/', $host)
+                || in_array(trim($host, '[]'), ['localhost', '127.0.0.1', '::1'], true)
+                || preg_match('/\.(test|invalid|example|localhost)$/', $host)
+                || (filter_var(trim($host, '[]'), FILTER_VALIDATE_IP) && ! filter_var(trim($host, '[]'), FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE))) {
+                $failures[] = "{$name} must be an HTTPS URL without credentials.";
+            }
+        }
+        if (config('cors.supports_credentials') && (in_array('*', config('cors.allowed_origins', []), true) || config('cors.allowed_origins_patterns', []) !== [])) {
+            $failures[] = 'Credentialed CORS requires explicit allowed origins without wildcard patterns.';
+        }
+        if (! config('session.secure') || ! config('session.http_only')) {
+            $failures[] = 'Production session cookies must be Secure and HttpOnly.';
+        }
+        $connection = (string) config('database.default');
+        if (in_array($connection, ['mysql', 'mariadb', 'pgsql', 'sqlsrv'], true)) {
+            $this->requireValue($failures, 'DB_DATABASE', config("database.connections.{$connection}.database"));
+            $this->requireValue($failures, 'DB_USERNAME', config("database.connections.{$connection}.username"));
+            $this->requireValue($failures, 'DB_PASSWORD', config("database.connections.{$connection}.password"));
+            $password = (string) config("database.connections.{$connection}.password");
+            if (strlen($password) < 12 || preg_match('/^(password|root|admin|secret|changeme|test)(\d|[!_.-])*$/i', $password)) {
+                $failures[] = 'DB_PASSWORD must be a non-default secret of at least 12 characters.';
+            }
+        }
+
         $this->requireValue($failures, 'APP_KEY', config('app.key'));
+        $key = (string) config('app.key');
+        $decodedKey = str_starts_with($key, 'base64:') ? base64_decode(substr($key, 7), true) : $key;
+        if (! is_string($decodedKey) || ! Encrypter::supported($decodedKey, (string) config('app.cipher'))) {
+            $failures[] = 'APP_KEY must be a valid key for the configured cipher.';
+        } elseif (count(array_unique(str_split($decodedKey))) < 8) {
+            $failures[] = 'APP_KEY must not use a weak repeated-byte key.';
+        }
+        foreach (array_filter(array_map('trim', explode(',', (string) config('app.trusted_proxies')))) as $proxy) {
+            [$ip, $mask] = array_pad(explode('/', $proxy, 2), 2, null);
+            $bits = str_contains($ip, ':') ? 128 : 32;
+            if (! filter_var($ip, FILTER_VALIDATE_IP) || ($mask !== null && (! ctype_digit($mask) || (int) $mask < 1 || (int) $mask > $bits))) {
+                $failures[] = 'TRUSTED_PROXIES must contain explicit IP addresses or bounded CIDR ranges.';
+                break;
+            }
+        }
         $this->requireValue($failures, 'LEGAL_ENTITY_NAME', config('legal.entity_name'));
         $this->requireValue($failures, 'LEGAL_STATUS', config('legal.legal_status'));
         $this->requireValue($failures, 'LEGAL_ADDRESS', config('legal.address'));
@@ -134,6 +185,14 @@ class ProductionPreflight extends Command
         ) {
             $failures[] = 'CMI is enabled without a complete production configuration.';
         }
+        if ((bool) config('payments.providers.cmi.enabled')) {
+            foreach (['gateway_url', 'client_id', 'store_key', 'ok_url', 'fail_url', 'callback_url'] as $field) {
+                $this->requireValue($failures, 'CMI_'.strtoupper($field), config("payments.providers.cmi.{$field}"));
+            }
+            if (strlen((string) config('payments.providers.cmi.store_key')) < 12) {
+                $failures[] = 'CMI_STORE_KEY must contain at least 12 characters.';
+            }
+        }
 
         if (
             ! $configurationOnly
@@ -182,7 +241,7 @@ class ProductionPreflight extends Command
     {
         $normalized = trim((string) $value);
 
-        if ($normalized === '' || str_contains($normalized, 'example.com')) {
+        if ($normalized === '' || preg_match('/example\.(com|org|net)|<[^>]+>|YOUR[_ -]|à renseigner|a renseigner|todo|placeholder|change.?me|replace[_ -]?me|^default$/iu', $normalized)) {
             $failures[] = "{$name} is required and must not use a placeholder.";
         }
     }

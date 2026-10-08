@@ -40,6 +40,7 @@ run_gate() {
     fake_status="$4"
     mode="${5:-full}"
     fake_uid="${6:-1000}"
+    deployment_profile="${7:-production}"
     output_file="$test_root/output"
 
     : > "$invocation_log"
@@ -49,6 +50,7 @@ run_gate() {
         PREFLIGHT_FAKE_EXIT_CODE="$fake_status" \
         PREFLIGHT_FAKE_UID="$fake_uid" \
         APP_ENV="$app_environment" \
+        YAZOO_DEPLOYMENT_PROFILE="$deployment_profile" \
         YAZOO_RUN_PRODUCTION_PREFLIGHT="$enabled" \
         sh "$gate" "$mode" > "$output_file" 2>&1
     actual_status=$?
@@ -82,7 +84,11 @@ run_gate 0 local true 23
 test ! -s "$invocation_log"
 grep -Fq 'skipped outside production' "$test_root/output"
 
-run_gate 0 production false 23
+run_gate 78 production false 23
+test ! -s "$invocation_log"
+grep -Fq 'bypass is forbidden' "$test_root/output"
+
+run_gate 0 production false 23 full 1000 showcase
 test ! -s "$invocation_log"
 grep -Fq 'explicitly disabled' "$test_root/output"
 

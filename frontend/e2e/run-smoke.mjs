@@ -26,6 +26,8 @@ const vite = spawn(
     env: {
       ...process.env,
       VITE_API_URL: apiURL,
+      VITE_STARTUP_PILOT: process.env.E2E_STARTUP_PILOT ?? 'false',
+      VITE_ANIMAL_LISTINGS_PUBLIC: process.env.E2E_ANIMAL_LISTINGS_PUBLIC ?? 'true',
       VITE_GOOGLE_AUTH_ENABLED: 'false',
       VITE_REALTIME_ENABLED: 'false',
       VITE_MONITORING_ENABLED: 'false',

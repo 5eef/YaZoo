@@ -11,6 +11,10 @@ export const DEMO_BACKEND_RETRY_DELAYS_MS = Object.freeze([
 export const DEMO_BACKEND_MAX_WAIT_MS = 90_000
 const STATUS_REQUEST_TIMEOUT_MS = 10_000
 
+const STATUS_ENDPOINT = import.meta.env.DEV
+  ? '/health/live'
+  : '/demo-backend-status'
+
 export async function pollDemoBackend({
   fetchImpl = globalThis.fetch,
   maxWaitMs = DEMO_BACKEND_MAX_WAIT_MS,
@@ -75,7 +79,7 @@ async function probeDemoBackend(fetchImpl, parentSignal) {
   parentSignal.addEventListener('abort', abortRequest, { once: true })
 
   try {
-    const response = await fetchImpl('/demo-backend-status', {
+    const response = await fetchImpl(STATUS_ENDPOINT, {
       cache: 'no-store',
       headers: { Accept: 'application/json' },
       signal: requestController.signal,
@@ -88,7 +92,10 @@ async function probeDemoBackend(fetchImpl, parentSignal) {
 
     const payload = await response.json()
 
-    if (response.ok && payload?.status === 'ready') {
+    if (
+      response.ok &&
+      (payload?.status === 'ready' || payload?.status === 'ok')
+    ) {
       return 'ready'
     }
 

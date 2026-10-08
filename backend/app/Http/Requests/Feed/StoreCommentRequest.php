@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Feed;
 
+use App\Support\RequestInput;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -35,8 +36,8 @@ class StoreCommentRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->merge([
-            'body' => trim((string) $this->input('body')),
-            'reaction' => $this->input('reaction') ? trim((string) $this->input('reaction')) : null,
+            'body' => RequestInput::trim($this->input('body')),
+            'reaction' => $this->input('reaction') ? RequestInput::trim($this->input('reaction')) : null,
         ]);
     }
 }

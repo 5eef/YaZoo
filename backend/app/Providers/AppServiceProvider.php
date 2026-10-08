@@ -39,11 +39,16 @@ class AppServiceProvider extends ServiceProvider
         Model::preventLazyLoading(! $this->app->isProduction());
 
         RateLimiter::for('api', function (Request $request) {
+            // Video playback makes multiple range requests; keep its budget separate from API actions.
+            if (in_array($request->method(), ['GET', 'HEAD'], true) && $request->is('api/media/*')) {
+                return Limit::perMinute(600)->by('media:'.($request->user()?->id ?: $request->ip()));
+            }
+
             return Limit::perMinute(120)->by($request->user()?->id ?: $request->ip());
         });
 
         RateLimiter::for('login', function (Request $request) {
-            $email = Str::lower(trim((string) $request->input('email')));
+            $email = is_string($request->input('email')) ? Str::lower(trim($request->input('email'))) : '';
             $phone = PhoneNumber::normalize($request->input('phone'));
             $identifier = $email !== '' ? 'email:'.$email : 'phone:'.($phone ?? 'invalid');
             $identifierKey = hash_hmac(
@@ -69,7 +74,7 @@ class AppServiceProvider extends ServiceProvider
             $phone = PhoneNumber::normalize($request->input('phone'));
             $phoneKey = hash_hmac(
                 'sha256',
-                ($phone ?? 'invalid').':'.(string) $request->input('intent'),
+                ($phone ?? 'invalid').':'.(is_string($request->input('intent')) ? $request->input('intent') : 'invalid'),
                 (string) config('app.key'),
             );
 

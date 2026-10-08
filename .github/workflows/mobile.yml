@@ -1,0 +1,42 @@
+name: Mobile pilot quality
+on:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  mobile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - name: Reproducible install
+        working-directory: mobile
+        run: npm ci
+      - name: Static and unit checks
+        working-directory: mobile
+        run: |
+          npm run lint
+          npm run typecheck
+          npm test
+          npx expo install --check
+          npx expo-doctor
+      - name: Android JavaScript export
+        working-directory: mobile
+        run: npx expo export --platform android --source-maps
+      - name: Generate mobile CycloneDX dependency inventory
+        working-directory: mobile
+        run: npm sbom --omit=dev --sbom-format cyclonedx > mobile.cdx.json
+      - name: Upload mobile dependency inventory
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mobile-sbom-${{ github.sha }}
+          path: mobile/mobile.cdx.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Dependency audit
+        working-directory: mobile
+        run: node ../scripts/audit-dependency-policy.mjs mobile

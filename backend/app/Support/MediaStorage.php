@@ -318,7 +318,7 @@ class MediaStorage
     /**
      * Extract the raw ObjectId string from a MongoDB media reference.
      */
-    protected static function extractMongoFileId(string $path): string
+    public static function extractMongoFileId(string $path): string
     {
         return Str::after($path, 'mongodb:');
     }

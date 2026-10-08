@@ -1,6 +1,6 @@
 Bonjour {{ $recipient->name }},
 
-Une réinitialisation du mot de passe de votre compte YaZoo a été demandée.
+Une réinitialisation du mot de passe de votre compte {{ config('app.name') }} a été demandée.
 
 Ouvrez ce lien dans les {{ $expiresInMinutes }} prochaines minutes :
 {{ $resetUrl }}

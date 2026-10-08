@@ -56,7 +56,11 @@ try {
     Assert-ContainerRunning $appContainer
     & docker cp "${appContainer}:/var/www/html/storage/app/public" (Join-Path $workDir 'storage\public')
     if ($LASTEXITCODE -ne 0) {
-        Write-BackupLog -Message 'Could not copy container storage/app/public; continuing with config and DB snapshot.' -Level WARN -LogName 'snapshot.log' -Quiet:$Quiet
+        throw 'Public media backup failed; refusing to create an incomplete recovery snapshot.'
+    }
+    & docker cp "${appContainer}:/var/www/html/storage/app/private" (Join-Path $workDir 'storage\private')
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Private media backup failed; refusing to create an incomplete recovery snapshot.'
     }
 
     foreach ($relativePath in @(

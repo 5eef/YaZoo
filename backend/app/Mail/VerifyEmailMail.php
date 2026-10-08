@@ -23,7 +23,7 @@ class VerifyEmailMail extends Mailable implements ShouldQueue
     public function build(): self
     {
         return $this
-            ->subject('Vérifiez votre adresse email YaZoo')
+            ->subject('Vérifiez votre adresse email '.config('app.name'))
             ->text('emails.verify-email');
     }
 }

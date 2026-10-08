@@ -7,7 +7,6 @@ use App\Mail\ContactMessage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
-use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
 
 class ContactController extends Controller
 {
@@ -20,10 +19,10 @@ class ContactController extends Controller
             $recipient === ''
             || (app()->isProduction() && in_array($mailer, ['log', 'array'], true))
         ) {
-            throw new ServiceUnavailableHttpException(
-                300,
-                __('messages.contact.unavailable'),
-            );
+            return response()->json([
+                'error' => 'server.internal',
+                'message' => __('messages.contact.unavailable'),
+            ], 503, ['Retry-After' => '300']);
         }
 
         $validated = Validator::make($request->all(), [

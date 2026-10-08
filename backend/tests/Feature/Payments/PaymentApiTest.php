@@ -20,6 +20,23 @@ class PaymentApiTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config(['features.payments' => true]);
+    }
+
+    public function test_pilot_payment_switch_rejects_automated_payment_even_with_provider_enabled(): void
+    {
+        config(['features.payments' => false, 'payments.providers.cmi.enabled' => true]);
+        $reservation = $this->reservation();
+        Sanctum::actingAs($reservation->buyer, ['*']);
+        $this->postJson("/api/reservations/{$reservation->id}/payments", ['provider' => Payment::PROVIDER_CMI])->assertUnprocessable();
+        $this->assertDatabaseCount('payments', 0);
+        $this->postJson('/api/payments/cmi/callback', ['oid' => 'test-only-reference'])->assertUnprocessable();
+        $this->getJson('/api/payments/config')->assertOk()->assertJsonPath('providers.cmi.enabled', false);
+    }
+
     public function test_buyer_can_create_manual_bank_transfer_awaiting_verification_payment(): void
     {
         $reservation = $this->reservation();

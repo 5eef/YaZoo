@@ -50,6 +50,7 @@ COPY infra/nginx/frontend.conf /etc/nginx/templates/default.conf.template
 COPY --from=build /app/frontend/dist /usr/share/nginx/html
 COPY LICENSE /usr/share/nginx/html/LICENSE.txt
 RUN set -eux; \
+    apk upgrade --no-cache libcrypto3 libssl3 libexpat libuuid pcre2 tiff; \
     printf '{"version":"%s"}\n' "$APP_VERSION" > /usr/share/nginx/html/version.json; \
     sed -i 's/listen  *80;/listen 8080;/' /etc/nginx/templates/default.conf.template; \
     sed -i 's!^[[:space:]]*pid[[:space:]].*;!pid /tmp/nginx.pid;!' /etc/nginx/nginx.conf; \

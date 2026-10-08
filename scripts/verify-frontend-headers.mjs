@@ -13,7 +13,9 @@ const target = process.argv[2] ?? 'infra/nginx/frontend.conf'
 
 if (/^https?:\/\//i.test(target)) {
   const response = await fetch(target, { method: 'GET', redirect: 'manual' })
-  assertHeaders(Object.fromEntries(response.headers.entries()))
+  const url = new URL(target)
+  const local = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)
+  assertHeaders(Object.fromEntries(response.headers.entries()), url.protocol === 'https:' && !local)
 } else {
   const contents = await readFile(target, 'utf8')
   const headers = {}
@@ -22,13 +24,24 @@ if (/^https?:\/\//i.test(target)) {
     headers[match[1].toLowerCase()] = match[2]
   }
 
+  if (headers['strict-transport-security'] === '$yazoo_hsts') {
+    if (!contents.includes('map "$host:$yazoo_forwarded_proto" $yazoo_hsts') || !contents.includes('~:https$ "max-age=31536000; includeSubDomains";') || !contents.includes('~^(localhost|127\\.0\\.0\\.1|\\[::1\\]): "";')) {
+      throw new Error('HSTS must be restricted to HTTPS and exclude local hosts')
+    }
+    headers['strict-transport-security'] = requiredHeaders['strict-transport-security']
+  }
+
   assertHeaders(headers)
 }
 
-function assertHeaders(headers) {
+function assertHeaders(headers, requireHsts = true) {
   const missing = []
 
   for (const [name, expectedValue] of Object.entries(requiredHeaders)) {
+    if (name === 'strict-transport-security' && !requireHsts) {
+      if (headers[name]) missing.push('HSTS must be absent on HTTP and local hosts')
+      continue
+    }
     const actual = headers[name]
 
     if (!actual) {

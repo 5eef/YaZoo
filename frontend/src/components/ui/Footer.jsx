@@ -1,3 +1,4 @@
+import { brand } from '../../lib/brand'
 import { useContext } from 'react'
 import { Link } from 'react-router'
 
@@ -51,7 +52,7 @@ function Footer({ className = '' }) {
             aria-hidden="true"
           />
           <p>
-            <span className="yz-wordmark text-xs font-semibold">{config.entityName || 'YaZoo'}</span>
+            <span className="yz-wordmark text-xs font-semibold">{config.entityName || brand.name}</span>
             {' © 2026 - '}
             {t('footer.platformDescription')}
           </p>

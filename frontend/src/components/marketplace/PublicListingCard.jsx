@@ -48,6 +48,7 @@ function PublicListingCard({ listing, locale, section, t }) {
             </p>
           </div>
           <div className="flex shrink-0 flex-col items-end gap-1.5">
+            {listing.isDemo ? <Badge className="border border-amber-200 bg-amber-50 text-amber-900">{t('startup.demoData')}</Badge> : null}
             {professionalBadgeKey ? (
               <Badge className="border border-emerald-200 bg-emerald-100 text-emerald-900 dark:border-emerald-300/30 dark:bg-emerald-950/80 dark:text-emerald-100">
                 {t(professionalBadgeKey)}

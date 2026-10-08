@@ -23,8 +23,8 @@ class SecurityHeaders
             'Content-Security-Policy' => "default-src 'self'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:",
         ];
 
-        if ($request->isSecure()) {
-            $headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains; preload';
+        if ($request->isSecure() && ! in_array($request->getHost(), ['localhost', '127.0.0.1', '[::1]', '::1'], true)) {
+            $headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains';
         }
 
         foreach ($headers as $name => $value) {

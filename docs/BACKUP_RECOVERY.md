@@ -142,3 +142,10 @@ With the recommended scheduler:
 - RTO: 15 to 45 minutes for a practiced restore on the same Docker host.
 
 For production SaaS, use managed MySQL backups, off-host encrypted storage, and periodic restore drills.
+## Final audit evidence — 2026-10-08
+
+A disposable MySQL 8.4 database used for concurrency tests was dumped with `mysqldump --single-transaction --routines --triggers --no-tablespaces`, then imported into a separate disposable MySQL 8.4 container/database. Import exited 0; verification found 43 tables and 64 migration records. Evidence is in ignored `output/final-readiness/restore-result.log`. This proves restoration of the test database only. It does not prove recovery of production data or media, cross-version compatibility, RPO or RTO.
+
+Snapshots now fail if public or private media cannot be copied. `yazoo:backup-media` refuses same-disk and unsupported Mongo backups, fails on unreadable or unwritable objects and preserves old backups on failure. Restore private files together with their `media_assets` records and permissions. Custom `PRIVATE_STORAGE_PATH`, remote disks and Mongo GridFS require an explicit backup of their actual target: filesystem snapshots alone are insufficient. Back up GridFS files/chunks and metadata using an appropriate Mongo tool; validate their restoration in isolation before enabling that production storage mode.
+
+Recovery sequence: provision compatible services; restore the verified SQL dump into an isolated database; restore public/private media or GridFS and confirm checksums; recover secrets from the operator's secret store; run configuration preflight; start workers/scheduler and inspect `/health/ready`; test authentication and authorized media retrieval; then decide on traffic cutover. Never restore untrusted dumps against the live database. Redis is cache/coordination, not the authoritative business database; inspect pending queue jobs and rebuild cache safely. Confirm data deletion obligations also cover backup retention. A real production/media restore drill and measured RPO/RTO remain owner actions.

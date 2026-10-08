@@ -14,6 +14,29 @@ class PublicMarketplaceApiTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config(['features.animal_listings_public' => true]);
+    }
+
+    public function test_pilot_disables_animal_preview_and_direct_public_routes(): void
+    {
+        config(['features.animal_listings_public' => false]);
+        $this->getJson('/api/marketplace/public-preview')->assertOk()->assertJsonPath('data.animals', []);
+        $this->getJson('/api/marketplace/public/animals')->assertNotFound();
+        $this->getJson('/api/marketplace/public/animals/1')->assertNotFound();
+    }
+
+    public function test_public_care_filters_use_real_city_and_specialty(): void
+    {
+        Veterinarian::factory()->create(['name' => 'Pilot Vet', 'city' => 'Sefrou', 'specialties' => ['cats'], 'is_active' => true, 'moderation_status' => 'active']);
+        Veterinarian::factory()->create(['name' => 'Other Vet', 'city' => 'Rabat', 'specialties' => ['dogs'], 'is_active' => true, 'moderation_status' => 'active']);
+        $this->getJson('/api/marketplace/public/veterinarians?city=Sefrou&specialty=cats&search=Pilot')->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.title', 'Pilot Vet');
+        $this->getJson('/api/marketplace/public/veterinarians?city=Sefrou&specialty=dogs')->assertOk()->assertJsonCount(0, 'data');
+        $this->getJson('/api/marketplace/public/veterinarians?search='.str_repeat('x', 121))->assertUnprocessable();
+    }
+
     public function test_guest_sees_only_approved_previews_without_sensitive_contact_details(): void
     {
         $seller = User::factory()->create([

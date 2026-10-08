@@ -4,6 +4,7 @@ namespace App\Http\Requests\Feed;
 
 use App\Models\Post;
 use App\Rules\SafeMediaUpload;
+use App\Support\RequestInput;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -42,16 +43,19 @@ class StorePostRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
-        $tags = collect($this->input('tags', []))
-            ->filter(fn ($tag) => is_string($tag) && trim($tag) !== '')
-            ->map(fn ($tag) => trim($tag))
-            ->values()
-            ->all();
+        $tags = $this->input('tags', []);
+        if (is_array($tags)) {
+            $tags = collect($tags)
+                ->filter(fn ($tag) => ! is_string($tag) || trim($tag) !== '')
+                ->map(fn ($tag) => is_string($tag) ? trim($tag) : $tag)
+                ->values()
+                ->all();
+        }
 
         $this->merge([
-            'content' => trim((string) $this->input('content')),
+            'content' => RequestInput::trim($this->input('content')),
             'community_id' => $this->input('community_id') ?: null,
-            'location' => trim((string) $this->input('location')),
+            'location' => RequestInput::trim($this->input('location')),
             'tags' => $tags,
             'visibility' => $this->input('visibility') ?: Post::VISIBILITY_PUBLIC,
         ]);
@@ -63,7 +67,7 @@ class StorePostRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator): void {
-            $hasContent = trim((string) $this->input('content')) !== '';
+            $hasContent = RequestInput::trim($this->input('content')) !== '';
             $hasMedia = $this->hasFile('media_file');
 
             if (! $hasContent && ! $hasMedia) {

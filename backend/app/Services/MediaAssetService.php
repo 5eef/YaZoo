@@ -15,6 +15,25 @@ use Throwable;
 
 class MediaAssetService
 {
+    public function registerPostUpload(User $owner, UploadedFile $file, string $kind): MediaAsset
+    {
+        if (config('media.driver') === 'mongodb') {
+            return $this->registerUpload($owner, $file, 'feed/posts', $kind, MediaAsset::VISIBILITY_PRIVATE);
+        }
+
+        $path = $file->store('feed/posts', 'private');
+        if (! is_string($path) || $path === '') {
+            throw new \RuntimeException('Post media storage failed.');
+        }
+        try {
+            return $this->registerStoredPath($owner, $path, $kind, MediaAsset::VISIBILITY_PRIVATE, (string) $file->getMimeType(), $file->getSize() ?: null, $file->getClientOriginalName(), 'private');
+        } catch (Throwable $exception) {
+            Storage::disk('private')->delete($path);
+
+            throw $exception;
+        }
+    }
+
     public function registerUpload(
         User $owner,
         UploadedFile $file,

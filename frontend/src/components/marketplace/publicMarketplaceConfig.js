@@ -1,3 +1,5 @@
+import { features } from '../../lib/features'
+
 export const PUBLIC_MARKETPLACE_SECTIONS = Object.freeze([
   {
     key: 'veterinarians',
@@ -23,7 +25,7 @@ export const PUBLIC_MARKETPLACE_SECTIONS = Object.freeze([
     pageTitleKey: 'publicMarketplace.productsTitle',
     descriptionKey: 'publicMarketplace.productsDescription',
   },
-])
+].filter((section) => (section.key !== 'animals' || features.animalListingsPublic) && (section.key !== 'products' || features.productMarketplace)))
 
 const SECTION_KEYS = new Set(
   PUBLIC_MARKETPLACE_SECTIONS.map((section) => section.key),

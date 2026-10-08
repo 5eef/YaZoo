@@ -1,4 +1,7 @@
-export const SITE_NAME = 'YaZoo'
+import { features } from '../../lib/features.js'
+import { brand } from '../../lib/brand.js'
+
+export const SITE_NAME = brand.name
 const configuredSiteUrl = (
   import.meta.env?.VITE_SITE_URL ?? globalThis.process?.env?.VITE_SITE_URL ?? ''
 ).trim()
@@ -72,6 +75,9 @@ const PUBLIC_ROUTE_METADATA = {
     descriptionKey: 'trustSafety.intro',
   },
 }
+
+if (!features.animalListingsPublic) delete PUBLIC_ROUTE_METADATA['/discover/animals']
+if (!features.productMarketplace) delete PUBLIC_ROUTE_METADATA['/discover/products']
 
 export const INDEXABLE_PATHS = Object.freeze(Object.keys(PUBLIC_ROUTE_METADATA))
 

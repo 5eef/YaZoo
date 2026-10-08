@@ -2,6 +2,8 @@ name: CI
 
 on:
   pull_request:
+  push:
+    branches: [main, startup-2026]
   workflow_call:
     inputs:
       build_containers:
@@ -17,6 +19,9 @@ permissions:
   contents: read
 
 jobs:
+  mobile:
+    uses: ./.github/workflows/mobile.yml
+
   quality:
     runs-on: ubuntu-latest
     env:
@@ -48,6 +53,10 @@ jobs:
         working-directory: backend
         run: composer audit --no-interaction
 
+      - name: Check backend formatting
+        working-directory: backend
+        run: php vendor/bin/pint --test
+
       - name: Validate PHP syntax
         run: find backend -path backend/vendor -prune -o -name '*.php' -print0 | xargs -0 -n1 php -l
 
@@ -63,7 +72,12 @@ jobs:
         working-directory: frontend
         run: |
           npm audit --omit=dev
-          npm audit
+          node ../scripts/audit-dependency-policy.mjs frontend
+
+      - name: Validate active release guards and fail-closed audit policy
+        run: |
+          node scripts/validate-startup-release-guards.mjs
+          node --test scripts/tests/release-policy.test.mjs
 
       - name: Run frontend static checks
         working-directory: frontend
@@ -116,11 +130,22 @@ jobs:
       REDIS_CLIENT: phpredis
       REDIS_HOST: 127.0.0.1
       REDIS_PORT: 6379
+      REDIS_PASSWORD: 'null'
+      YAZOO_GRIDFS_TEST_URI: mongodb://127.0.0.1:27017
       YAZOO_ACCOUNT_DELETION_PROCESSING_LEASE_SECONDS: 60
       YAZOO_ACCOUNT_DELETION_RETRY_MAX_ATTEMPTS: 5
       YAZOO_ACCOUNT_DELETION_UNIQUE_LOCK_STORE: redis
       YAZOO_MYSQL_CONCURRENCY_TEST: "true"
     services:
+      mongo:
+        image: mongo:8.0@sha256:d0d926f94df099bff534b7ee5b5986458131a22489dfff8664509af0c1e2ca9c
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd="mongosh --quiet --eval 'db.adminCommand({ping: 1})'"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
       mysql:
         image: mysql:8.4.10@sha256:8dbcf531a03aade657e181b9cf2f1d1803ce621a1d55610cb44cb531ab7d7db6
         env:
@@ -150,7 +175,7 @@ jobs:
       - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
         with:
           php-version: "8.4"
-          extensions: bcmath, intl, mbstring, dom, fileinfo, pdo_mysql, redis
+          extensions: bcmath, intl, mbstring, dom, fileinfo, pdo_mysql, pdo_sqlite, mongodb, redis
           coverage: none
 
       - name: Install backend dependencies
@@ -163,7 +188,11 @@ jobs:
 
       - name: Run real MySQL concurrency tests
         working-directory: backend
-        run: ./vendor/bin/phpunit --fail-on-skipped tests/Integration/AccountDeletionMySqlConcurrencyTest.php tests/Integration/VeterinarianAppointmentMySqlConcurrencyTest.php tests/Integration/Database2CompatibilityTest.php tests/Integration/ReservationPaymentMySqlIntegrationTest.php tests/Integration/ReleaseAdminBootstrapMySqlTest.php tests/Feature/Marketplace/Database2TestDataBootstrapTest.php
+        run: ./vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php --fail-on-skipped tests/Integration/AccountDeletionMySqlConcurrencyTest.php tests/Integration/VeterinarianAppointmentMySqlConcurrencyTest.php tests/Integration/Database2CompatibilityTest.php tests/Integration/ReservationPaymentMySqlIntegrationTest.php tests/Integration/ReleaseAdminBootstrapMySqlTest.php tests/Feature/Marketplace/Database2TestDataBootstrapTest.php
+
+      - name: Run real GridFS media streaming tests
+        working-directory: backend
+        run: ./vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php --fail-on-skipped tests/Integration/GridFsMediaStreamingTest.php
 
   container-and-secrets:
     runs-on: ubuntu-latest
@@ -225,10 +254,10 @@ jobs:
         run: |
           docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
             aquasec/trivy@sha256:cffe3f5161a47a6823fbd23d985795b3ed72a4c806da4c4df16266c02accdd6f \
-            image --ignore-unfixed --severity CRITICAL,HIGH --exit-code 1 yazoo-api:ci
+            image --severity CRITICAL,HIGH --exit-code 1 yazoo-api:ci
           docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
             aquasec/trivy@sha256:cffe3f5161a47a6823fbd23d985795b3ed72a4c806da4c4df16266c02accdd6f \
-            image --ignore-unfixed --severity CRITICAL,HIGH --exit-code 1 yazoo-frontend:ci
+            image --severity CRITICAL,HIGH --exit-code 1 yazoo-frontend:ci
 
       - name: Upload SBOM artifacts
         if: github.event_name != 'workflow_call' || inputs.build_containers

@@ -8451,3 +8451,7 @@ export function getDateLocale(locale) {
 
   return dateLocales[normalizeLocale(locale)] ?? dateLocales.fr
 }
+
+messages.fr.startup = { demoData: 'Démonstration — aucun partenariat réel' }
+messages.ar.startup = { demoData: 'بيانات توضيحية — لا شراكة فعلية' }
+messages.en.startup = { demoData: 'Demo data — no real partnership' }

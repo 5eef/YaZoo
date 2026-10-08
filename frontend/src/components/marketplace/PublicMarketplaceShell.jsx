@@ -1,3 +1,4 @@
+import { brand } from '../../lib/brand'
 import PropTypes from 'prop-types'
 import { Link, NavLink } from 'react-router'
 
@@ -21,7 +22,7 @@ function PublicMarketplaceShell({ children }) {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <Link to="/" className="flex items-center gap-3">
               <img src="/yazoo-logo.webp" alt="" className="h-11 w-11 object-contain" />
-              <span className="yz-wordmark text-base">YaZoo</span>
+              <span className="yz-wordmark text-base">{brand.name}</span>
             </Link>
             <div className="flex items-center gap-2">
               <Link

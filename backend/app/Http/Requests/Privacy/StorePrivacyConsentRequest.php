@@ -4,6 +4,7 @@ namespace App\Http\Requests\Privacy;
 
 use App\Models\PrivacyConsent;
 use App\Models\User;
+use App\Support\RequestInput;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -26,8 +27,8 @@ class StorePrivacyConsentRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $payload = [
-            'type' => trim((string) $this->input('type')),
-            'locale' => $this->filled('locale') ? trim((string) $this->input('locale')) : 'fr',
+            'type' => RequestInput::trim($this->input('type')),
+            'locale' => $this->filled('locale') ? RequestInput::trim($this->input('locale')) : 'fr',
         ];
 
         if ($this->has('accepted')) {

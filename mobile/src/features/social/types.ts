@@ -1,0 +1,9 @@
+export type Person = { id: number; name: string; avatar?: string; isFollowing?: boolean };
+export type Comment = { id: number; body: string; author: Person; reaction?: string; replies?: Comment[] };
+export type Post = { id: number; content: string; author: Person; createdAt: string; imageUrl?: string; mediaUrl?: string; mediaKind?: string; likes: number; liked: boolean; userReaction?: string; commentsCount: number; comments?: Comment[]; visibility?: string; communityId?: number };
+export type Profile = Person & { coverPhoto?: string; bio?: string; city?: string; postsCount: number; followersCount: number; followingCount: number; isOwner: boolean; isProfessionalVerified?: boolean };
+export type Community = { id: number; name: string; description?: string; imageUrl?: string; membersCount: number; isMember: boolean; isOwner: boolean; isPrivate: boolean; membershipStatus?: string };
+export type Story = { id: number; content?: string; mediaUrl?: string; mediaKind?: string; isOwn?: boolean; isViewed?: boolean; expiresAt?: string };
+export type StoryGroup = { id: string; user: Person; stories: Story[]; isOwn?: boolean; hasUnviewed: boolean };
+export type Product = { id: number; name?: string; title?: string; description?: string; imageUrl?: string; location?: string; price?: number; type?: string; isFavorited?: boolean; item?: Product };
+export type Notification = { id: string; title?: string; body?: string; message?: string; isRead: boolean; createdAt?: string };

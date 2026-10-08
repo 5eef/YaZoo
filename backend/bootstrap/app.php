@@ -141,7 +141,9 @@ return Application::configure(basePath: dirname(__DIR__))
                     429 => 'rate_limit.exceeded',
                     default => $status >= 500 ? 'server.internal' : 'request.failed',
                 };
-            $message = trim($exception->getMessage());
+            $message = $status >= 500 && ! config('app.debug')
+                ? ''
+                : trim($exception->getMessage());
 
             return response()->json([
                 'error' => $error,

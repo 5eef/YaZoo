@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\DataDeletionRequestController;
 use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\MediaController;
 use App\Http\Controllers\Api\MessageController;
+use App\Http\Controllers\Api\MobileAuthController;
 use App\Http\Controllers\Api\MonitoringController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PaymentController;
@@ -39,19 +40,25 @@ use App\Http\Controllers\Api\StoryController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\VeterinarianAppointmentController;
 use App\Http\Controllers\Api\VeterinarianController;
+use App\Http\Middleware\CountPilotConversions;
+use App\Http\Middleware\EnsureFeatureEnabled;
 use App\Http\Middleware\ForceJsonResponse;
 use App\Http\Middleware\SetApiLocale;
 use App\Http\Middleware\UseSanctumTokenFromCookie;
 use App\Support\Sms\SmsSender;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware([ForceJsonResponse::class, SetApiLocale::class, 'throttle:api'])->group(function (): void {
+Route::middleware([ForceJsonResponse::class, SetApiLocale::class, EnsureFeatureEnabled::class, CountPilotConversions::class, 'throttle:api'])->group(function (): void {
     Route::get('/', fn () => response()->json([
-        'name' => 'YaZoo API',
+        'name' => config('app.name').' API',
         'status' => 'ok',
     ]));
 
     Route::get('/legal/config', fn () => response()->json([
+        'frontendUrl' => config('app.frontend_url'),
+        'features' => collect(['social_feed', 'communities', 'product_marketplace', 'animal_listings_public'])
+            ->mapWithKeys(fn (string $feature): array => [$feature => (bool) config('features.'.$feature)])
+            ->all(),
         'entityName' => config('legal.entity_name'),
         'legalStatus' => config('legal.legal_status'),
         'address' => config('legal.address'),
@@ -71,6 +78,10 @@ Route::middleware([ForceJsonResponse::class, SetApiLocale::class, 'throttle:api'
 
     Route::get('/media/{fileId}', [MediaController::class, 'show'])
         ->where('fileId', '[A-Fa-f0-9]{24}');
+
+    Route::get('/media/posts/{post}', [MediaController::class, 'showPost'])
+        ->whereNumber('post')
+        ->middleware([UseSanctumTokenFromCookie::class, 'auth:sanctum']);
 
     Route::get('/media/private/{fileId}', [MediaController::class, 'showPrivate'])
         ->where('fileId', '[A-Fa-f0-9]{24}')
@@ -102,6 +113,8 @@ Route::middleware([ForceJsonResponse::class, SetApiLocale::class, 'throttle:api'
         ->middleware('throttle:30,1');
 
     Route::prefix('auth')->group(function (): void {
+        Route::post('/mobile/login', [MobileAuthController::class, 'login'])->middleware('throttle:login');
+        Route::post('/mobile/register', [MobileAuthController::class, 'register'])->middleware('throttle:10,1');
         Route::post('/otp/request', [AuthController::class, 'requestOtp'])->middleware('throttle:otp-request');
         Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:10,1');
         Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');

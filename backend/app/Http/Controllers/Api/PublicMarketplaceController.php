@@ -27,8 +27,8 @@ class PublicMarketplaceController extends Controller
 
         return response()->json([
             'data' => [
-                'animals' => $this->sectionItems('animals', $perSection),
-                'products' => $this->sectionItems('products', $perSection),
+                'animals' => config('features.animal_listings_public') ? $this->sectionItems('animals', $perSection) : [],
+                'products' => config('features.product_marketplace') ? $this->sectionItems('products', $perSection) : [],
                 'services' => $this->sectionItems('services', $perSection),
                 'veterinarians' => $this->sectionItems('veterinarians', $perSection),
             ],
@@ -37,9 +37,29 @@ class PublicMarketplaceController extends Controller
 
     public function index(Request $request, string $section): JsonResponse
     {
+        abort_if($section === 'products' && ! config('features.product_marketplace'), 404);
+        abort_if($section === 'animals' && ! config('features.animal_listings_public'), 404);
         $page = max($request->integer('page', 1), 1);
         $perPage = min(max($request->integer('per_page', 12), 1), 24);
         $query = $this->sectionQuery($section);
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:120'],
+            'city' => ['nullable', 'string', 'max:100'],
+            'specialty' => ['nullable', 'string', 'max:100'],
+        ]);
+        if (in_array($section, ['veterinarians', 'services'], true)) {
+            if (filled($filters['city'] ?? null)) {
+                $query->where('city', 'like', '%'.$filters['city'].'%');
+            }
+            if (filled($filters['search'] ?? null)) {
+                $titleColumn = $section === 'veterinarians' ? 'name' : 'title';
+                $term = '%'.$filters['search'].'%';
+                $query->where(fn ($inner) => $inner->where($titleColumn, 'like', $term)->orWhere('description', 'like', $term));
+            }
+            if ($section === 'veterinarians' && filled($filters['specialty'] ?? null)) {
+                $query->where('specialties', 'like', '%'.$filters['specialty'].'%');
+            }
+        }
         $total = (clone $query)->count();
         $items = $query
             ->forPage($page, $perPage)
@@ -60,6 +80,7 @@ class PublicMarketplaceController extends Controller
 
     public function show(string $section, int $listing): JsonResponse
     {
+        abort_if($section === 'animals' && ! config('features.animal_listings_public'), 404);
         $item = $this->sectionQuery($section)->findOrFail($listing);
 
         return response()->json([
@@ -244,6 +265,7 @@ class PublicMarketplaceController extends Controller
             : null;
 
         return [
+            'isDemo' => str_ends_with((string) $listing->user?->email, '@yazoo.test') || (config('operations.deployment_profile') === 'showcase'),
             'id' => $listing->getKey(),
             'type' => $type,
             'title' => $this->sanitizePublicText($title),
@@ -268,7 +290,7 @@ class PublicMarketplaceController extends Controller
     private function professionalVerificationRelations(): array
     {
         return [
-            'user:id,name,avatar,city',
+            'user:id,name,avatar,city,email',
             'user.latestProfessionalVerification.reviewer:id,is_admin',
         ];
     }
