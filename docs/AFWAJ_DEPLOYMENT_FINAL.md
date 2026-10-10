@@ -6,7 +6,7 @@ Cette procÃ©dure prÃ©pare une dÃ©monstration fictive, pas un service de so
 
 AccÃ¨s propriÃ©taire Ã  Docker Hub `5eef`, Render, Cloudflare Pages, TiDB Cloud et Expo/EAS ; Docker opÃ©rationnel, Node et lockfiles du dÃ©pÃ´t. Sauvegarde TiDB vÃ©rifiÃ©e avant migration. Fournir les secrets par les interfaces sÃ©curisÃ©es, jamais dans Git ou les rapports.
 
-Le HEAD au dÃ©but de la prÃ©paration est `ad77546d60348577b9095cf230d5c6802a9c32b1`. Il **ne reprÃ©sente pas** les changements AFWAJ locaux. AprÃ¨s revue, le propriÃ©taire doit crÃ©er le commit final sur `startup-2026`, lancer la CI, puis reconstruire depuis ce commit. Ne pas attribuer Ã  l'ancien SHA une image contenant les modifications non commitÃ©es.
+Utiliser git rev-parse HEAD apres CI verte. Construire et publier uniquement depuis le commit valide sur startup-2026, avec un worktree propre ; ne pas reutiliser le SHA d une image anterieure.
 
 ```powershell
 git status --short --branch
@@ -89,7 +89,7 @@ Secrets Ã  fournir manuellement : `APP_KEY` (clÃ© Laravel forte, stable entr
 
 Configurer Ã©galement les garde-fous Ã  partir de la **mÃªme cible TiDB validÃ©e** : `YAZOO_EXPECTED_DB_HOST`, `YAZOO_EXPECTED_DB_PORT`, `YAZOO_EXPECTED_DB_NAME`, `YAZOO_SHOWCASE_DATABASE_HOST`, `YAZOO_SHOWCASE_DATABASE_NAME`. `YAZOO_PROTECTED_DB_NAMES` doit protÃ©ger les autres bases rÃ©elles, sans inclure le showcase autorisÃ©. Ne pas utiliser la base systÃ¨me TiDB. Utilisateur DB limitÃ© au schÃ©ma showcase, TLS avec CA systÃ¨me. Le port TiDB vient de la console propriÃ©taire ; le template illustre 4000.
 
-Le filesystem Render Free est Ã©phÃ©mÃ¨re. Au dÃ©marrage, migrations contrÃ´lÃ©es, bootstrap protÃ©gÃ©, restauration des 21 images et des deux petits MP4 versionnÃ©s, puis preflight sont exÃ©cutÃ©s. Les mÃ©dias fictifs survivent ainsi aux redÃ©marrages ; les uploads utilisateurs restent interdits. Ne pas vider le cache database : il contient les markers de bootstrap.
+Sur le profil showcase, Render execute automatiquement : migration -> bootstrap/upgrade -> restauration media -> synchronisation credentials jury -> preflight. La synchronisation reste executee quand le marker v2 est deja complete. Le password est lu depuis l environnement securise, jamais passe en argument. Les medias versionnes sont restaures au demarrage ; uploads utilisateurs interdits. Ne pas vider le cache database qui contient les markers.
 
 ## 3. StratÃ©gie database : option B, upgrade conservateur v1 â†’ v2
 

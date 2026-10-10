@@ -36,6 +36,45 @@ class ShowcaseBootstrapTest extends TestCase
 
     private string $password = 'Showcase-Test-Password-2026!';
 
+    public function test_completed_bootstrap_preserves_data_but_sync_rotates_jury_password_once(): void
+    {
+        $arguments = ['--images' => $this->imagesPath, '--confirmation' => $this->confirmation];
+        $this->assertSame(0, Artisan::call('yazoo:bootstrap-showcase', $arguments), Artisan::output());
+        $before = [];
+        foreach (['users', 'posts', 'stories', 'comments', 'likes', 'follows', 'messages', 'veterinarian_appointments'] as $table) {
+            $before[$table] = DB::table($table)->orderBy('id')->get()->toJson();
+        }
+        $outsider = User::factory()->create(['email' => 'outside@example.test', 'is_admin' => false]);
+        $adminHashes = User::query()->where('is_admin', true)->pluck('password', 'id')->all();
+        config(['operations.showcase_password' => 'Rotated-Test-Only-Password-2026!']);
+        $this->assertSame(0, Artisan::call('yazoo:bootstrap-showcase', $arguments));
+        $this->assertStringContainsString('aucune ecriture', Artisan::output());
+        foreach ($before as $table => $rows) {
+            $query = DB::table($table)->orderBy('id');
+            if ($table === 'users') {
+                $query->where('id', '!=', $outsider->id);
+            }
+            $this->assertSame($rows, $query->get()->toJson());
+        }
+        $this->mock(ShowcaseBootstrapGuard::class, function ($mock): void {
+            $mock->shouldReceive('assertAllowed')->with($this->confirmation)->twice();
+        });
+        $sync = ['--confirmation' => $this->confirmation];
+        $syncExit = Artisan::call('yazoo:sync-showcase-credentials', $sync);
+        $syncOutput = Artisan::output();
+        $this->assertSame(0, $syncExit, $syncOutput);
+        $this->assertStringContainsString('18 modification(s)', $syncOutput);
+        $this->assertTrue(Hash::check(config('operations.showcase_password'), User::query()->where('email', 'client.fes@yazoo.test')->firstOrFail()->password));
+        $this->assertSame(0, Artisan::call('yazoo:sync-showcase-credentials', $sync));
+        $this->assertStringContainsString('0 modification(s)', Artisan::output());
+        $this->assertSame($adminHashes, User::query()->where('is_admin', true)->pluck('password', 'id')->all());
+        $this->assertSame($outsider->password, $outsider->fresh()->password);
+        foreach (array_diff(array_keys($before), ['users']) as $table) {
+            $this->assertSame($before[$table], DB::table($table)->orderBy('id')->get()->toJson());
+        }
+        $this->assertStringNotContainsString(config('operations.showcase_password'), Artisan::output());
+    }
+
     public function test_credential_sync_is_idempotent_and_preserves_non_demo_users_and_admins(): void
     {
         $this->mock(ShowcaseBootstrapGuard::class, function ($mock): void {
