@@ -2,10 +2,25 @@
 
 namespace Tests\Feature;
 
+use Illuminate\Support\Facades\Artisan;
 use Tests\TestCase;
 
 class ProductionLegalPreflightTest extends TestCase
 {
+    public function test_remote_addr_proxy_sentinel_is_allowed_only_for_showcase(): void
+    {
+        foreach (['showcase', 'production'] as $profile) {
+            config(['operations.deployment_profile' => $profile, 'app.trusted_proxies' => 'REMOTE_ADDR']);
+            Artisan::call('yazoo:preflight-production', ['--configuration-only' => true]);
+            $output = Artisan::output();
+            if ($profile === 'showcase') {
+                $this->assertStringNotContainsString('TRUSTED_PROXIES must contain', $output);
+            } else {
+                $this->assertStringContainsString('TRUSTED_PROXIES must contain', $output);
+            }
+        }
+    }
+
     public function test_production_rejects_a_valid_length_but_weak_application_key(): void
     {
         config(['app.key' => 'base64:'.base64_encode(str_repeat('a', 32))]);

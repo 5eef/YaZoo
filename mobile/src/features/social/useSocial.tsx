@@ -72,7 +72,7 @@ export function useSocial(locale: Locale, user: User | undefined, navigate: (scr
   async function run(action: () => Promise<void>) {
     if (pending.current) return;
     pending.current = true; setBusy(true); setError('');
-    try { await action(); } catch (failure) { if (__DEV__ && !(failure instanceof ApiError)) { const code = (failure as { code?: unknown })?.code; console.warn('[YaZoo] Native action failed:', typeof code === 'string' && /^[A-Z0-9_]{1,64}$/.test(code) ? code : 'UNKNOWN_NATIVE_ERROR'); } setError(t(errorKey(failure instanceof ApiError ? failure.status : 0))); }
+    try { await action(); } catch (failure) { if (__DEV__ && !(failure instanceof ApiError)) { const code = (failure as { code?: unknown })?.code; console.warn('[YaZoo] Native action failed:', typeof code === 'string' && /^[A-Z0-9_]{1,64}$/.test(code) ? code : 'UNKNOWN_NATIVE_ERROR'); } setError(t(errorKey(failure instanceof ApiError ? failure.status : 0, failure instanceof ApiError ? failure.code : undefined))); }
     finally { pending.current = false; setBusy(false); }
   }
   async function loadPosts(targetPage = 1, communityId?: number, lang = locale, authorId?: number, append = false) {

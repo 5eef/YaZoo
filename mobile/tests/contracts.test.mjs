@@ -10,6 +10,9 @@ test('API URL normalizes and rejects credentials or unsafe schemes', () => {
 });
 test('API failures distinguish offline, revoked auth, validation, limits and backend', () => {
   assert.equal(errorKey(0), 'offline'); assert.equal(errorKey(401), 'expired'); assert.equal(errorKey(419), 'forbidden'); assert.equal(errorKey(422), 'validation'); assert.equal(errorKey(429), 'limited'); assert.equal(errorKey(503), 'unavailable');
+  assert.equal(errorKey(503, 'DEMO_BACKEND_WAKING'), 'demoBackendWaking');
+  assert.equal(dictionaries.fr.demoBackendWaking, 'Le serveur de démonstration démarre. Réessayez dans quelques secondes.');
+  assert.equal(dictionaries.en.demoBackendWaking, 'The demo server is starting. Try again in a few seconds.');
 });
 test('all product messages have FR AR EN translations', () => {
   const keys = Object.keys(dictionaries.fr).sort();

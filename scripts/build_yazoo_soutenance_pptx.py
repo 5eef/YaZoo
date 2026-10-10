@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT_DIR = ROOT / "docs" / "soutenance"
 OUT = OUT_DIR / "YaZoo_Soutenance_PFE_DEVFS201.pptx"
 
-LOGO_YAZOO = Path(os.getenv("YAZOO_LOGO_PATH", ROOT / "frontend" / "public" / "yazoo-logo.webp"))
+LOGO_YAZOO = Path(os.getenv("YAZOO_LOGO_PATH", ROOT / "frontend" / "public" / "brand" / "yazoo-logo.png"))
 LOGO_OFPPT = Path(os.getenv("OFPPT_LOGO_PATH", ROOT / "docs" / "soutenance" / "assets" / "ofppt-logo.jpg"))
 IMG_DIR = Path(os.getenv("YAZOO_PRESENTATION_IMAGES", ROOT / "docs" / "screenshots"))
 SHOTS = [

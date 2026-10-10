@@ -8,6 +8,8 @@ YaZoo is a Moroccan product MVP for connecting pet owners with animal care profe
 
 This branch is a product prototype for incubation and pilot preparation. It does not establish that a company has been legally incorporated, that a pilot has been approved, that listed professionals are real partners, or that real transactions have taken place.
 
+The startup visual identity supplied in `docs/logo` is integrated into Web SVG assets and Android PNG assets. Mobile opens with a short brand intro followed by Login/Register, using the phone language automatically (Arabic/English, otherwise French), with dark/light, RTL and Reduce Motion support. See [asset mapping](docs/BRAND_ASSETS.md) and [AFWAJ demo guide](docs/AFWAJ_DEMO_GUIDE.md). Physical device review, public deployment and APK distribution remain owner actions.
+
 ## Product scope
 
 ### For pet owners

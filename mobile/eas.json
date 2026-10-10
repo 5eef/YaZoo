@@ -2,7 +2,7 @@
   "cli": { "appVersionSource": "remote" },
   "build": {
     "development": { "developmentClient": true, "distribution": "internal" },
-    "preview": { "distribution": "internal", "credentialsSource": "remote", "android": { "buildType": "apk" } },
+    "preview": { "environment": "preview", "distribution": "internal", "credentialsSource": "remote", "android": { "buildType": "apk" } },
     "production": { "credentialsSource": "remote", "environment": "production", "android": { "buildType": "app-bundle" }, "autoIncrement": true }
   }
 }

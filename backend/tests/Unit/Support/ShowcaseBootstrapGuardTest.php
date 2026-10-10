@@ -48,6 +48,13 @@ class ShowcaseBootstrapGuardTest extends TestCase
         app(ShowcaseBootstrapGuard::class)->assertAllowed('wrong-target');
     }
 
+    public function test_it_rejects_the_real_production_profile(): void
+    {
+        config(['operations.deployment_profile' => 'production']);
+        $this->expectException(RuntimeException::class);
+        app(ShowcaseBootstrapGuard::class)->assertAllowed('demo-db.example/yazoo_showcase@demo.example');
+    }
+
     public function test_it_rejects_a_different_application_host(): void
     {
         config(['app.url' => 'https://another.example']);

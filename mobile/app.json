@@ -4,7 +4,7 @@
     "slug": "yazoo-pilot",
     "version": "0.1.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/brand/app-icon.png",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true
@@ -12,19 +12,25 @@
     "android": {
       "versionCode": 1,
       "adaptiveIcon": {
-        "backgroundColor": "#7c3aed",
-        "foregroundImage": "./assets/android-icon-foreground.png"
+        "backgroundColor": "#FAF7FF",
+        "foregroundImage": "./assets/brand/adaptive-foreground.png"
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.yazoo.pilot"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/brand/favicon.png"
     },
     "plugins": [
       "./plugins/with-release-signing",
       "expo-video",
-      ["expo-image-picker", { "cameraPermission": false, "microphonePermission": false }],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ],
       "expo-secure-store",
       [
         "expo-localization",
@@ -36,9 +42,12 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#7c3aed",
-          "image": "./assets/icon.png",
-          "imageWidth": 160
+          "backgroundColor": "#FAF7FF",
+          "image": "./assets/brand/yazoo-symbol.png",
+          "imageWidth": 160,
+          "dark": {
+            "backgroundColor": "#10091A"
+          }
         }
       ]
     ],

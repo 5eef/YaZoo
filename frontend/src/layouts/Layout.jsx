@@ -479,7 +479,7 @@ function Layout() {
         >
           <div className="flex items-center gap-3">
             <NavLink to="/feed" className="flex min-w-0 items-center gap-3">
-              <img src="/yazoo-logo.webp" alt={t('layout.logoLabel')} className="h-12 w-12 shrink-0 object-contain" />
+              <img src="/brand/yazoo-symbol.svg" alt={t('layout.logoLabel')} className="h-12 w-12 shrink-0 object-contain" />
               <div className="min-w-0">
                 <p className="yz-wordmark truncate text-base">YaZoo</p>
                 <p className="truncate text-xs text-stone-700 dark:text-violet-100/78">{t('common.tagline')}</p>

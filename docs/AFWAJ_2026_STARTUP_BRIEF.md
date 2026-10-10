@@ -62,3 +62,7 @@ Le code contient contrôle d'accès, authentification Web par cookies et mobile 
 ## Release candidate après fermeture
 
 Le statut technique final et les preuves sont dans [PRODUCTION_READINESS_AFWAJ_2026.md](PRODUCTION_READINESS_AFWAJ_2026.md). Les risques npm livrés en runtime ont été traités ; les résiduels de build restent explicites. Git est consolidé pour revue avant commit. La configuration de signature exige de vrais credentials et refuse le fallback debug. Le dossier CNDP sépare préparation logicielle et démarches administratives. La production publique exige encore domaines/secrets/infrastructure, revue juridique, formalités applicables et comptes EAS/Play. Aucun utilisateur, revenu, partenaire, traction, entreprise immatriculée, agrément CNDP ou publication Play n'est revendiqué.
+
+## Identité intégrée — 10 octobre 2026
+
+Identité visuelle startup sélectionnée et intégrée techniquement : source originale dans `docs/logo`, SVG Web et PNG Android décrits dans [BRAND_ASSETS.md](BRAND_ASSETS.md). Le Web conserve son design et ses thèmes. L’entrée mobile présente le logo puis Login/Register ; la langue initiale suit le téléphone (ar/en, sinon fr), avec RTL arabe et Reduce Motion. Une session restaurée rejoint le Feed sans afficher Login. Validation sur téléphone par le propriétaire, distribution EAS et déploiement final restent des actions humaines. Aucune protection OMPIC, conformité CNDP, validation AFWAJ, traction ou publication Play Store n’en découle.

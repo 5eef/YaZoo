@@ -26,6 +26,9 @@ const vite = spawn(
     env: {
       ...process.env,
       VITE_API_URL: apiURL,
+      // Local E2E canonical URLs must match this test server, even when
+      // the parent shell just built the public Cloudflare release.
+      VITE_SITE_URL: baseURL,
       VITE_STARTUP_PILOT: process.env.E2E_STARTUP_PILOT ?? 'false',
       VITE_ANIMAL_LISTINGS_PUBLIC: process.env.E2E_ANIMAL_LISTINGS_PUBLIC ?? 'true',
       VITE_GOOGLE_AUTH_ENABLED: 'false',

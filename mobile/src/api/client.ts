@@ -32,7 +32,10 @@ export async function api<T>(path: string, locale: Locale, method = 'GET', body?
     if (!response.ok) {
       if (response.status === 401 && requestToken && requestToken === token) invalidSession();
       const errors = payload && typeof payload === 'object' && 'errors' in payload ? payload.errors : {};
-      throw new ApiError(response.status, errors && typeof errors === 'object' && !Array.isArray(errors) ? errors as Record<string, string[]> : {});
+      const code = payload && typeof payload === 'object' && 'code' in payload && payload.code === 'DEMO_BACKEND_WAKING' ? payload.code : undefined;
+      const retryHeader = response.headers.get('Retry-After');
+      const retryAfter = retryHeader && /^\d+$/.test(retryHeader) ? Math.min(Number(retryHeader), 300) : undefined;
+      throw new ApiError(response.status, errors && typeof errors === 'object' && !Array.isArray(errors) ? errors as Record<string, string[]> : {}, code, retryAfter);
     }
     return payload as T;
   } catch (error) {

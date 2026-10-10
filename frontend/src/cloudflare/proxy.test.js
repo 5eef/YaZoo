@@ -7,6 +7,31 @@ import {
 } from '../../functions/_shared/proxy.js'
 
 describe('Cloudflare Pages reverse proxy', () => {
+  it('transmet un appel mobile Sanctum sans cookie et conserve les reponses auth', async () => {
+    for (const status of [200, 401]) {
+      const fetchImpl = vi.fn().mockImplementation(async (_url, init) => {
+        expect(init.headers.get('Authorization')).toBe('Bearer test-only-native-token')
+        expect(init.headers.get('Accept-Language')).toBe('fr')
+        expect(init.headers.get('Content-Type')).toBe('application/json')
+        expect(init.headers.has('Cookie')).toBe(false)
+        return new Response(JSON.stringify(status === 200 ? { id: 42, isAdmin: false } : { message: 'Unauthenticated.' }), {
+          status, headers: { 'Content-Type': 'application/json' },
+        })
+      })
+      vi.stubGlobal('fetch', fetchImpl)
+      const response = await proxyRequest({
+        env: { BACKEND_ORIGIN: 'https://yazoo-showcase.onrender.com' },
+        request: new Request('https://yazoo-showcase.pages.dev/api/auth/me', {
+          headers: { Authorization: 'Bearer test-only-native-token', 'Accept-Language': 'fr', 'Content-Type': 'application/json' },
+        }),
+      }, { expectedJson: true })
+      expect(response.status).toBe(status)
+      expect(fetchImpl).toHaveBeenCalledTimes(1)
+      expect(String(fetchImpl.mock.calls[0][0])).toBe('https://yazoo-showcase.onrender.com/api/auth/me')
+      if (status === 200) await expect(response.json()).resolves.toEqual({ id: 42, isAdmin: false })
+    }
+  })
+
   it('accepte seulement une origine admin HTTPS sans chemin', () => {
     expect(normalizeBackendOrigin('https://yazoo-showcase.onrender.com')).toBe(
       'https://yazoo-showcase.onrender.com',
@@ -30,6 +55,8 @@ describe('Cloudflare Pages reverse proxy', () => {
         method: 'POST',
         headers: {
           Accept: 'application/json',
+          Authorization: 'Bearer test-only-sanctum-token',
+          'Accept-Language': 'ar',
           Cookie: 'yazoo_api_token=opaque',
           'Content-Type': 'application/json',
           'X-XSRF-TOKEN': 'opaque-xsrf',
@@ -52,6 +79,9 @@ describe('Cloudflare Pages reverse proxy', () => {
     )
     expect(init.method).toBe('POST')
     expect(init.headers.get('Cookie')).toBe('yazoo_api_token=opaque')
+    expect(init.headers.get('Authorization')).toBe('Bearer test-only-sanctum-token')
+    expect(init.headers.get('Accept-Language')).toBe('ar')
+    expect(init.headers.get('Content-Type')).toBe('application/json')
     expect(init.headers.get('X-XSRF-TOKEN')).toBe('opaque-xsrf')
     expect(init.headers.get('X-Forwarded-Host')).toBe('demo.pages.dev')
     expect(new TextDecoder().decode(init.body)).toBe('{"title":"Demo"}')
@@ -71,6 +101,7 @@ describe('Cloudflare Pages reverse proxy', () => {
     }, { expectedJson: true })
 
     expect(response.status).toBe(503)
+    expect(response.headers.get('Retry-After')).toBe('4')
     expect(response.headers.get('content-type')).toContain('application/json')
     await expect(response.json()).resolves.toMatchObject({
       code: 'DEMO_BACKEND_WAKING',

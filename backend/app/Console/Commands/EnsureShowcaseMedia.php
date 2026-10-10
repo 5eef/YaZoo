@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use Database\Seeders\AfwajShowcaseSeeder;
 use Database\Seeders\MarketplaceTestSeeder;
 use Illuminate\Console\Command;
 use RuntimeException;
@@ -27,6 +28,7 @@ class EnsureShowcaseMedia extends Command
             }
 
             $result = $seeder->ensureShowcaseMedia($imagesPath);
+            AfwajShowcaseSeeder::ensureMedia();
             $this->info(sprintf(
                 'Medias showcase verifies: %d crees, %d actualises, %d inchanges.',
                 $result['created'],

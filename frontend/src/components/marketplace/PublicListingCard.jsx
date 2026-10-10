@@ -38,8 +38,8 @@ function PublicListingCard({ listing, locale, section, t }) {
       </Link>
 
       <div className="flex flex-1 flex-col space-y-3 p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0 flex-1 basis-32">
             <h2 className="truncate text-base font-semibold text-stone-950 dark:text-white">
               {listing.title}
             </h2>
@@ -47,7 +47,7 @@ function PublicListingCard({ listing, locale, section, t }) {
               {listing.subtitle || listing.location}
             </p>
           </div>
-          <div className="flex shrink-0 flex-col items-end gap-1.5">
+          <div className="flex max-w-full flex-wrap gap-1.5">
             {listing.isDemo ? <Badge className="border border-amber-200 bg-amber-50 text-amber-900">{t('startup.demoData')}</Badge> : null}
             {professionalBadgeKey ? (
               <Badge className="border border-emerald-200 bg-emerald-100 text-emerald-900 dark:border-emerald-300/30 dark:bg-emerald-950/80 dark:text-emerald-100">
@@ -100,7 +100,7 @@ function PublicListingCard({ listing, locale, section, t }) {
 
 function Badge({ children, className }) {
   return (
-    <span className={`inline-flex max-w-full items-center whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold leading-none ${className}`}>
+    <span className={`inline-flex max-w-full items-center whitespace-normal rounded-full px-2.5 py-1 text-[11px] font-semibold leading-tight ${className}`}>
       {children}
     </span>
   )

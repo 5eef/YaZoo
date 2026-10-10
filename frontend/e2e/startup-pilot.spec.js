@@ -25,6 +25,14 @@ for (const locale of ['fr', 'ar', 'en']) {
     await inputs.nth(1).fill('Sefrou')
     await page.locator('form button[type="submit"]').click()
     await expect(page.getByRole('heading', { name: 'Pilot Demo Vet' })).toBeVisible()
+    // A long translated demo badge must never collapse the title to zero width.
+    for (const width of [320, 768, 1280]) {
+      await page.setViewportSize({ width, height: 800 })
+      const card = page.getByRole('article').filter({ has: page.getByRole('heading', { name: 'Pilot Demo Vet', exact: true }) })
+      await expect(card).toHaveCount(1)
+      await expect(card.getByRole('heading', { name: 'Pilot Demo Vet', exact: true })).toBeVisible()
+      await expect.poll(() => card.locator('h2').evaluate(node => node.getBoundingClientRect().width)).toBeGreaterThan(100)
+    }
     expect(filtered).toBe(true)
     await expect(page.locator('body')).not.toHaveText(/undefined|\[object Object\]/)
   })

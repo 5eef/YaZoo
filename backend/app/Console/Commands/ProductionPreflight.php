@@ -75,6 +75,11 @@ class ProductionPreflight extends Command
             $failures[] = 'APP_KEY must not use a weak repeated-byte key.';
         }
         foreach (array_filter(array_map('trim', explode(',', (string) config('app.trusted_proxies')))) as $proxy) {
+            // Laravel resolves this sentinel to the immediate FastCGI peer.
+            // The backend-only showcase image uses its own Nginx in front of PHP.
+            if ($isShowcaseProfile && $proxy === 'REMOTE_ADDR') {
+                continue;
+            }
             [$ip, $mask] = array_pad(explode('/', $proxy, 2), 2, null);
             $bits = str_contains($ip, ':') ? 128 : 32;
             if (! filter_var($ip, FILTER_VALIDATE_IP) || ($mask !== null && (! ctype_digit($mask) || (int) $mask < 1 || (int) $mask > $bits))) {

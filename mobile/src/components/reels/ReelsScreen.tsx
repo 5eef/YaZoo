@@ -54,7 +54,7 @@ export function ReelsScreen({ locale, openAuthor, renderComments, getSnapshot, s
       page.current = response.page;
       setHasMore(response.hasMore);
       setPosts(current => mergeReels(current, response.posts));
-    } catch (failure) { if (alive.current) setError(t[errorKey(failure instanceof ApiError ? failure.status : 0)]); }
+    } catch (failure) { if (alive.current) setError(t[errorKey(failure instanceof ApiError ? failure.status : 0, failure instanceof ApiError ? failure.code : undefined)]); }
     finally { pending.current = false; if (alive.current) setBusy(false); }
   }
   useEffect(() => { if (!snapshot) void more(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -74,10 +74,10 @@ export function ReelsScreen({ locale, openAuthor, renderComments, getSnapshot, s
     if (likePending.current) return;
     likePending.current = true;
     try { const result = await api<{ data: Post }>(`/posts/${post.id}/like`, locale, 'POST', { reaction: 'like' }); if (alive.current) setPosts(current => mergeReels(current, [result.data])); }
-    catch (failure) { if (alive.current) { setError(t[errorKey(failure instanceof ApiError ? failure.status : 0)]); if (failure instanceof ApiError && failure.status === 404) setPosts(current => current.filter(value => value.id !== post.id)); } } finally { likePending.current = false; }
+    catch (failure) { if (alive.current) { setError(t[errorKey(failure instanceof ApiError ? failure.status : 0, failure instanceof ApiError ? failure.code : undefined)]); if (failure instanceof ApiError && failure.status === 404) setPosts(current => current.filter(value => value.id !== post.id)); } } finally { likePending.current = false; }
   }
   async function share(post: Post) {
-    try { const config = await api<{ frontendUrl: string }>('/legal/config', locale); if (!alive.current) return; const link = publicPostLink(config.frontendUrl, post.id); await Share.share({ message: link ? `${post.content}\n${link}` : post.content }); } catch (failure) { if (alive.current) setError(t[errorKey(failure instanceof ApiError ? failure.status : 0)]); }
+    try { const config = await api<{ frontendUrl: string }>('/legal/config', locale); if (!alive.current) return; const link = publicPostLink(config.frontendUrl, post.id); await Share.share({ message: link ? `${post.content}\n${link}` : post.content }); } catch (failure) { if (alive.current) setError(t[errorKey(failure instanceof ApiError ? failure.status : 0, failure instanceof ApiError ? failure.code : undefined)]); }
   }
   function closeComments() { if (comments) setPosts(current => mergeReels(current, [latestPost(comments)])); setComments(null); }
   return <View style={{ flex: 1, backgroundColor: colors.page }} onLayout={event => { const next = event.nativeEvent.layout.height; if (next > 0) setHeight(next); }}>

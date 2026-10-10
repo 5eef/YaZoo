@@ -25,6 +25,7 @@ test('distributed builds reject missing, local, credential-bearing and placehold
   for (const profile of ['preview', 'production']) {
     for (const url of [undefined, 'not-a-url', 'http://api.example.org', 'https://localhost', 'https://127.0.0.1', 'https://10.0.2.2', 'https://api.example.test', 'https://api.example.org', 'https://172.16.0.1', 'https://169.254.1.1', 'https://api.unit-fixture.dev?token=fixture', 'https://api.unit-fixture.dev#fragment', 'https://user:fixture@api.example.org']) assert.throws(() => config(profile, url));
     assert.doesNotThrow(() => config(profile, 'https://api.unit-fixture.dev'));
+    assert.doesNotThrow(() => config(profile, 'https://yazoo-showcase.pages.dev/api'));
   }
   assert.doesNotThrow(() => config(undefined, undefined));
   assert.doesNotThrow(() => config('development', 'http://127.0.0.1:8000'));

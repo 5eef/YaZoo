@@ -70,12 +70,12 @@ describe('PublicListingCard', () => {
     const statusBadge = screen.getByText('Adoption')
 
     expect(professionalBadge).toHaveClass(
-      'whitespace-nowrap',
+      'whitespace-normal',
       'dark:bg-emerald-950/80',
       'dark:text-emerald-100',
     )
     expect(statusBadge).toHaveClass(
-      'whitespace-nowrap',
+      'whitespace-normal',
       'dark:bg-violet-950/80',
       'dark:text-violet-100',
     )

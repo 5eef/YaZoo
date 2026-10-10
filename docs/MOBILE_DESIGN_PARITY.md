@@ -319,3 +319,7 @@ Première commande : `adb devices -l`. Résultat : `List of devices attached` sa
 | Android Back | BLOCKED | BLOCKED |
 
 Mission non terminée : DEVICE PASS réel du header et du footer encore requis. Logcat final et installation finale BLOCKED également. Aucun commit ni push.
+
+## Identité actuelle — 10 octobre 2026
+
+Les mentions « logo historique » ci-dessus décrivent les audits du 7 octobre. L’identité actuelle provient de `docs/logo`, intégrée Web/Android sans modification artistique : [mapping](BRAND_ASSETS.md). Le shell conserve ses dimensions et ses tokens ; l’entrée est désormais un composant dédié avec logo centré puis transition verticale vers Login/Register, langue automatique du téléphone, RTL et Reduce Motion. Une session restaurée n’affiche pas Login. La QA physique de cette nouvelle entrée (clavier, TalkBack, grandes polices) reste à réaliser par le propriétaire ; aucune vérification téléphone n’a été exécutée pendant cette migration.
