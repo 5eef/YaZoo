@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\MediaStorage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -33,6 +34,11 @@ class HealthController extends Controller
                 (bool) config('operations.require_scheduler_heartbeat'),
             ),
             'persistentStorage' => $this->checkPersistentStorage(),
+            'mediaStorage' => [
+                'ok' => ! config('operations.showcase_uploads_enabled') || MediaStorage::persistentUploadsConfigured(),
+                'media_driver' => config('media.driver'),
+                'media_storage' => MediaStorage::persistentUploadsConfigured() ? 'ready' : 'not_ready',
+            ],
             'reverb' => $this->checkReverb(),
         ];
 

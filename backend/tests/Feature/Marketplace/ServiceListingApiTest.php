@@ -13,6 +13,30 @@ class ServiceListingApiTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_partial_service_update_preserves_omitted_type_description_and_contact(): void
+    {
+        $owner = User::factory()->approvedProfessional('service_provider')->create();
+        $service = ServiceListing::factory()->create([
+            'user_id' => $owner->id,
+            'type' => 'pet_sitting',
+            'title' => 'QA original',
+            'description' => 'QA preserved description',
+            'contact_visibility' => 'phone',
+            'contact_phone' => '+212600000000',
+            'price_type' => 'fixed',
+        ]);
+        Sanctum::actingAs($owner, ['*']);
+
+        $this->patchJson("/api/services/{$service->id}", ['title' => 'QA updated'])
+            ->assertOk()
+            ->assertJsonPath('data.title', 'QA updated')
+            ->assertJsonPath('data.type', 'pet_sitting')
+            ->assertJsonPath('data.description', 'QA preserved description')
+            ->assertJsonPath('data.contactVisibility', 'phone')
+            ->assertJsonPath('data.contactPhone', '+212600000000')
+            ->assertJsonPath('data.priceType', 'fixed');
+    }
+
     public function test_approved_trainer_can_create_update_list_and_delete_a_service(): void
     {
         $admin = User::factory()->admin()->create();

@@ -6,6 +6,7 @@ use App\Contracts\MediaScanner;
 use App\Events\UserNotificationCreated;
 use App\Notifications\NewMessageNotification;
 use App\Services\Media\UnavailableMediaScanner;
+use App\Support\MediaStorage;
 use App\Support\PhoneNumber;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
@@ -13,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Notifications\Events\NotificationSent;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
@@ -32,6 +34,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Storage::extend('r2', fn ($app, $config) => MediaStorage::createR2Disk($config));
         if ($this->app->isProduction() || (bool) config('app.force_https')) {
             URL::forceScheme('https');
         }

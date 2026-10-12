@@ -58,4 +58,21 @@ describe('VeterinarianAppointmentsPage', () => {
       expect(appointmentsApi.reviewVeterinarianAppointmentRequest).toHaveBeenCalledWith(17, { rating: 2 })
     })
   })
+
+  it('verrouille une mutation en cours et conserve la note après une erreur 422', async () => {
+    const user = userEvent.setup()
+    let rejectRequest
+    appointmentsApi.reviewVeterinarianAppointmentRequest.mockReturnValueOnce(new Promise((resolve, reject) => { rejectRequest = reject }))
+    render(<MemoryRouter><I18nProvider><VeterinarianAppointmentsPage /></I18nProvider></MemoryRouter>)
+    const rating = await screen.findByRole('combobox', { name: 'Note' })
+    await user.selectOptions(rating, '3')
+    const submit = screen.getByRole('button', { name: 'Publier la note' })
+    await user.dblClick(submit)
+    expect(appointmentsApi.reviewVeterinarianAppointmentRequest).toHaveBeenCalledTimes(1)
+    expect(submit).toBeDisabled()
+    rejectRequest({ response: { status: 422, data: { errors: { rating: ['Note refusée par le serveur.'] } } } })
+    expect(await screen.findByRole('alert')).toHaveTextContent('Note refusée par le serveur.')
+    await waitFor(() => expect(submit).not.toBeDisabled())
+    expect(rating).toHaveValue('3')
+  })
 })

@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\MediaAsset;
 use App\Models\ProfessionalVerification;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Storage;
@@ -30,6 +31,7 @@ class PurgeExpiredProfessionalVerificationDocuments extends Command
                 foreach ($verifications as $verification) {
                     $scanned++;
                     $path = (string) $verification->document_path;
+                    $objectDisk = str_starts_with($path, 'private/') ? 'r2' : ($disk === 'r2' ? 'private' : $disk);
 
                     if (! $this->isSafeDocumentPath($path)) {
                         $this->warn("Skipped unsafe path for verification {$verification->id}.");
@@ -37,8 +39,8 @@ class PurgeExpiredProfessionalVerificationDocuments extends Command
                         continue;
                     }
 
-                    if (! $dryRun && Storage::disk($disk)->exists($path)) {
-                        if (! Storage::disk($disk)->delete($path)) {
+                    if (! $dryRun && Storage::disk($objectDisk)->exists($path)) {
+                        if (! Storage::disk($objectDisk)->delete($path)) {
                             $failed++;
                             $this->error("Storage deletion failed for verification {$verification->id}.");
 
@@ -49,6 +51,8 @@ class PurgeExpiredProfessionalVerificationDocuments extends Command
                     }
 
                     if (! $dryRun) {
+                        MediaAsset::query()->where('attachable_type', $verification->getMorphClass())
+                            ->where('attachable_id', $verification->id)->where('path', $path)->delete();
                         $verification->forceFill([
                             'document_path' => null,
                             'document_size' => null,
@@ -76,6 +80,7 @@ class PurgeExpiredProfessionalVerificationDocuments extends Command
         return $normalized !== ''
             && ! str_contains($normalized, "\0")
             && ! str_contains($normalized, '../')
-            && str_starts_with($normalized, 'professional-verifications/');
+            && (str_starts_with($normalized, 'professional-verifications/')
+                || str_starts_with($normalized, 'private/professional-verifications/'));
     }
 }

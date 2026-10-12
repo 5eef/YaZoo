@@ -2,10 +2,18 @@
 
 namespace App\Http\Requests\Community;
 
+use App\Http\Requests\Concerns\PreservesPartialInput;
 use App\Models\Community;
 
 class UpdateCommunityRequest extends StoreCommunityRequest
 {
+    use PreservesPartialInput;
+
+    public function rules(): array
+    {
+        return $this->partialRules(parent::rules());
+    }
+
     /**
      * Determine if the user is authorized to make this request.
      */

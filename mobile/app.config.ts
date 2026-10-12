@@ -14,6 +14,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash || /^[\d.]+$/.test(host) || host.startsWith('[') || /^(localhost|127\.|0\.|10\.|192\.168\.|\[::1\])/.test(host) || /\.(test|invalid|example|localhost)$/.test(host) || /(^|\.)example\.(com|org|net)$/.test(host)) {
       throw new Error('EXPO_PUBLIC_API_URL must be a real HTTPS API for distributed builds');
     }
+    if (url.href.replace(/\/+$/, '') !== 'https://yazoo-showcase.pages.dev/api') {
+      throw new Error('Distributed YaZoo builds require the official Cloudflare API');
+    }
   }
   return withGradleProperties({ ...config, name: config.name || 'YaZoo', slug: config.slug || 'yazoo-pilot' }, mod => {
     const properties = { 'org.gradle.jvmargs': '-Xmx4096m -XX:MaxMetaspaceSize=1536m', 'org.gradle.workers.max': '2' };

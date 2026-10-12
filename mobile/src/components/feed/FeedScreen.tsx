@@ -1,5 +1,5 @@
 import { SearchBar } from './SearchBar';
-import { ApiError, errorKey } from '../../api/errors';
+import { ApiError, failureKey } from '../../api/errors';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import { api } from '../../api/client';
@@ -62,7 +62,7 @@ export function FeedScreen(props: Props) {
     const value = query.trim();
     if (value.length < 2) return;
     let active = true;
-    const timer = setTimeout(() => { setSearching(true); setSearchError(''); void Promise.allSettled([api<{ data: SearchResults }>(`/search?q=${encodeURIComponent(value)}&type=all`, locale), api<Collection<Vet>>(`/veterinarians?specialty=${encodeURIComponent(value.charAt(0).toLocaleUpperCase(locale) + value.slice(1))}&per_page=8`, locale)]).then(([search, specialties]) => { if (search.status === 'rejected') throw search.reason; const response = search.value; if (active && searchVersion.current === version) setResults({ ...response.data, veterinarians: mergeProfessionals(response.data.veterinarians || [], specialties.status === 'fulfilled' ? specialties.value.data : []) }); }).catch(failure => { if (__DEV__) console.warn('[YaZoo search]', failure instanceof ApiError ? failure.status : 'invalid response'); if (active && searchVersion.current === version) setSearchError(t(errorKey(failure instanceof ApiError ? failure.status : 0, failure instanceof ApiError ? failure.code : undefined))); }).finally(() => { if (active && searchVersion.current === version) setSearching(false); }); }, 300);
+    const timer = setTimeout(() => { setSearching(true); setSearchError(''); void Promise.allSettled([api<{ data: SearchResults }>(`/search?q=${encodeURIComponent(value)}&type=all`, locale), api<Collection<Vet>>(`/veterinarians?specialty=${encodeURIComponent(value.charAt(0).toLocaleUpperCase(locale) + value.slice(1))}&per_page=8`, locale)]).then(([search, specialties]) => { if (search.status === 'rejected') throw search.reason; const response = search.value; if (active && searchVersion.current === version) setResults({ ...response.data, veterinarians: mergeProfessionals(response.data.veterinarians || [], specialties.status === 'fulfilled' ? specialties.value.data : []) }); }).catch(failure => { if (__DEV__) console.warn('[YaZoo search]', failure instanceof ApiError ? failure.status : 'invalid response'); if (active && searchVersion.current === version) setSearchError(t(failureKey(failure))); }).finally(() => { if (active && searchVersion.current === version) setSearching(false); }); }, 300);
     return () => { clearTimeout(timer); active = false; };
   }, [query, locale]); // eslint-disable-line react-hooks/exhaustive-deps -- translations are selected by locale, not by the render-time function
   async function refresh() {

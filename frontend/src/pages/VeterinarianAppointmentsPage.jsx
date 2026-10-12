@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router'
 
 import {
@@ -28,6 +28,22 @@ function VeterinarianAppointmentsPage() {
   const [endsAt, setEndsAt] = useState('')
   const [message, setMessage] = useState('')
   const [ratings, setRatings] = useState({})
+  const mutationLock = useRef(false)
+  const [pending, setPending] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState({})
+  const beginMutation = () => {
+    if (mutationLock.current) return false
+    mutationLock.current = true
+    setPending(true)
+    setFieldErrors({})
+    setMessage('')
+    return true
+  }
+  const endMutation = () => { mutationLock.current = false; setPending(false) }
+  const showFailure = (error) => {
+    setFieldErrors(error?.response?.status === 422 ? error.response.data?.errors ?? {} : {})
+    setMessage(getErrorMessage(error, t('vetAppointments.actionError')))
+  }
 
   const load = async () => {
     const response = await listVeterinarianAppointmentsRequest()
@@ -45,9 +61,10 @@ function VeterinarianAppointmentsPage() {
 
   const submitAppointment = async (event) => {
     event.preventDefault()
+    if (!beginMutation()) return
     try {
       await createVeterinarianAppointmentRequest(veterinarianId, {
-        availability_slot_id: Number(selection), animal_type: animalType, reason,
+        availability_slot_id: Number(selection), animal_type: animalType.trim(), reason: reason.trim(),
       })
       setMessage(t('vetAppointments.requested'))
       setSelection('')
@@ -55,12 +72,13 @@ function VeterinarianAppointmentsPage() {
       setReason('')
       await load()
     } catch (error) {
-      setMessage(getErrorMessage(error, t('vetAppointments.actionError')))
-    }
+      showFailure(error)
+    } finally { endMutation() }
   }
 
   const submitSlot = async (event) => {
     event.preventDefault()
+    if (!beginMutation()) return
     try {
       await createVeterinarianAvailabilityRequest(veterinarianId, {
         starts_at: new Date(startsAt).toISOString(), ends_at: new Date(endsAt).toISOString(),
@@ -70,28 +88,30 @@ function VeterinarianAppointmentsPage() {
       setMessage(t('vetAppointments.slotCreated'))
       await load()
     } catch (error) {
-      setMessage(getErrorMessage(error, t('vetAppointments.actionError')))
-    }
+      showFailure(error)
+    } finally { endMutation() }
   }
 
   const updateStatus = async (id, status) => {
+    if (!beginMutation()) return
     try {
       await updateVeterinarianAppointmentStatusRequest(id, { status })
       setMessage(t('vetAppointments.updated'))
       await load()
     } catch (error) {
-      setMessage(getErrorMessage(error, t('vetAppointments.actionError')))
-    }
+      showFailure(error)
+    } finally { endMutation() }
   }
 
   const review = async (id) => {
+    if (!beginMutation()) return
     try {
       await reviewVeterinarianAppointmentRequest(id, { rating: Number(ratings[id] ?? 5) })
       setMessage(t('vetAppointments.reviewed'))
       await load()
     } catch (error) {
-      setMessage(getErrorMessage(error, t('vetAppointments.actionError')))
-    }
+      showFailure(error)
+    } finally { endMutation() }
   }
 
   return (
@@ -110,12 +130,12 @@ function VeterinarianAppointmentsPage() {
             </select>
           </label>
           <label className="text-sm text-stone-700 dark:text-violet-100">{t('vetAppointments.animalType')}
-            <input required value={animalType} onChange={(event) => setAnimalType(event.target.value)} className="mt-2 w-full rounded-2xl border border-violet-200 bg-white px-4 py-3 dark:bg-stone-950" />
+            <input required maxLength={80} aria-invalid={Boolean(fieldErrors.animal_type)} value={animalType} onChange={(event) => setAnimalType(event.target.value)} className="mt-2 w-full rounded-2xl border border-violet-200 bg-white px-4 py-3 dark:bg-stone-950" />
           </label>
           <label className="text-sm text-stone-700 dark:text-violet-100 md:col-span-2">{t('vetAppointments.reason')}
-            <textarea required maxLength={500} value={reason} onChange={(event) => setReason(event.target.value)} className="mt-2 w-full rounded-2xl border border-violet-200 bg-white px-4 py-3 dark:bg-stone-950" />
+            <textarea required aria-invalid={Boolean(fieldErrors.reason)} maxLength={500} value={reason} onChange={(event) => setReason(event.target.value)} className="mt-2 w-full rounded-2xl border border-violet-200 bg-white px-4 py-3 dark:bg-stone-950" />
           </label>
-          <Button type="submit" disabled={!selection}>{t('vetAppointments.request')}</Button>
+          <Button type="submit" disabled={pending || !selection}>{t('vetAppointments.request')}</Button>
         </form>
       ) : null}
 
@@ -123,10 +143,11 @@ function VeterinarianAppointmentsPage() {
         <form onSubmit={submitSlot} className="grid gap-4 rounded-[28px] bg-white/90 p-5 dark:bg-white/8 md:grid-cols-2">
           <label className="text-sm text-stone-700 dark:text-violet-100">{t('vetAppointments.startsAt')}<input required type="datetime-local" value={startsAt} onChange={(event) => setStartsAt(event.target.value)} className="mt-2 w-full rounded-2xl border border-violet-200 bg-white px-4 py-3 dark:bg-stone-950" /></label>
           <label className="text-sm text-stone-700 dark:text-violet-100">{t('vetAppointments.endsAt')}<input required type="datetime-local" value={endsAt} onChange={(event) => setEndsAt(event.target.value)} className="mt-2 w-full rounded-2xl border border-violet-200 bg-white px-4 py-3 dark:bg-stone-950" /></label>
-          <Button type="submit">{t('vetAppointments.addSlot')}</Button>
+          <Button type="submit" disabled={pending}>{t('vetAppointments.addSlot')}</Button>
         </form>
       ) : null}
 
+      {Object.entries(fieldErrors).map(([field, errors]) => <p key={field} role="alert" className="text-sm text-red-700 dark:text-red-200">{Array.isArray(errors) ? errors.join(' ') : String(errors)}</p>)}
       <div aria-live="polite" className="text-sm text-violet-800 dark:text-violet-100">{message}</div>
       <div className="grid gap-4">
         {appointments.map((appointment) => (
@@ -136,9 +157,9 @@ function VeterinarianAppointmentsPage() {
             <p className="mt-1 text-sm text-stone-700 dark:text-violet-100">{appointment.reason}</p>
             <p className="mt-2 text-xs font-semibold uppercase text-violet-700">{t(`vetAppointments.status.${appointment.status}`)}</p>
             <div className="mt-3 flex flex-wrap gap-2">
-              {appointment.canManage && appointment.status === 'pending' ? <Button type="button" onClick={() => updateStatus(appointment.id, 'confirmed')}>{t('vetAppointments.confirm')}</Button> : null}
-              {appointment.canCancel ? <Button type="button" variant="ghost" onClick={() => updateStatus(appointment.id, 'cancelled')}>{t('common.cancel')}</Button> : null}
-              {appointment.canManage && appointment.status === 'confirmed' ? <Button type="button" variant="secondary" onClick={() => updateStatus(appointment.id, 'completed')}>{t('vetAppointments.complete')}</Button> : null}
+              {appointment.canManage && appointment.status === 'pending' ? <Button type="button" disabled={pending} onClick={() => updateStatus(appointment.id, 'confirmed')}>{t('vetAppointments.confirm')}</Button> : null}
+              {appointment.canCancel ? <Button type="button" disabled={pending} variant="ghost" onClick={() => updateStatus(appointment.id, 'cancelled')}>{t('common.cancel')}</Button> : null}
+              {appointment.canManage && appointment.status === 'confirmed' && new Date(appointment.endsAt).getTime() < Date.now() ? <Button type="button" disabled={pending} variant="secondary" onClick={() => updateStatus(appointment.id, 'completed')}>{t('vetAppointments.complete')}</Button> : null}
               {appointment.canReview ? (
                 <div className="flex items-center gap-2">
                   <label htmlFor={`appointment-rating-${appointment.id}`} className="text-sm font-medium text-stone-700 dark:text-violet-100">
@@ -152,7 +173,7 @@ function VeterinarianAppointmentsPage() {
                   >
                     {[1, 2, 3, 4, 5].map((rating) => <option key={rating} value={rating}>{rating}</option>)}
                   </select>
-                  <Button type="button" variant="secondary" onClick={() => review(appointment.id)}>{t('vetAppointments.review')}</Button>
+                  <Button type="button" disabled={pending} variant="secondary" onClick={() => review(appointment.id)}>{t('vetAppointments.review')}</Button>
                 </div>
               ) : null}
             </div>

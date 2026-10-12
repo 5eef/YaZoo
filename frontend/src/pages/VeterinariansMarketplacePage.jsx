@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { createVeterinarianRequest, listVeterinariansRequest } from '../api/veterinarians'
+import { uploadError } from '../utils/uploadValidation'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createVeterinarianRequest, listVeterinariansRequest, updateVeterinarianRequest, deleteVeterinarianRequest } from '../api/veterinarians'
+import OwnerListingActions from '../components/marketplace/OwnerListingActions'
 import VeterinarianCard from '../components/marketplace/VeterinarianCard'
 import { Field, MarketplaceHero, QuickFilterChips } from '../components/marketplace/MarketplaceCommon'
 import Button from '../components/ui/Button'
@@ -30,6 +32,8 @@ const initialForm = {
 function VeterinariansMarketplacePage() {
   const { t } = useI18n()
   const { isAuthenticated } = useAuth()
+  const mutationLock = useRef(false)
+  const [editingId, setEditingId] = useState(null)
   const [veterinarians, setVeterinarians] = useState([])
   const [filters, setFilters] = useState({ search: '', city: '', specialty: '' })
   const [appliedFilters, setAppliedFilters] = useState(filters)
@@ -116,6 +120,9 @@ function VeterinariansMarketplacePage() {
 
   const handleSubmit = async (event) => {
     event.preventDefault()
+    if (mutationLock.current) return
+    const uploadIssue = uploadError(imageFile)
+    if (uploadIssue) { setFormError(t(uploadIssue)); return }
     setFormError('')
     setSuccessMessage('')
 
@@ -153,18 +160,24 @@ function VeterinariansMarketplacePage() {
       payload.append('image', imageFile)
     }
 
+    mutationLock.current = true
     setIsSubmitting(true)
 
     try {
-      await createVeterinarianRequest(payload)
+      if (editingId) {
+        if (imageFile) { payload.set('_method', 'PATCH'); await updateVeterinarianRequest(editingId, payload) }
+        else await updateVeterinarianRequest(editingId, { ...Object.fromEntries(Object.entries(form).filter(([key]) => !['specialties', 'working_hours'].includes(key)).map(([key, value]) => [key, String(value ?? '').trim() || null])), specialties: splitList(form.specialties), working_hours: splitList(form.working_hours) })
+      } else await createVeterinarianRequest(payload)
+      setEditingId(null)
       await refreshVeterinarians()
       setForm(initialForm)
       setImageFile(null)
       setIsCreateOpen(false)
-      setSuccessMessage(t('veterinarians.created'))
+      setSuccessMessage(t(editingId ? 'veterinarians.updated' : 'veterinarians.created'))
     } catch (error) {
       setFormError(getErrorMessage(error, t('veterinarians.createError')))
     } finally {
+      mutationLock.current = false
       setIsSubmitting(false)
     }
   }
@@ -206,18 +219,19 @@ function VeterinariansMarketplacePage() {
             showLabel={t('veterinarians.addListing')}
             hideLabel={t('creation.hideForm')}
           >
+            {editingId ? <Button type="button" disabled={isSubmitting} variant="ghost" onClick={() => { setEditingId(null); setForm(initialForm); setImageFile(null) }}>{t('common.cancel')}</Button> : null}
             <form className="space-y-4" onSubmit={handleSubmit}>
             <div className="grid gap-3 md:grid-cols-2">
-              <Field label={t('veterinarians.name')} value={form.name} onChange={handleFormChange('name')} required />
-              <Field label={t('veterinarians.clinicName')} value={form.clinic_name} onChange={handleFormChange('clinic_name')} />
-              <Field label={t('veterinarians.city')} value={form.city} onChange={handleFormChange('city')} />
-              <Field label={t('veterinarians.address')} value={form.address} onChange={handleFormChange('address')} />
-              <Field label={t('veterinarians.phone')} value={form.phone} onChange={handleFormChange('phone')} dir="ltr" />
-              <Field label={t('veterinarians.whatsapp')} value={form.whatsapp} onChange={handleFormChange('whatsapp')} dir="ltr" />
-              <Field label={t('veterinarians.email')} type="email" value={form.email} onChange={handleFormChange('email')} dir="ltr" />
+              <Field label={t('veterinarians.name')} maxLength={255} value={form.name} onChange={handleFormChange('name')} required />
+              <Field label={t('veterinarians.clinicName')} maxLength={255} value={form.clinic_name} onChange={handleFormChange('clinic_name')} />
+              <Field label={t('veterinarians.city')} maxLength={120} value={form.city} onChange={handleFormChange('city')} />
+              <Field label={t('veterinarians.address')} maxLength={500} value={form.address} onChange={handleFormChange('address')} />
+              <Field label={t('veterinarians.phone')} maxLength={50} value={form.phone} onChange={handleFormChange('phone')} dir="ltr" />
+              <Field label={t('veterinarians.whatsapp')} maxLength={50} value={form.whatsapp} onChange={handleFormChange('whatsapp')} dir="ltr" />
+              <Field label={t('veterinarians.email')} type="email" maxLength={255} value={form.email} onChange={handleFormChange('email')} dir="ltr" />
               <Field label={t('veterinarians.specialties')} value={form.specialties} onChange={handleFormChange('specialties')} placeholder={t('veterinarians.specialtiesPlaceholder')} />
               <Field label={t('veterinarians.workingHours')} value={form.working_hours} onChange={handleFormChange('working_hours')} placeholder={t('veterinarians.workingHoursPlaceholder')} />
-              <Field label={t('veterinarians.locationUrl')} type="url" value={form.location_url} onChange={handleFormChange('location_url')} dir="ltr" />
+              <Field label={t('veterinarians.locationUrl')} type="url" maxLength={1000} value={form.location_url} onChange={handleFormChange('location_url')} dir="ltr" />
               <Field label={t('veterinarians.latitude')} value={form.latitude} onChange={handleFormChange('latitude')} dir="ltr" />
               <Field label={t('veterinarians.longitude')} value={form.longitude} onChange={handleFormChange('longitude')} dir="ltr" />
             </div>
@@ -227,7 +241,7 @@ function VeterinariansMarketplacePage() {
               </span>
               <input
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp"
                 onChange={(event) => setImageFile(event.target.files?.[0] ?? null)}
                 className="w-full rounded-2xl border border-violet-100 bg-violet-50/55 px-4 py-3 text-sm text-stone-700 file:me-4 file:rounded-full file:border-0 file:bg-[linear-gradient(135deg,#7c3aed,#a855f7)] file:px-4 file:py-2 file:text-sm file:font-medium file:text-white dark:border-violet-300/18 dark:bg-white/10 dark:text-violet-50"
               />
@@ -237,7 +251,7 @@ function VeterinariansMarketplacePage() {
                 {t('veterinarians.description')}
               </span>
               <textarea
-                value={form.description}
+                maxLength={3000} value={form.description}
                 onChange={handleFormChange('description')}
                 rows={4}
                 className="w-full rounded-2xl border border-violet-100 bg-violet-50/55 px-4 py-3 text-sm text-stone-700 outline-none transition focus:border-violet-400 focus:bg-white dark:border-violet-300/18 dark:bg-white/10 dark:text-violet-50"
@@ -251,7 +265,7 @@ function VeterinariansMarketplacePage() {
                 {t('common.cancel')}
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? t('common.sending') : t('veterinarians.create')}
+                {isSubmitting ? t('common.sending') : t(editingId ? 'common.save' : 'veterinarians.create')}
               </Button>
             </div>
             </form>
@@ -327,7 +341,16 @@ function VeterinariansMarketplacePage() {
 
       <div className="grid min-w-0 gap-4 lg:grid-cols-2">
         {veterinarians.map((veterinarian) => (
-          <VeterinarianCard key={veterinarian.id} veterinarian={veterinarian} />
+          <div key={veterinarian.id}>
+            <VeterinarianCard veterinarian={veterinarian} />
+            {veterinarian.isOwner ? <OwnerListingActions disabled={isSubmitting} onEdit={() => {
+              setEditingId(veterinarian.id)
+              setForm({ ...initialForm, name: veterinarian.name, clinic_name: veterinarian.clinicName ?? '', description: veterinarian.description ?? '', city: veterinarian.city ?? '', address: veterinarian.address ?? '', phone: veterinarian.phone ?? '', whatsapp: veterinarian.whatsapp ?? '', email: veterinarian.email ?? '', specialties: (veterinarian.specialties ?? []).join(', '), working_hours: (veterinarian.workingHours ?? []).join(', '), latitude: veterinarian.latitude ?? '', longitude: veterinarian.longitude ?? '', location_url: veterinarian.locationUrl ?? '' })
+              setImageFile(null)
+              setIsCreateOpen(true)
+              createPanelRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
+            }} onDelete={async () => { await deleteVeterinarianRequest(veterinarian.id); setVeterinarians(current => current.filter(item => item.id !== veterinarian.id)); if (editingId === veterinarian.id) { setEditingId(null); setForm(initialForm); setImageFile(null) } }} /> : null}
+          </div>
         ))}
       </div>
     </section>

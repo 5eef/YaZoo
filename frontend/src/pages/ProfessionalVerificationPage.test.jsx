@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -16,6 +16,21 @@ vi.mock('../api/professionalVerifications', () => ({
 }))
 
 describe('ProfessionalVerificationPage', () => {
+  it('blocks duplicate submits and preserves the form after a validation failure', async () => {
+    let reject
+    createProfessionalVerificationRequest.mockImplementation(() => new Promise((_resolve, fail) => { reject = fail }))
+    render(<MemoryRouter><I18nProvider><ProfessionalVerificationPage /></I18nProvider></MemoryRouter>)
+    await screen.findByLabelText(/type d.*activit/i)
+    const form = document.querySelector('form')
+    const input = form.querySelector('input')
+    fireEvent.change(input, { target: { value: 'QA retained' } })
+    fireEvent.submit(form)
+    fireEvent.submit(form)
+    expect(createProfessionalVerificationRequest).toHaveBeenCalledTimes(1)
+    await act(async () => reject({ response: { status: 422, data: { errors: { legal_name: ['QA validation'] } } } }))
+    await waitFor(() => expect(screen.getByDisplayValue('QA retained')).toBeInTheDocument())
+    expect(screen.getByText('QA validation')).toBeInTheDocument()
+  })
   beforeEach(() => {
     vi.clearAllMocks()
     localStorage.setItem('yazoo-locale', 'fr')

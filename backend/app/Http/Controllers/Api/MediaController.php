@@ -3,14 +3,18 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Community;
 use App\Models\MediaAsset;
 use App\Models\Post;
+use App\Models\Story;
 use App\Support\ByteRange;
 use App\Support\ContentVisibility;
 use App\Support\MediaStorage;
+use App\Support\StoredMediaResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -25,6 +29,9 @@ class MediaController extends Controller
         abort_unless(is_string($path) && $path !== '' && ! str_contains($path, '..') && ! str_starts_with($path, '/') && ! preg_match('#^https?://#i', $path), Response::HTTP_NOT_FOUND);
         $asset = MediaAsset::query()->where('attachable_type', $post->getMorphClass())->where('attachable_id', $post->id)->where('path', $path)->first();
         abort_if($asset && ! in_array($asset->state, [MediaAsset::STATE_ACTIVE, MediaAsset::STATE_CLEAN], true), Response::HTTP_NOT_FOUND);
+        if ($asset?->disk === 'r2') {
+            return StoredMediaResponse::make('r2', $path, $asset->mime_type, $asset->original_name ?: basename($path));
+        }
         if (MediaStorage::isMongoReference($path)) {
             abort_unless($asset, Response::HTTP_NOT_FOUND);
 
@@ -51,8 +58,24 @@ class MediaController extends Controller
     {
         $asset = $this->resolveAsset($fileId, MediaAsset::VISIBILITY_PUBLIC);
         abort_if($asset->attachable_type === (new Post)->getMorphClass(), Response::HTTP_NOT_FOUND);
+        if ($asset->disk === 'r2' && $asset->attachable_type) {
+            $subject = $asset->attachable;
+            abort_unless($subject, 404);
+            $viewer = request()->user('sanctum');
+            if (method_exists($subject, 'isPubliclyVisible') && ! $subject->isPubliclyVisible()) {
+                abort_unless($viewer && ($viewer->is_admin || (int) $viewer->id === (int) $asset->owner_id), 404);
+            }
+            if ($subject instanceof Story) {
+                abort_if($subject->expires_at->isPast(), 404);
+            }
+            if ($subject instanceof Community && $subject->is_private) {
+                abort_unless($viewer && Community::query()->visibleTo($viewer)->whereKey($subject->id)->exists(), 404);
+            }
+        }
 
-        return $this->stream($asset, $fileId);
+        return $asset->disk === 'r2'
+            ? StoredMediaResponse::make('r2', $asset->path, $asset->mime_type, $asset->original_name ?: basename($asset->path))
+            : $this->stream($asset, $fileId);
     }
 
     /**
@@ -66,11 +89,24 @@ class MediaController extends Controller
             Response::HTTP_NOT_FOUND,
         );
 
-        return $this->stream($asset, $fileId);
+        return $asset->disk === 'r2'
+            ? StoredMediaResponse::make('r2', $asset->path, $asset->mime_type, $asset->original_name ?: basename($asset->path))
+            : $this->stream($asset, $fileId);
     }
 
     private function resolveAsset(string $fileId, string $visibility): MediaAsset
     {
+        if (Str::isUuid($fileId)) {
+            $asset = MediaAsset::query()->whereKey($fileId)->where('disk', 'r2')
+                ->where('visibility', $visibility)
+                ->whereIn('state', [MediaAsset::STATE_ACTIVE, MediaAsset::STATE_CLEAN])->first();
+            abort_if($asset === null, 404);
+
+            // Documents have their own authorization/MFA protected download route.
+            abort_if($asset->kind === 'document', 404);
+
+            return $asset;
+        }
         $path = 'mongodb:'.$fileId;
         $asset = MediaAsset::query()
             ->where('disk', 'mongodb')

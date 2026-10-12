@@ -30,6 +30,23 @@ return [
 
     'disks' => [
 
+        // Private bucket: object URLs are never exposed by the application.
+        'r2' => [
+            'driver' => 'r2',
+            'key' => env('R2_ACCESS_KEY_ID'),
+            'secret' => env('R2_SECRET_ACCESS_KEY'),
+            'region' => env('R2_REGION', 'auto'),
+            'bucket' => env('R2_BUCKET'),
+            'endpoint' => env('R2_ENDPOINT'),
+            'use_path_style_endpoint' => true,
+            'visibility' => 'private',
+            'throw' => true,
+            'report' => false,
+            'request_checksum_calculation' => 'when_required',
+            'response_checksum_validation' => 'when_required',
+            'http' => ['connect_timeout' => 5, 'timeout' => 60],
+        ],
+
         'local' => [
             'driver' => 'local',
             'root' => storage_path('app/private'),

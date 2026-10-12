@@ -46,11 +46,11 @@ function AnimalListingForm({
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <Field label={t('common.name')} value={form.name} onChange={onFormChange('name')} />
+        <Field label={t('common.name')} maxLength={150} required value={form.name} onChange={onFormChange('name')} />
         <SelectField label={t('common.category')} value={form.category} onChange={onFormChange('category')} options={animalFormCategoryOptions} />
-        <Field label={t('common.type')} value={form.type} onChange={onFormChange('type')} />
-        <Field label={t('common.breed')} value={form.breed} onChange={onFormChange('breed')} />
-        <Field label={t('common.age')} type="number" min="0" value={form.age} onChange={onFormChange('age')} />
+        <Field label={t('common.type')} maxLength={100} required value={form.type} onChange={onFormChange('type')} />
+        <Field label={t('common.breed')} maxLength={150} value={form.breed} onChange={onFormChange('breed')} />
+        <Field label={t('common.age')} type="number" min="0" max="100" step="1" value={form.age} onChange={onFormChange('age')} />
         <SelectField
           label={t('common.sex')}
           value={form.sex}
@@ -61,7 +61,7 @@ function AnimalListingForm({
             { value: 'unknown', labelKey: 'animals.labels.unknown' },
           ]}
         />
-        <Field label={t('feed.location')} value={form.location} onChange={onFormChange('location')} />
+        <Field label={t('feed.location')} maxLength={150} required value={form.location} onChange={onFormChange('location')} />
         <SelectField
           label={t('marketplaceContact.visibilityLabel')}
           value={form.contact_visibility}
@@ -69,17 +69,17 @@ function AnimalListingForm({
           options={contactVisibilityOptions}
         />
         {['phone', 'whatsapp'].includes(form.contact_visibility) ? (
-          <Field label={t('marketplaceContact.phoneLabel')} value={form.contact_phone} onChange={onFormChange('contact_phone')} required />
+          <Field label={t('marketplaceContact.phoneLabel')} maxLength={50} value={form.contact_phone} onChange={onFormChange('contact_phone')} required />
         ) : null}
         {form.contact_visibility === 'email' ? (
-          <Field label={t('marketplaceContact.emailLabel')} type="email" value={form.contact_email} onChange={onFormChange('contact_email')} required />
+          <Field label={t('marketplaceContact.emailLabel')} type="email" maxLength={255} value={form.contact_email} onChange={onFormChange('contact_email')} required />
         ) : null}
-        <Field label={t('common.price')} type="number" min="0" step="0.01" value={form.price} onChange={onFormChange('price')} />
+        <Field label={t('common.price')} type="number" min="0" max="999999.99" step="0.01" value={form.price} onChange={onFormChange('price')} />
         <SelectField label={t('common.status')} value={form.listing_status} onChange={onFormChange('listing_status')} options={animalFormStatusOptions} />
         <SelectField label={t('animals.sellerType')} value={form.seller_type} onChange={onFormChange('seller_type')} options={animalSellerTypeOptions} />
-        <Field label={t('animals.origin')} value={form.origin} onChange={onFormChange('origin')} />
-        <Field label={t('animals.identificationNumber')} value={form.identification_number} onChange={onFormChange('identification_number')} />
-        <Field label={t('animals.onssaAuthorizationNumber')} value={form.onssa_authorization_number} onChange={onFormChange('onssa_authorization_number')} />
+        <Field label={t('animals.origin')} maxLength={190} value={form.origin} onChange={onFormChange('origin')} />
+        <Field label={t('animals.identificationNumber')} maxLength={120} value={form.identification_number} onChange={onFormChange('identification_number')} />
+        <Field label={t('animals.onssaAuthorizationNumber')} maxLength={100} value={form.onssa_authorization_number} onChange={onFormChange('onssa_authorization_number')} />
       </div>
 
       <p className="mt-3 rounded-[20px] border border-violet-200 bg-violet-50/80 px-4 py-3 text-sm text-violet-950 dark:border-violet-300/18 dark:bg-violet-400/10 dark:text-violet-100">
@@ -123,8 +123,8 @@ function AnimalListingForm({
       </label>
 
       <div className="mt-4 grid gap-4 md:grid-cols-2">
-        <FileField label={t('animals.mainImage')} accept="image/*" onChange={(event) => onPhotoFileChange(event.target.files?.[0] ?? null)} />
-        <FileField label={t('animals.gallery')} accept="image/*" multiple onChange={(event) => onGalleryFilesChange(Array.from(event.target.files ?? []))} />
+        <FileField label={t('animals.mainImage')} accept="image/jpeg,image/png,image/webp" onChange={(event) => onPhotoFileChange(event.target.files?.[0] ?? null)} />
+        <FileField label={t('animals.gallery')} accept="image/jpeg,image/png,image/webp" multiple onChange={(event) => onGalleryFilesChange(Array.from(event.target.files ?? []))} />
       </div>
 
       <SelectedFiles photoFile={photoFile} galleryFiles={galleryFiles} t={t} />
@@ -134,6 +134,7 @@ function AnimalListingForm({
         <span className="mb-2 block text-sm font-medium text-stone-700 dark:text-violet-100">{t('common.description')}</span>
         <textarea
           rows={4}
+          maxLength={5000}
           value={form.description}
           onChange={onFormChange('description')}
           required

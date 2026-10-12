@@ -1,6 +1,6 @@
 import { ReelsScreen } from './src/components/reels/ReelsScreen';
 import { Stack, router, usePathname, type Href } from 'expo-router';
-import React, { createContext, useCallback, useContext, useEffect, useEffectEvent, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, I18nManager, Keyboard, KeyboardAvoidingView, Linking, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
@@ -16,7 +16,7 @@ import { useSocial } from './src/features/social/useSocial';
 import { Avatar, Button } from './src/components/ui';
 import { ProfessionalCard } from './src/components/ProfessionalCard';
 import { api, configureSession } from './src/api/client';
-import { ApiError, errorKey } from './src/api/errors';
+import { ApiError, failureKey } from './src/api/errors';
 import { clearSession, readSession, saveSession, type Session } from './src/auth/session';
 import { dictionaries, type Locale, type TranslationKey } from './src/i18n/messages';
 import type { Appointment, Collection, Conversation, Service, Slot, Vet } from './src/features/types';
@@ -85,7 +85,7 @@ function PilotApp() {
       const next = startupLocale(phoneLocale(), lang, !!saved);
       setLocale(next); I18nManager.allowRTL(true); I18nManager.forceRTL(next === 'ar');
       setSession(saved); configureSession(saved?.token || null, invalidate);
-    }).catch(() => { if (active) setError(dictionaries[phoneLocale()].offline); }).finally(() => { if (active) setRestoring(false); });
+    }).catch(() => { if (active) setError(dictionaries[phoneLocale()].unexpected); }).finally(() => { if (active) setRestoring(false); });
     return () => { active = false; };
   }, [invalidate]);
   const refreshScreen = useEffectEvent(() => { if (session) void perform(() => load(screen, 1)); });
@@ -97,15 +97,17 @@ function PilotApp() {
       setError(''); setFields({});
       setLocale(next); I18nManager.allowRTL(true); I18nManager.forceRTL(next === 'ar');
       if (I18nManager.isRTL !== (next === 'ar')) Alert.alert(dictionaries[next].language, dictionaries[next].restart);
-    } catch { setError(t('offline')); }
+    } catch { setError(t('unexpected')); }
   }
+  const mutationLock = useRef(false);
   async function perform(action: () => Promise<void>) {
-    if (busy) return;
+    if (mutationLock.current) return;
+    mutationLock.current = true;
     setBusy(true); setError(''); setFields({});
     try { await action(); } catch (failure) {
-      const issue = failure instanceof ApiError ? failure : new ApiError(0);
-      setError(t(errorKey(issue.status, issue.code))); setFields(issue.fields);
-    } finally { setBusy(false); }
+      const issue = failure instanceof ApiError ? failure : new ApiError(500);
+      setError(t(failureKey(failure))); setFields(issue.fields);
+    } finally { mutationLock.current = false; setBusy(false); }
   }
   async function load(target: Screen = screen, targetPage = page) {
     if ((socialScreens as readonly string[]).includes(target)) {
@@ -146,7 +148,7 @@ function PilotApp() {
     return <Button label={label} onPress={onPress} secondary={secondary} disabled={busy} />;
   }
   function input(label: string, value: string, change: (text: string) => void, secure = false, field?: string) {
-    return <View style={styles.field}><Text style={[styles.label, textStyle]}>{label}</Text><TextInput accessibilityLabel={label} value={value} onChangeText={change} secureTextEntry={secure} autoCapitalize={secure || field === 'email' ? 'none' : 'sentences'} keyboardType={field === 'email' ? 'email-address' : field === 'rating' ? 'number-pad' : 'default'} style={[styles.input, textStyle]} />{field && fields[field]?.map((item, i) => <Text accessibilityRole="alert" key={i} style={styles.error}>{item}</Text>)}</View>;
+    return <View style={styles.field}><Text style={[styles.label, textStyle]}>{label}</Text><TextInput accessibilityLabel={label} value={value} onChangeText={change} maxLength={field === 'body' ? 5000 : undefined} multiline={field === 'body'} secureTextEntry={secure} autoCapitalize={secure || field === 'email' ? 'none' : 'sentences'} keyboardType={field === 'email' ? 'email-address' : field === 'rating' ? 'number-pad' : 'default'} style={[styles.input, textStyle]} />{field && fields[field]?.map((item, i) => <Text accessibilityRole="alert" key={i} style={styles.error}>{item}</Text>)}</View>;
   }
   const languages = <View style={styles.row}>{(['fr', 'ar', 'en'] as const).map(lang => <Pressable key={lang} accessibilityRole="button" accessibilityLabel={{fr: 'Français', ar: 'العربية', en: 'English'}[lang]} accessibilityState={{ selected: locale === lang }} style={[styles.language, locale === lang && styles.secondary]} onPress={() => void changeLocale(lang)}><Text style={{ color: colors.text }}>{lang.toUpperCase()}</Text></Pressable>)}</View>;
   if (restoring) return provideScreen(<BrandLoading backgroundColor={colors.page} />);
@@ -177,14 +179,14 @@ function PilotApp() {
         {reviewId === appointment.id && <View>{input(t('rating'), rating, setRating, false, 'rating')}{input(t('comment'), comment, setComment, false, 'comment')}{button(t('send'), () => void perform(async () => { await api(`/veterinarian-appointments/${appointment.id}/review`, locale, 'POST', { rating: Number(rating), comment }); setReviewId(null); setComment(''); await load('appointments'); }))}</View>}
       </View>)}</View>}
       {screen === 'messages' && <View>{!conversations.length && <Text style={styles.text}>{t('empty')}</Text>}{conversations.map(conversation => <Pressable key={conversation.id} accessibilityRole="button" accessibilityLabel={conversation.participant.name} onPress={() => void perform(async () => { setSelectedConversation((await api<{ data: Conversation }>(`/conversations/${conversation.id}`, locale)).data); await api(`/conversations/${conversation.id}/read`, locale, 'PATCH'); setScreen('conversation'); })} style={[styles.card, { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 80 }]}><Avatar name={conversation.participant.name} uri={conversation.participant.avatar} /><View style={{ flex: 1 }}><Text style={styles.heading}>{conversation.participant.name}</Text><Text numberOfLines={2} style={styles.text}>{conversation.latestMessage?.body}</Text><Text style={styles.label}>{conversation.updatedAt && new Date(conversation.updatedAt).toLocaleString(locale)}</Text></View>{!!conversation.unreadCount && <Text accessibilityLabel={`${t('unread')} ${conversation.unreadCount}`} style={{ color: colors.brandText, fontWeight: '700' }}>{conversation.unreadCount}</Text>}</Pressable>)}</View>}
-      {screen === 'conversation' && selectedConversation && <View><View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}><Avatar name={selectedConversation.participant.name} uri={selectedConversation.participant.avatar} /><Text style={[styles.heading, textStyle]}>{selectedConversation.participant.name}</Text></View>{selectedConversation.messages?.map(message => <View key={message.id} style={[styles.card, { alignSelf: message.isOwn ? 'flex-end' : 'flex-start', maxWidth: '88%', backgroundColor: message.isOwn ? colors.muted : colors.surface }]}><Text style={[styles.label, textStyle]}>{message.sender?.name}</Text><Text style={[styles.text, textStyle]}>{message.body}</Text><Text style={styles.label}>{message.createdAt && new Date(message.createdAt).toLocaleTimeString(locale)}</Text></View>)}{input(t('message'), body, setBody, false, 'body')}{button(t('send'), () => void perform(async () => { await api(`/conversations/${selectedConversation.id}/messages`, locale, 'POST', { body }); setBody(''); await load('conversation'); }))}</View>}
+      {screen === 'conversation' && selectedConversation && <View><View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}><Avatar name={selectedConversation.participant.name} uri={selectedConversation.participant.avatar} /><Text style={[styles.heading, textStyle]}>{selectedConversation.participant.name}</Text></View>{selectedConversation.messages?.map(message => <View key={message.id} style={[styles.card, { alignSelf: message.isOwn ? 'flex-end' : 'flex-start', maxWidth: '88%', backgroundColor: message.isOwn ? colors.muted : colors.surface }]}><Text style={[styles.label, textStyle]}>{message.sender?.name}</Text><Text style={[styles.text, textStyle]}>{message.body}</Text><Text style={styles.label}>{message.createdAt && new Date(message.createdAt).toLocaleTimeString(locale)}</Text></View>)}{input(t('message'), body, setBody, false, 'body')}{button(t('send'), () => void perform(async () => { if (!body.trim() || body.trim().length > 5000) throw new ApiError(422, { body: [t('validation')] }); await api(`/conversations/${selectedConversation.id}/messages`, locale, 'POST', { body: body.trim() }); setBody(''); await load('conversation'); }))}</View>}
       {screen === 'settings' && <View style={styles.card}><Text style={styles.heading}>{t('language')}</Text>{languages}<Avatar name={session.user.name} uri={session.user.avatar} size={64} /><Text style={[styles.heading, textStyle]}>{session.user.name}</Text><Text style={[styles.text, textStyle]}>{session.user.email}</Text><Text style={[styles.text, textStyle]}>{session.user.city}</Text><Text style={[styles.heading, textStyle]}>{t('theme')}</Text>{(['system', 'light', 'dark'] as const).map(value => <View key={value}>{button(`${t(value)}${preference === value ? ' ✓' : ''}`, () => void perform(() => setPreference(value)), true)}</View>)}<Text style={[styles.text, textStyle]}>{t('secure')}</Text>{button(t('logout'), () => void perform(async () => { await api('/auth/logout', locale, 'POST'); await clearSession(); invalidate(); }))}</View>}
     </View>
     <Text style={[styles.text, textStyle]}>{t('demo')}</Text>{button(t('privacy'), () => void openLegal('/privacy'), true)}{button(t('terms'), () => void openLegal('/cgu'), true)}
   </ScrollView></KeyboardAvoidingView>;
   return provideScreen(session ? <YaZooShell backEnabled={!['feed', 'reels', 'messages'].includes(screen) && (screen !== 'user-profile' || !social.isOwnProfile)} onBack={() => { Keyboard.dismiss(); if (router.canGoBack()) router.back(); else router.replace('/feed'); }} screen={screen} user={session.user} rtl={rtl} label={key => t(key)} navigate={target => void navigate(target)} communitiesEnabled={social.flags.communities} openWeb={path => void social.openWeb(path)} webLinks={[{ label: t('reservationsWeb'), path: '/reservations' }, { label: t('ordersWeb'), path: '/orders/history' }, { label: t('verificationWeb'), path: '/settings/professional-verification' }]}>{content}</YaZooShell> : <SafeAreaView style={styles.container}>{content}</SafeAreaView>);
   async function transition(id: number, status: string) { await perform(async () => { await api(`/veterinarian-appointments/${id}/status`, locale, 'PATCH', { status }); await load('appointments'); }); }
-  async function openLegal(path: string) { try { const config = await api<{ frontendUrl: string }>('/legal/config', locale); const url = new URL(config.frontendUrl); if (!['https:', 'http:'].includes(url.protocol)) throw new Error('Invalid legal URL'); await Linking.openURL(`${url.origin}${path}?lang=${locale}`); } catch { setError(t('offline')); } }
+  async function openLegal(path: string) { try { const config = await api<{ frontendUrl: string }>('/legal/config', locale); const url = new URL(config.frontendUrl); if (!['https:', 'http:'].includes(url.protocol)) throw new Error('Invalid legal URL'); await Linking.openURL(`${url.origin}${path}?lang=${locale}`); } catch (failure) { setError(t(failureKey(failure))); } }
 }
 function createStyles(colors: Colors) { return StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.page }, content: { padding: 16, paddingBottom: 28, width: '100%', maxWidth: 720, alignSelf: 'center' }, title: { fontSize: 32, fontWeight: '800', color: colors.brandText, marginBottom: 8 }, subtitle: { fontSize: 20, color: colors.text, marginBottom: 12 }, heading: { fontSize: 20, fontWeight: '700', color: colors.text, marginVertical: 10 }, text: { fontSize: 16, color: colors.text, lineHeight: 25, marginVertical: 6 }, secondary: { backgroundColor: colors.muted }, row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, language: { minHeight: 48, minWidth: 60, alignItems: 'center', justifyContent: 'center', borderRadius: 16 }, field: { marginVertical: 8 }, label: { color: colors.secondary, fontSize: 13, marginBottom: 6 }, input: { minHeight: 48, backgroundColor: colors.form, borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: 12, fontSize: 16, color: colors.text }, card: { backgroundColor: colors.surface, borderRadius: 28, padding: 16, marginVertical: 8, borderWidth: 1, borderColor: colors.border }, error: { color: colors.danger, fontSize: 16, lineHeight: 24, marginVertical: 8 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 
 import {
@@ -10,6 +10,7 @@ import ComplianceBadge from '../components/ui/ComplianceBadge'
 import { useI18n } from '../hooks/useI18n'
 import { extractDataArray, extractDataObject } from '../utils/apiData'
 import { getErrorMessage } from '../utils/getErrorMessage'
+import { uploadError } from '../utils/uploadValidation'
 
 const BUSINESS_TYPES = [
   'veterinarian',
@@ -53,6 +54,7 @@ function ProfessionalVerificationPage() {
   const [successMessage, setSuccessMessage] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const mutationLock = useRef(false)
   const isVeterinarian = form.business_type === 'veterinarian'
 
   const loadVerifications = async () => {
@@ -89,11 +91,21 @@ function ProfessionalVerificationPage() {
   }
 
   const handleFileChange = (event) => {
-    setForm((current) => ({ ...current, document: event.target.files?.[0] ?? null }))
+    const file = event.target.files?.[0] ?? null
+    const error = uploadError(file, 'document')
+    if (error) {
+      setErrorMessage(t(error))
+      event.target.value = ''
+      return
+    }
+    setForm((current) => ({ ...current, document: file }))
   }
 
   const handleSubmit = async (event) => {
     event.preventDefault()
+    if (mutationLock.current) return
+    const formElement = event.currentTarget
+    mutationLock.current = true
     setErrorMessage('')
     setSuccessMessage('')
     setIsSubmitting(true)
@@ -104,11 +116,12 @@ function ProfessionalVerificationPage() {
       const nextVerification = extractDataObject(response, null)?.verification
       setVerifications((current) => [nextVerification, ...current].filter(Boolean))
       setForm(initialForm)
-      event.currentTarget.reset()
+      formElement.reset()
       setSuccessMessage(t('professionalVerification.submitSuccess'))
     } catch (error) {
       setErrorMessage(getErrorMessage(error, t('professionalVerification.submitError')))
     } finally {
+      mutationLock.current = false
       setIsSubmitting(false)
     }
   }
@@ -145,12 +158,12 @@ function ProfessionalVerificationPage() {
                 ))}
               </select>
             </label>
-            <Field label={t('professionalVerification.legalName')} value={form.legal_name} onChange={handleChange('legal_name')} />
-            <Field label={t('professionalVerification.ice')} value={form.ice} onChange={handleChange('ice')} />
-            <Field label={t('professionalVerification.onssaNumber')} value={form.onssa_authorization_number} onChange={handleChange('onssa_authorization_number')} />
+            <Field label={t('professionalVerification.legalName')} maxLength={190} value={form.legal_name} onChange={handleChange('legal_name')} />
+            <Field label={t('professionalVerification.ice')} maxLength={50} value={form.ice} onChange={handleChange('ice')} />
+            <Field label={t('professionalVerification.onssaNumber')} maxLength={100} value={form.onssa_authorization_number} onChange={handleChange('onssa_authorization_number')} />
             <Field
               label={t('professionalVerification.licenseNumber')}
-              value={form.professional_license_number}
+              maxLength={100} value={form.professional_license_number}
               onChange={handleChange('professional_license_number')}
               required={isVeterinarian}
             />

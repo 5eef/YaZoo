@@ -2,6 +2,9 @@
 
 namespace App\Support;
 
+use App\Models\MediaAsset;
+use Aws\Middleware;
+use Illuminate\Filesystem\AwsS3V3Adapter;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
@@ -17,6 +20,90 @@ use Throwable;
 
 class MediaStorage
 {
+    public static function createR2Disk(array $config): AwsS3V3Adapter
+    {
+        $disk = app('filesystem')->createS3Driver($config);
+        // R2 has bucket-level privacy, not S3 object ACLs. Strip ACL on all
+        // commands, including multipart initiation, before SDK serialization.
+        $disk->getClient()->getHandlerList()->appendInit(Middleware::mapCommand(function ($command) {
+            unset($command['ACL']);
+
+            return $command;
+        }), 'r2-no-object-acl');
+
+        return $disk;
+    }
+
+    /** Configuration readiness only; live connectivity is verified after owner setup. */
+    public static function persistentUploadsConfigured(): bool
+    {
+        if (config('media.driver') !== 'r2' || config('professional_verifications.disk') !== 'r2') {
+            return false;
+        }
+        foreach (['key', 'secret', 'bucket', 'endpoint'] as $field) {
+            if (trim((string) config('filesystems.disks.r2.'.$field)) === '') {
+                return false;
+            }
+        }
+        $endpoint = parse_url((string) config('filesystems.disks.r2.endpoint'));
+
+        return config('filesystems.disks.r2.driver') === 'r2'
+            && config('filesystems.disks.r2.region') === 'auto'
+            && ($endpoint['scheme'] ?? '') === 'https'
+            && ! isset($endpoint['user']) && ! isset($endpoint['pass'])
+            && ! isset($endpoint['query'])
+            && str_ends_with($endpoint['host'] ?? '', '.r2.cloudflarestorage.com');
+    }
+
+    public static function mediaDirectory(string $directory): string
+    {
+        return 'media/'.preg_replace('#^(feed|marketplace)/#', '', trim($directory, '/'));
+    }
+
+    public static function storePrivateDocument(UploadedFile $file, string $disk, int $ownerId): string
+    {
+        try {
+            $directory = ($disk === 'r2' ? 'private/' : '').'professional-verifications/'.$ownerId;
+            $path = $file->storeAs($directory, Str::uuid().'.'.strtolower($file->extension() ?: $file->getClientOriginalExtension()), $disk);
+            if (! is_string($path) || $path === '') {
+                throw new RuntimeException('Document storage write failed.');
+            }
+
+            return $path;
+        } catch (Throwable) {
+            throw new RuntimeException('Document storage write failed.');
+        }
+    }
+
+    /** @return resource */
+    public static function openDiskStream(string $diskName, string $path, ?array $range = null)
+    {
+        $disk = Storage::disk($diskName);
+        try {
+            if ($diskName === 'r2' && $disk instanceof AwsS3V3Adapter) {
+                $parameters = ['Bucket' => config('filesystems.disks.r2.bucket'), 'Key' => $path, '@http' => ['stream' => true]];
+                if ($range !== null) {
+                    $parameters['Range'] = 'bytes='.$range[0].'-'.$range[1];
+                }
+                $stream = $disk->getClient()->getObject($parameters)['Body']->detach();
+            } else {
+                $stream = $disk->readStream($path);
+                if (is_resource($stream) && $range !== null && fseek($stream, $range[0]) !== 0) {
+                    fclose($stream);
+                    throw new RuntimeException('Media stream is not seekable.');
+                }
+            }
+            if (! is_resource($stream)) {
+                throw new RuntimeException('Media stream unavailable.');
+            }
+
+            return $stream;
+        } catch (Throwable) {
+            // SDK exceptions can contain signed URLs or request credentials.
+            throw new RuntimeException('Media storage read failed.');
+        }
+    }
+
     /**
      * Determine whether the PHP MongoDB extension is available.
      */
@@ -31,6 +118,19 @@ class MediaStorage
     public static function storeUploadedFile(UploadedFile $file, string $directory): string
     {
         $driver = (string) config('media.driver', 'filesystem');
+
+        if ($driver === 'r2') {
+            try {
+                $path = $file->store(self::mediaDirectory($directory), 'r2');
+                if (! is_string($path) || $path === '') {
+                    throw new RuntimeException('Media storage write failed.');
+                }
+
+                return $path;
+            } catch (Throwable) {
+                throw new RuntimeException('Media storage write failed.');
+            }
+        }
 
         if ($driver === 'mongodb') {
             self::assertMongoConfiguration();
@@ -55,6 +155,12 @@ class MediaStorage
             return '/api/media/'.self::extractMongoFileId($path);
         }
 
+        if (str_starts_with($path, 'media/')) {
+            $asset = MediaAsset::query()->where('disk', 'r2')->where('path_hash', hash('sha256', $path))->where('path', $path)->first();
+
+            return $asset ? '/api/media/'.$asset->id : null;
+        }
+
         if (Str::startsWith($path, ['http://', 'https://', '/'])) {
             return $path;
         }
@@ -69,6 +175,13 @@ class MediaStorage
      */
     public static function deleteStoredFiles(array $paths): void
     {
+        $remotePaths = array_filter($paths, fn ($path) => is_string($path) && str_starts_with($path, 'media/'));
+        foreach ($remotePaths as $path) {
+            if (! MediaAsset::query()->where('disk', 'r2')->where('path', $path)->exists()) {
+                Storage::disk('r2')->delete($path);
+            }
+        }
+        $paths = array_diff($paths, $remotePaths);
         $mongoIds = collect($paths)
             ->filter(fn ($path) => is_string($path) && self::isMongoReference($path))
             ->map(fn (string $path) => self::extractMongoFileId($path))
@@ -107,6 +220,13 @@ class MediaStorage
      */
     public static function deleteStoredFilesOrFail(array $paths): void
     {
+        $remotePaths = array_filter($paths, fn ($path) => is_string($path) && str_starts_with($path, 'media/'));
+        foreach ($remotePaths as $path) {
+            if (Storage::disk('r2')->exists($path) && ! Storage::disk('r2')->delete($path)) {
+                throw new RuntimeException('Media storage cleanup failed.');
+            }
+        }
+        $paths = array_diff($paths, $remotePaths);
         $mongoIds = collect($paths)
             ->filter(fn ($path) => is_string($path) && self::isMongoReference($path))
             ->map(fn (string $path) => self::extractMongoFileId($path))

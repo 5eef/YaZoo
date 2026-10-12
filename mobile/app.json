@@ -51,6 +51,13 @@
         }
       ]
     ],
-    "scheme": "yazoo-pilot"
+    "scheme": "yazoo-pilot",
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "55196a69-8fc1-4849-be9f-c01964b0f9dd"
+      }
+    },
+    "owner": "youssef5ef"
   }
 }

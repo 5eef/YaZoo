@@ -7,6 +7,27 @@ import {
 } from '../../functions/_shared/proxy.js'
 
 describe('Cloudflare Pages reverse proxy', () => {
+  it('preserves media byte ranges and streams the response body', async () => {
+    const fetchImpl = vi.fn().mockImplementation(async (_url, init) => {
+      expect(init.headers.get('Range')).toBe('bytes=2-5')
+      return new Response('2345', { status: 206, headers: {
+        'Content-Type': 'video/mp4', 'Content-Length': '4',
+        'Content-Range': 'bytes 2-5/10', 'Accept-Ranges': 'bytes',
+        'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff',
+      } })
+    })
+    vi.stubGlobal('fetch', fetchImpl)
+    const response = await proxyRequest({ env: { BACKEND_ORIGIN: 'https://backend.example.test' },
+      request: new Request('https://demo.pages.dev/api/media/posts/1', { headers: { Range: 'bytes=2-5' } }),
+    })
+    expect(response.status).toBe(206)
+    expect(response.headers.get('Content-Range')).toBe('bytes 2-5/10')
+    expect(response.headers.get('Accept-Ranges')).toBe('bytes')
+    expect(response.headers.get('Content-Length')).toBe('4')
+    expect(response.headers.get('X-Content-Type-Options')).toBe('nosniff')
+    await expect(response.text()).resolves.toBe('2345')
+    expect(fetchImpl).toHaveBeenCalledTimes(1)
+  })
   it('transmet un appel mobile Sanctum sans cookie et conserve les reponses auth', async () => {
     for (const status of [200, 401]) {
       const fetchImpl = vi.fn().mockImplementation(async (_url, init) => {

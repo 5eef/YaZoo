@@ -63,7 +63,7 @@ test('Reels screen paginates Feed videos, switches its sole player, reuses comme
     'expo-router': { useFocusEffect: callback => { const index = cursor++; if (!slots[index]) { slots[index] = true; effects.push(callback); } } },
     expo: {}, 'expo-video': {}, 'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView' },
     '../../api/client': { api: async path => { if (path.startsWith('/veterinarians')) { assert.equal(path, '/veterinarians?per_page=50'); return { data: [{ id: 7, name: 'Different clinic name', owner: { id: 42 } }] }; } calls.push(path); const page = Number(new URL(`http://test${path}`).searchParams.get('page')); return { data: [video(page), { id: 20, mediaKind: 'image' }], meta: { current_page: page, last_page: 2 } }; } },
-    '../../api/errors': { ApiError: class extends Error {}, errorKey: () => 'offline' },
+    '../../api/errors': { ApiError: class extends Error {}, failureKey: () => 'unexpected' },
     '../ui': { mediaUrl: value => value, Avatar: 'Avatar', Button: 'Button', Empty: 'Empty', Label: 'Label' },
     '../EdgeSwipeBack': { EdgeSwipeBack: 'EdgeSwipeBack' }, '../SocialVideo': { SocialVideo: 'SocialVideo' }, '../Icon': { Icon: 'Icon' }, '../../i18n/messages': { dictionaries },
     '../../theme/ThemeProvider': { useTheme: () => ({ colors: { page: '#fff', danger: '#900', brandText: '#739' } }) },

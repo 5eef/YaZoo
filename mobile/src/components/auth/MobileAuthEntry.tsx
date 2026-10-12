@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { AccessibilityInfo, ActivityIndicator, Animated, Easing, Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { AccessibilityInfo, ActivityIndicator, Animated, Easing, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { AnimatedBrandLogo } from './AnimatedBrandLogo';
 import { Button } from '../ui';
 import { useTheme } from '../../theme/ThemeProvider';
-import { radius, spacing, themes, typography } from '../../theme/tokens';
+import { radius, spacing, typography } from '../../theme/tokens';
 import { dictionaries, type Locale } from '../../i18n/messages';
 
 type Field = 'name' | 'email' | 'password' | 'password_confirmation';
@@ -15,11 +16,11 @@ type Props = {
 };
 
 export function MobileAuthEntry(props: Props) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const styles = useMemo(() => StyleSheet.create({
     root: { flex: 1, backgroundColor: colors.page },
     content: { width: '100%', maxWidth: 480, alignSelf: 'center', padding: spacing.xl, paddingBottom: spacing.xxl },
-    logo: { width: 220, height: 220, alignSelf: 'center', borderRadius: radius.card, backgroundColor: themes.light.page },
+    logo: { width: '100%', maxWidth: 220, aspectRatio: 1, alignSelf: 'center', borderRadius: radius.card, overflow: 'hidden', backgroundColor: colors.page },
     card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.card, padding: spacing.lg, gap: spacing.md },
     heading: { fontSize: typography.title, fontWeight: '700', color: colors.text },
     label: { fontSize: typography.caption, color: colors.secondary, marginBottom: spacing.sm },
@@ -31,6 +32,8 @@ export function MobileAuthEntry(props: Props) {
   const [progress] = useState(() => new Animated.Value(0));
   const [revealed, setRevealed] = useState(false);
   const [height, setHeight] = useState(0);
+  const [reduceMotion, setReduceMotion] = useState<boolean | null>(null);
+  const [logoVisible, setLogoVisible] = useState(true);
   useEffect(() => {
     let active = true;
     const reveal = (reduceMotion: boolean) => {
@@ -42,8 +45,8 @@ export function MobileAuthEntry(props: Props) {
       ]).start();
     };
     const timer = setTimeout(() => reveal(false), 800);
-    const reduce = (enabled: boolean) => { if (enabled) { clearTimeout(timer); reveal(true); } };
-    void AccessibilityInfo.isReduceMotionEnabled().then(reduce).catch(() => {});
+    const reduce = (enabled: boolean) => { if (!active) return; setReduceMotion(enabled); if (enabled) { clearTimeout(timer); reveal(true); } };
+    void AccessibilityInfo.isReduceMotionEnabled().then(reduce).catch(() => reduce(true));
     const listener = AccessibilityInfo.addEventListener('reduceMotionChanged', reduce);
     return () => { active = false; clearTimeout(timer); listener.remove(); progress.stopAnimation(); };
   }, [progress]);
@@ -61,9 +64,10 @@ export function MobileAuthEntry(props: Props) {
     // Freeze the intro geometry: opening the keyboard must not restart or move it.
     if (!height) setHeight(event.nativeEvent.layout.height);
   }}>
-    <ScrollView keyboardShouldPersistTaps="handled" scrollEnabled={revealed} contentContainerStyle={styles.content}>
+    <ScrollView keyboardShouldPersistTaps="handled" scrollEnabled={revealed} contentContainerStyle={styles.content}
+      scrollEventThrottle={100} onScroll={event => setLogoVisible(event.nativeEvent.contentOffset.y < 220 + spacing.xl)}>
       <Animated.View style={{ transform: [{ translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [Math.max(0, (height - 220) / 2 - spacing.xl), -spacing.md] }) }, { scale: progress.interpolate({ inputRange: [0, 1], outputRange: [1, 0.78] }) }] }}>
-        <Image source={require('../../../assets/brand/yazoo-logo.png')} resizeMode="contain" style={styles.logo} accessible={!revealed} accessibilityLabel="YaZoo" accessibilityElementsHidden={revealed} importantForAccessibility={revealed ? 'no' : 'yes'} />
+        <AnimatedBrandLogo isDark={isDark} reduceMotion={reduceMotion !== false} visible={logoVisible} style={styles.logo} accessible={!revealed} />
       </Animated.View>
       {revealed && <Animated.View testID="auth-form" style={{ opacity: progress, transform: [{ translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [24, 0] }) }] }}>
         <View style={styles.card}>

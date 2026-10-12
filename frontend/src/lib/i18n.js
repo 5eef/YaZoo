@@ -8455,3 +8455,15 @@ export function getDateLocale(locale) {
 messages.fr.startup = { demoData: 'Démonstration — aucun partenariat réel' }
 messages.ar.startup = { demoData: 'بيانات توضيحية — لا شراكة فعلية' }
 messages.en.startup = { demoData: 'Demo data — no real partnership' }
+
+Object.assign(messages.fr.errors, { timeout: 'Le serveur met trop de temps à répondre. Réessayez.', backendWaking: 'Le serveur de démonstration démarre. Réessayez dans quelques secondes.', forbidden: 'Action non autorisée.', notFound: 'Ressource introuvable.', conflict: 'Une modification récente empêche cette action. Actualisez.', validation: 'Vérifiez les champs du formulaire.' })
+Object.assign(messages.en.errors, { timeout: 'The server is taking too long to respond. Try again.', backendWaking: 'The demo server is starting. Try again in a few seconds.', forbidden: 'Action not allowed.', notFound: 'Resource not found.', conflict: 'A recent change prevents this action. Refresh.', validation: 'Check the form fields.' })
+Object.assign(messages.ar.errors, { timeout: 'استغرق الخادم وقتاً طويلاً للرد. حاول مجدداً.', backendWaking: 'خادم العرض قيد التشغيل. حاول بعد بضع ثوانٍ.', forbidden: 'الإجراء غير مسموح.', notFound: 'المورد غير موجود.', conflict: 'تغيير حديث يمنع هذا الإجراء. حدّث الصفحة.', validation: 'تحقق من حقول النموذج.' })
+
+Object.assign(messages.fr.errors, { uploadsDisabled: 'Les uploads sont désactivés sur cette démonstration. Aucune image n’a été enregistrée.' })
+Object.assign(messages.en.errors, { uploadsDisabled: 'Uploads are disabled in this demo. No image was saved.' })
+Object.assign(messages.ar.errors, { uploadsDisabled: 'رفع الملفات معطّل في هذا العرض. لم تُحفظ أي صورة.' })
+
+Object.assign(messages.fr.errors, {"uploadType":"Format de fichier non autorisé.","uploadSize":"Fichier trop volumineux : 5 Mo pour les images et documents, 20 Mo pour les médias du fil.","uploadCount":"Six images maximum par annonce."})
+Object.assign(messages.en.errors, {"uploadType":"File format not allowed.","uploadSize":"File too large: 5 MB for images and documents, 20 MB for feed media.","uploadCount":"A listing supports up to six images."})
+Object.assign(messages.ar.errors, {"uploadType":"صيغة الملف غير مسموحة.","uploadSize":"حجم الملف كبير: 5 ميغابايت للصور والمستندات، و20 ميغابايت لوسائط المنشورات.","uploadCount":"الحد الأقصى ست صور لكل إعلان."})

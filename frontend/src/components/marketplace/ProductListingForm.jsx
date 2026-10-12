@@ -44,10 +44,10 @@ function ProductListingForm({
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <Field label={t('common.name')} value={form.name} onChange={onFormChange('name')} />
+        <Field label={t('common.name')} maxLength={150} required value={form.name} onChange={onFormChange('name')} />
         <SelectField label={t('common.category')} value={form.category} onChange={onFormChange('category')} options={productFormCategoryOptions} />
-        <Field label={t('common.price')} type="number" min="0" step="0.01" value={form.price} onChange={onFormChange('price')} />
-        <Field label={t('feed.location')} value={form.location} onChange={onFormChange('location')} />
+        <Field label={t('common.price')} type="number" min="0" max="999999.99" step="0.01" required value={form.price} onChange={onFormChange('price')} />
+        <Field label={t('feed.location')} maxLength={150} required value={form.location} onChange={onFormChange('location')} />
         <SelectField
           label={t('marketplaceContact.visibilityLabel')}
           value={form.contact_visibility}
@@ -55,12 +55,12 @@ function ProductListingForm({
           options={contactVisibilityOptions}
         />
         {['phone', 'whatsapp'].includes(form.contact_visibility) ? (
-          <Field label={t('marketplaceContact.phoneLabel')} value={form.contact_phone} onChange={onFormChange('contact_phone')} required />
+          <Field label={t('marketplaceContact.phoneLabel')} maxLength={50} value={form.contact_phone} onChange={onFormChange('contact_phone')} required />
         ) : null}
         {form.contact_visibility === 'email' ? (
-          <Field label={t('marketplaceContact.emailLabel')} type="email" value={form.contact_email} onChange={onFormChange('contact_email')} required />
+          <Field label={t('marketplaceContact.emailLabel')} type="email" maxLength={255} value={form.contact_email} onChange={onFormChange('contact_email')} required />
         ) : null}
-        <Field label={t('common.stock')} type="number" min="0" value={form.stock} onChange={onFormChange('stock')} />
+        <Field label={t('common.stock')} type="number" min="0" max="100000" step="1" required value={form.stock} onChange={onFormChange('stock')} />
         <SelectField label={t('common.status')} value={form.listing_status} onChange={onFormChange('listing_status')} options={productFormStatusOptions} />
         <SelectField
           label={t('common.condition')}
@@ -78,8 +78,8 @@ function ProductListingForm({
       </p>
 
       <div className="mt-4 grid gap-4 md:grid-cols-2">
-        <FileField label={t('products.mainImage')} accept="image/*" onChange={(event) => onImageFileChange(event.target.files?.[0] ?? null)} />
-        <FileField label={t('products.gallery')} accept="image/*" multiple onChange={(event) => onGalleryFilesChange(Array.from(event.target.files ?? []))} />
+        <FileField label={t('products.mainImage')} accept="image/jpeg,image/png,image/webp" onChange={(event) => onImageFileChange(event.target.files?.[0] ?? null)} />
+        <FileField label={t('products.gallery')} accept="image/jpeg,image/png,image/webp" multiple onChange={(event) => onGalleryFilesChange(Array.from(event.target.files ?? []))} />
       </div>
 
       <SelectedFiles imageFile={imageFile} galleryFiles={galleryFiles} t={t} />
@@ -89,6 +89,8 @@ function ProductListingForm({
         <span className="mb-2 block text-sm font-medium text-stone-700">{t('common.description')}</span>
         <textarea
           rows={4}
+          maxLength={5000}
+          required
           value={form.description}
           onChange={onFormChange('description')}
           className="w-full rounded-2xl border border-violet-100 bg-violet-50/55 px-4 py-3 text-sm text-stone-700 outline-none transition focus:border-violet-400 focus:bg-white"

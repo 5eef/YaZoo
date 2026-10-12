@@ -1,8 +1,11 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import PropTypes from 'prop-types'
 
-import { createServiceRequest, getServicesRequest } from '../api/services'
+import { createServiceRequest, getServicesRequest, updateServiceRequest, deleteServiceRequest } from '../api/services'
+import OwnerListingActions from '../components/marketplace/OwnerListingActions'
+import Button from '../components/ui/Button'
+import { getErrorMessage } from '../utils/getErrorMessage'
 import ServiceCard from '../components/marketplace/ServiceCard'
 import { MarketplaceHero, QuickFilterChips } from '../components/marketplace/MarketplaceCommon'
 import CollapsiblePanel from '../components/ui/CollapsiblePanel'
@@ -29,6 +32,8 @@ const defaultServiceForm = {
 function ServicesMarketplacePage() {
   const { t } = useI18n()
   const { isAuthenticated, isBootstrapping } = useAuth()
+  const mutationLock = useRef(false)
+  const [editingId, setEditingId] = useState(null)
   const [services, setServices] = useState([])
   const [type, setType] = useState('')
   const [isLoading, setIsLoading] = useState(true)
@@ -77,6 +82,7 @@ function ServicesMarketplacePage() {
 
   const handleCreateService = async (event) => {
     event.preventDefault()
+    if (mutationLock.current) return
     setError('')
     setSuccess('')
 
@@ -114,17 +120,21 @@ function ServicesMarketplacePage() {
       payload.price = Number(serviceForm.price)
     }
 
+    mutationLock.current = true
     setIsSubmitting(true)
 
     try {
-      await createServiceRequest(payload)
+      if (editingId) await updateServiceRequest(editingId, payload)
+      else await createServiceRequest(payload)
+      setEditingId(null)
       setServiceForm(defaultServiceForm)
       setIsCreateOpen(false)
-      setSuccess(t('services.created'))
+      setSuccess(t(editingId ? 'common.save' : 'services.created'))
       await loadServices()
-    } catch {
-      setError(t('services.createFailed'))
+    } catch (failure) {
+      setError(getErrorMessage(failure, t('services.createFailed')))
     } finally {
+      mutationLock.current = false
       setIsSubmitting(false)
     }
   }
@@ -174,9 +184,11 @@ function ServicesMarketplacePage() {
             </Link>
           </div>
         ) : (
+          <>
+          {editingId ? <Button type="button" disabled={isSubmitting} variant="ghost" onClick={() => { setEditingId(null); setServiceForm(defaultServiceForm) }}>{t('common.cancel')}</Button> : null}
           <form className="grid gap-4" onSubmit={handleCreateService}>
             <div className="grid gap-4 md:grid-cols-2">
-              <Field label={t('services.title')} value={serviceForm.title} onChange={handleFormChange('title')} required />
+              <Field label={t('services.title')} maxLength={255} value={serviceForm.title} onChange={handleFormChange('title')} required />
               <SelectField
                 label={t('services.category')}
                 value={serviceForm.type}
@@ -228,7 +240,7 @@ function ServicesMarketplacePage() {
               </span>
               <textarea
                 rows={4}
-                value={serviceForm.description}
+                maxLength={5000} value={serviceForm.description}
                 onChange={handleFormChange('description')}
                 required
                 className="w-full rounded-2xl border border-violet-100 bg-violet-50/55 px-4 py-3 text-sm text-stone-700 outline-none transition focus:border-violet-400 focus:bg-white dark:border-violet-300/18 dark:bg-white/8 dark:text-white"
@@ -240,7 +252,7 @@ function ServicesMarketplacePage() {
                 disabled={isSubmitting}
                 className="rounded-full bg-[linear-gradient(135deg,#7c3aed,#a855f7)] px-5 py-2.5 text-sm font-semibold text-white transition hover:brightness-105 disabled:opacity-60"
               >
-                {isSubmitting ? t('common.sending') : t('services.save')}
+                {isSubmitting ? t('common.sending') : t(editingId ? 'common.save' : 'services.save')}
               </button>
               <button
                 type="button"
@@ -251,6 +263,7 @@ function ServicesMarketplacePage() {
               </button>
             </div>
           </form>
+          </>
         )}
         </CollapsiblePanel>
       </div>
@@ -297,7 +310,15 @@ function ServicesMarketplacePage() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         {services.map((service) => (
-          <ServiceCard key={service.id} service={service} />
+          <div key={service.id}>
+            <ServiceCard service={service} />
+            {service.isOwner ? <OwnerListingActions disabled={isSubmitting} onEdit={() => {
+              setEditingId(service.id)
+              setServiceForm({ ...defaultServiceForm, type: service.type, title: service.title, description: service.description, city: service.city ?? '', address: service.address ?? '', price: service.price ?? '', price_type: service.priceType, contact_visibility: service.contactVisibility ?? 'messages_only', contact_phone: service.contactPhone ?? '', contact_email: service.contactEmail ?? '' })
+              setIsCreateOpen(true)
+              createPanelRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
+            }} onDelete={async () => { await deleteServiceRequest(service.id); setServices(current => current.filter(item => item.id !== service.id)); if (editingId === service.id) { setEditingId(null); setServiceForm(defaultServiceForm) } }} /> : null}
+          </div>
         ))}
       </div>
     </section>

@@ -10,6 +10,8 @@ use App\Models\MediaAsset;
 use App\Models\ProfessionalVerification;
 use App\Services\Admin\ModerationLogger;
 use App\Services\MediaAssetService;
+use App\Support\MediaStorage;
+use App\Support\StoredMediaResponse;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
@@ -18,7 +20,6 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
@@ -41,12 +42,7 @@ class ProfessionalVerificationController extends Controller
         $documentAsset = null;
 
         if ($document) {
-            $extension = strtolower($document->extension() ?: $document->getClientOriginalExtension());
-            $path = $document->storeAs(
-                'professional-verifications/'.$request->user()->id,
-                Str::uuid()->toString().'.'.$extension,
-                $this->documentDisk(),
-            );
+            $path = MediaStorage::storePrivateDocument($document, $this->documentDisk(), $request->user()->id);
 
             $validated = [
                 ...$validated,
@@ -55,16 +51,21 @@ class ProfessionalVerificationController extends Controller
                 'document_mime' => $document->getMimeType() ?: $document->getClientMimeType(),
                 'document_size' => $document->getSize(),
             ];
-            $documentAsset = $this->mediaAssets->registerStoredPath(
-                $request->user(),
-                $path,
-                'document',
-                MediaAsset::VISIBILITY_PRIVATE,
-                $validated['document_mime'],
-                $validated['document_size'],
-                $validated['document_original_name'],
-                $this->documentDisk(),
-            );
+            try {
+                $documentAsset = $this->mediaAssets->registerStoredPath(
+                    $request->user(),
+                    $path,
+                    'document',
+                    MediaAsset::VISIBILITY_PRIVATE,
+                    $validated['document_mime'],
+                    $validated['document_size'],
+                    $validated['document_original_name'],
+                    $this->documentDisk(),
+                );
+            } catch (Throwable $exception) {
+                Storage::disk($this->documentDisk())->delete($path);
+                throw $exception;
+            }
         }
 
         try {
@@ -136,7 +137,7 @@ class ProfessionalVerificationController extends Controller
             ->first();
 
         if ($previous && $this->isSafeDocumentPath((string) $previous->document_path)) {
-            $disk = Storage::disk($this->documentDisk());
+            $disk = Storage::disk($this->storedDocumentDisk($previous));
             if ($disk->exists($previous->document_path)) {
                 if (! $disk->delete($previous->document_path)) {
                     $verification->delete();
@@ -147,6 +148,7 @@ class ProfessionalVerificationController extends Controller
                     throw new \RuntimeException('Previous professional document cleanup failed.');
                 }
 
+                $this->mediaAssets->deleteAttached($previous, $request->user());
                 $previous->forceFill([
                     'document_path' => null,
                     'document_original_name' => null,
@@ -237,7 +239,7 @@ class ProfessionalVerificationController extends Controller
         abort_unless($user && ($user->is_admin || (int) $user->id === (int) $professionalVerification->user_id), 403);
         abort_unless(filled($professionalVerification->document_path), 404);
         abort_unless($this->isSafeDocumentPath((string) $professionalVerification->document_path), 404);
-        abort_unless(Storage::disk($this->documentDisk())->exists($professionalVerification->document_path), 404);
+        $diskName = $this->storedDocumentDisk($professionalVerification);
 
         if ($user->is_admin) {
             $this->logger->log($request, 'download_professional_verification_document', $professionalVerification, null, [
@@ -246,10 +248,9 @@ class ProfessionalVerificationController extends Controller
             ]);
         }
 
-        return Storage::disk($this->documentDisk())->download(
-            $professionalVerification->document_path,
-            $this->safeDownloadName($professionalVerification),
-        );
+        return StoredMediaResponse::make($diskName, $professionalVerification->document_path,
+            $professionalVerification->document_mime ?: 'application/octet-stream',
+            $this->safeDownloadName($professionalVerification), true, true);
     }
 
     protected function documentDisk(): string
@@ -262,7 +263,15 @@ class ProfessionalVerificationController extends Controller
         return $path !== ''
             && ! str_contains($path, "\0")
             && ! str_contains(str_replace('\\', '/', $path), '../')
-            && str_starts_with(str_replace('\\', '/', $path), 'professional-verifications/');
+            && (str_starts_with(str_replace('\\', '/', $path), 'professional-verifications/')
+                || str_starts_with(str_replace('\\', '/', $path), 'private/professional-verifications/'));
+    }
+
+    private function storedDocumentDisk(ProfessionalVerification $verification): string
+    {
+        return MediaAsset::query()->where('attachable_type', $verification->getMorphClass())
+            ->where('attachable_id', $verification->id)->where('path', $verification->document_path)->value('disk')
+            ?: (str_starts_with($verification->document_path, 'private/') ? 'r2' : ($this->documentDisk() === 'r2' ? 'private' : $this->documentDisk()));
     }
 
     protected function safeDownloadName(ProfessionalVerification $professionalVerification): string

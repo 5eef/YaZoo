@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\MediaStorage;
 use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -13,7 +14,7 @@ class RejectDisabledShowcaseUploads
     {
         if (
             config('operations.deployment_profile') === 'showcase'
-            && ! (bool) config('operations.showcase_uploads_enabled')
+            && (! (bool) config('operations.showcase_uploads_enabled') || ! MediaStorage::persistentUploadsConfigured())
             && $request->allFiles() !== []
         ) {
             return new JsonResponse([

@@ -1,3 +1,4 @@
+import { uploadError } from '../../utils/uploadValidation'
 import { useEffect, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
 
@@ -17,6 +18,7 @@ function CreatePost({ onCreate, focusToken = 0 }) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
   const composerRef = useRef(null)
+  const mutationLock = useRef(false)
   const canPublish = Boolean(content.trim() || mediaFile)
 
   useEffect(() => {
@@ -73,23 +75,26 @@ function CreatePost({ onCreate, focusToken = 0 }) {
 
   const handleSubmit = async (event) => {
     event.preventDefault()
+    if (mutationLock.current) return
+    const uploadIssue = uploadError(mediaFile, 'media')
+    if (uploadIssue) { setErrorMessage(t(uploadIssue)); return }
 
+    const tags = tagsInput.split(',').map(tag => tag.trim()).filter(Boolean)
+    if (tags.length > 10 || tags.some(tag => tag.length > 50)) { setErrorMessage(t('errors.validation')); return }
     if (!canPublish) {
       setErrorMessage(t('feed.createPostNeedsContent'))
       return
     }
 
     setErrorMessage('')
+    mutationLock.current = true
     setIsSubmitting(true)
 
     try {
       await onCreate({
         content: content.trim(),
         location: location.trim(),
-        tags: tagsInput
-          .split(',')
-          .map((tag) => tag.trim())
-          .filter(Boolean),
+        tags,
         media_file: mediaFile,
       })
 
@@ -102,6 +107,7 @@ function CreatePost({ onCreate, focusToken = 0 }) {
         getErrorMessage(error, t('feed.createPostError')),
       )
     } finally {
+      mutationLock.current = false
       setIsSubmitting(false)
     }
   }
@@ -154,7 +160,7 @@ function CreatePost({ onCreate, focusToken = 0 }) {
             value={content}
             onChange={(event) => setContent(event.target.value)}
             rows={4}
-            maxLength={1200}
+            maxLength={5000}
             placeholder={t('feed.postPlaceholder')}
             className="w-full rounded-[24px] border border-violet-100 bg-violet-50/55 px-4 py-4 text-sm leading-6 text-stone-700 outline-none transition focus:border-violet-400 focus:bg-white"
             aria-describedby="create-post-helper"
@@ -167,7 +173,7 @@ function CreatePost({ onCreate, focusToken = 0 }) {
               {t('feed.location')}
             </span>
             <input
-              value={location}
+              maxLength={255} value={location}
               onChange={(event) => setLocation(event.target.value)}
               placeholder={t('feed.locationPlaceholder')}
               className="w-full rounded-2xl border border-violet-100 bg-violet-50/55 px-4 py-3 text-sm text-stone-700 outline-none transition focus:border-violet-400 focus:bg-white"
@@ -202,7 +208,7 @@ function CreatePost({ onCreate, focusToken = 0 }) {
               {t('feed.chooseFile')}
               <input
                 type="file"
-                accept="image/*,video/mp4,video/webm,video/quicktime"
+                accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
                 onChange={handleMediaChange}
                 className="hidden"
               />

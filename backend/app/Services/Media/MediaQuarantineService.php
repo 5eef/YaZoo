@@ -6,6 +6,7 @@ use App\Contracts\MediaScanner;
 use App\Jobs\ScanQuarantinedMedia;
 use App\Models\MediaAsset;
 use App\Models\User;
+use App\Support\MediaStorage;
 use App\ValueObjects\MediaScanResult;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
@@ -30,7 +31,7 @@ final class MediaQuarantineService
         bool $dispatchScan = true,
     ): MediaAsset {
         $this->validateUpload($file);
-        $diskName = (string) config('media.scanning.quarantine_disk', 'private');
+        $diskName = config('media.driver') === 'r2' ? 'r2' : (string) config('media.scanning.quarantine_disk', 'private');
         $safeDirectory = trim(str_replace(['..', '\\'], ['', '/'], $directory), '/');
         $extension = strtolower($file->getClientOriginalExtension());
         $filename = (string) Str::uuid().($extension !== '' ? '.'.$extension : '');
@@ -119,13 +120,16 @@ final class MediaQuarantineService
     {
         $sourceDisk = Storage::disk($asset->disk);
         $sourcePath = $asset->path;
-        $targetDiskName = (string) config('media.filesystem_disk', 'public');
+        $targetDiskName = config('media.driver') === 'r2' ? 'r2' : (string) config('media.filesystem_disk', 'public');
         $targetDisk = Storage::disk($targetDiskName);
         if (! Str::startsWith($sourcePath, 'quarantine/')) {
             return $this->recordResult($asset, MediaScanResult::failed('invalid_quarantine_path'));
         }
 
         $targetPath = Str::after($sourcePath, 'quarantine/');
+        if ($targetDiskName === 'r2') {
+            $targetPath = MediaStorage::mediaDirectory($targetPath);
+        }
         $stream = $sourceDisk->readStream($asset->path);
 
         if (! is_resource($stream)) {

@@ -77,14 +77,15 @@ Route::middleware([ForceJsonResponse::class, SetApiLocale::class, EnsureFeatureE
     ]))->middleware('throttle:30,1');
 
     Route::get('/media/{fileId}', [MediaController::class, 'show'])
-        ->where('fileId', '[A-Fa-f0-9]{24}');
+        ->where('fileId', '(?:[A-Fa-f0-9]{24}|[A-Fa-f0-9-]{36})')
+        ->middleware(UseSanctumTokenFromCookie::class);
 
     Route::get('/media/posts/{post}', [MediaController::class, 'showPost'])
         ->whereNumber('post')
         ->middleware([UseSanctumTokenFromCookie::class, 'auth:sanctum']);
 
     Route::get('/media/private/{fileId}', [MediaController::class, 'showPrivate'])
-        ->where('fileId', '[A-Fa-f0-9]{24}')
+        ->where('fileId', '(?:[A-Fa-f0-9]{24}|[A-Fa-f0-9-]{36})')
         ->middleware(['cookie_csrf', UseSanctumTokenFromCookie::class, 'auth:sanctum']);
 
     Route::post('/monitoring/frontend-error', [MonitoringController::class, 'store'])

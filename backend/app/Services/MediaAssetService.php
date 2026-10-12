@@ -17,7 +17,7 @@ class MediaAssetService
 {
     public function registerPostUpload(User $owner, UploadedFile $file, string $kind): MediaAsset
     {
-        if (config('media.driver') === 'mongodb') {
+        if (in_array(config('media.driver'), ['mongodb', 'r2'], true)) {
             return $this->registerUpload($owner, $file, 'feed/posts', $kind, MediaAsset::VISIBILITY_PRIVATE);
         }
 
@@ -72,7 +72,7 @@ class MediaAssetService
     ): MediaAsset {
         $disk = $diskName ?? (MediaStorage::isMongoReference($path)
             ? 'mongodb'
-            : (string) config('media.filesystem_disk', 'public'));
+            : (str_starts_with($path, 'media/') && config('media.driver') === 'r2' ? 'r2' : (string) config('media.filesystem_disk', 'public')));
 
         return $owner->ownedMediaAssets()->firstOrCreate(
             ['disk' => $disk, 'path_hash' => hash('sha256', $path)],
@@ -222,6 +222,11 @@ class MediaAssetService
 
     private function deletePhysicalFileAfterCommit(string $disk, string $path): void
     {
-        DB::afterCommit(fn () => $this->deletePhysicalFile($disk, $path));
+        DB::afterCommit(function () use ($disk, $path): void {
+            // A shared object must survive removal of one relational reference.
+            if (! MediaAsset::query()->where('disk', $disk)->where('path', $path)->exists()) {
+                $this->deletePhysicalFile($disk, $path);
+            }
+        });
     }
 }
