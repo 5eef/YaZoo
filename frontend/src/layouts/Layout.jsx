@@ -408,7 +408,7 @@ function Layout() {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />
+    return <Navigate to={`/login?returnTo=${encodeURIComponent(location.pathname + location.search)}`} replace />
   }
 
   const handleCreateStory = () => {

@@ -13,6 +13,7 @@ import { useDemoBackendStatus } from '../hooks/useDemoBackendStatus'
 import { getGoogleAuthErrorMessage } from '../lib/googleAuthErrors'
 import { translate } from '../lib/i18n'
 import { getErrorMessage } from '../utils/getErrorMessage'
+import { safeAuthDestination } from '../lib/authDestination'
 
 function LoginPage() {
   const { isAuthenticated, login } = useAuth()
@@ -41,7 +42,7 @@ function LoginPage() {
   )
 
   if (isAuthenticated) {
-    return <Navigate to="/feed" replace />
+    return <Navigate to={safeAuthDestination(searchParams.get('returnTo'))} replace />
   }
 
   const handleSubmit = async (event) => {
@@ -198,7 +199,7 @@ function LoginPage() {
 
           <p className="mt-5 text-sm text-stone-500 dark:text-violet-100/70">
             {t('auth.login.noAccount')}{' '}
-            <Link className="font-medium text-violet-900 dark:text-violet-300" to="/register">
+            <Link className="font-medium text-violet-900 dark:text-violet-300" to={`/register?returnTo=${encodeURIComponent(safeAuthDestination(searchParams.get('returnTo')))}`}>
               {t('auth.login.createAccount')}
             </Link>
           </p>

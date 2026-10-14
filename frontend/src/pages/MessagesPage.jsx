@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 
 import {
@@ -53,6 +53,7 @@ function MessagesPage() {
   const [isConversationLoading, setIsConversationLoading] = useState(false)
   const [isConversationSubmitting, setIsConversationSubmitting] = useState(false)
   const [isMessageSubmitting, setIsMessageSubmitting] = useState(false)
+  const directConversationTarget = useRef(null)
   const { refreshUnreadCount, latestNotification } = useNotifications()
 
   const safeConversations = asArray(conversations)
@@ -94,7 +95,7 @@ function MessagesPage() {
   const openConversation = useCallback(
     async (conversationId, { updateQuery = true, silent = false } = {}) => {
       setSelectedConversationId(conversationId)
-      setIsConversationLoading(true)
+      if (!silent) setIsConversationLoading(true)
 
       if (!silent) {
         setErrorMessage('')
@@ -126,7 +127,7 @@ function MessagesPage() {
           getErrorMessage(error, t('messages.loadConversationError')),
         )
       } finally {
-        setIsConversationLoading(false)
+        if (!silent) setIsConversationLoading(false)
       }
     },
     [refreshUnreadCount, searchParams, setSearchParams, t],
@@ -160,6 +161,8 @@ function MessagesPage() {
     }
 
     if (requestedUserId > 0) {
+      if (directConversationTarget.current === requestedUserId) return
+      directConversationTarget.current = requestedUserId
       const openDirectConversation = async () => {
         setIsConversationLoading(true)
         setErrorMessage('')
@@ -190,6 +193,7 @@ function MessagesPage() {
           }
           setSearchParams(nextSearchParams, { replace: true })
         } catch (error) {
+          directConversationTarget.current = null
           setErrorMessage(
             getErrorMessage(error, t('messages.startError')),
           )
@@ -201,6 +205,8 @@ function MessagesPage() {
       void openDirectConversation()
       return
     }
+
+    directConversationTarget.current = null
 
     if (!requestedConversationId && requestedEmail) {
       return
@@ -333,6 +339,22 @@ function MessagesPage() {
       })
     }
   }, [latestNotification, loadConversations, openConversation, selectedConversationId])
+
+  useEffect(() => {
+    let cancelled = false
+    let timer
+    const poll = async () => {
+      if (document.visibilityState !== 'hidden') {
+        await loadConversations({ silent: true })
+        if (!cancelled && selectedConversationId) {
+          await openConversation(selectedConversationId, { updateQuery: false, silent: true })
+        }
+      }
+      if (!cancelled) timer = globalThis.setTimeout(poll, 15000)
+    }
+    timer = globalThis.setTimeout(poll, 15000)
+    return () => { cancelled = true; globalThis.clearTimeout(timer) }
+  }, [loadConversations, openConversation, selectedConversationId])
 
   useEffect(() => {
     const trimmedQuery = recipientQuery.trim()

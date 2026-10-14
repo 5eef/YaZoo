@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test'
 test('le shell React reste visible pendant le reveil puis charge les donnees', async ({ page }) => {
   let healthCalls = 0
 
-  await page.route('**/health/live', async (route) => {
+  await page.route('**/health/ready', async (route) => {
     healthCalls += 1
     const status = healthCalls >= 3 ? 'ready' : 'waking'
 

@@ -104,6 +104,40 @@ jobs:
         working-directory: frontend
         run: npm run test:e2e
 
+      - name: Run isolated veterinarian full-stack journey and responsive matrix
+        working-directory: backend
+        env:
+          APP_ENV: testing
+          APP_DEBUG: 'false'
+          APP_KEY: base64:c49vk2fjl1WJZPUaxanThGkmCDU9hHDldPjseMgdaQc=
+          APP_URL: http://127.0.0.1:8000
+          DB_CONNECTION: sqlite
+          DB_DATABASE: /tmp/yazoo-veterinarian-e2e.sqlite
+          CACHE_STORE: array
+          SESSION_DRIVER: file
+          SESSION_SECURE_COOKIE: 'false'
+          QUEUE_CONNECTION: sync
+          BROADCAST_CONNECTION: log
+          MAIL_MAILER: array
+          MEDIA_STORAGE_DRIVER: filesystem
+          YAZOO_REQUIRE_EXPECTED_DATABASE: 'false'
+          SANCTUM_STATEFUL_DOMAINS: 127.0.0.1:5173,127.0.0.1:8000
+          CORS_ALLOWED_ORIGINS: http://127.0.0.1:5173
+          E2E_BASE_URL: http://127.0.0.1:5173
+          E2E_VETERINARIAN_FULLSTACK: 'true'
+        run: |
+          set -euo pipefail
+          php tests/Support/prepare-veterinarian-e2e.php
+          (
+            cd public
+            export PHP_CLI_SERVER_WORKERS=4
+            exec php -S 127.0.0.1:8000 ../vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php
+          ) > /tmp/yazoo-e2e-server.log 2>&1 &
+          server_pid=$!
+          trap 'if kill -0 "$server_pid" 2>/dev/null; then kill "$server_pid"; fi' EXIT
+          cd ../frontend
+          npm run test:e2e -- e2e/veterinarian-fullstack.spec.js
+
       - name: SonarCloud scan
         if: env.SONAR_TOKEN != '' && env.SONAR_ORGANIZATION != ''
         uses: SonarSource/sonarqube-scan-action@2f77a1ec69fb1d595b06f35ab27e97605bdef703 # v5
@@ -234,6 +268,10 @@ jobs:
         if: github.event_name != 'workflow_call' || inputs.build_containers
         run: docker build --build-arg APP_VERSION="${GITHUB_SHA}" -f frontend/Dockerfile -t yazoo-frontend:ci .
 
+      - name: Build showcase API container
+        if: github.event_name != 'workflow_call' || inputs.build_containers
+        run: docker build --build-arg APP_VERSION="${GITHUB_SHA}" -f Dockerfile.api-demo -t yazoo-api-demo:ci .
+
       - name: Smoke-test non-root release containers
         if: github.event_name != 'workflow_call' || inputs.build_containers
         run: sh scripts/smoke-test-release-images.sh yazoo-api:ci yazoo-frontend:ci
@@ -252,6 +290,9 @@ jobs:
       - name: Scan release images with Trivy
         if: github.event_name != 'workflow_call' || inputs.build_containers
         run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy@sha256:cffe3f5161a47a6823fbd23d985795b3ed72a4c806da4c4df16266c02accdd6f \
+            image --severity CRITICAL,HIGH --exit-code 1 yazoo-api-demo:ci
           docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
             aquasec/trivy@sha256:cffe3f5161a47a6823fbd23d985795b3ed72a4c806da4c4df16266c02accdd6f \
             image --severity CRITICAL,HIGH --exit-code 1 yazoo-api:ci

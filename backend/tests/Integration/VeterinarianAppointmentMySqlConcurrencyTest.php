@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\Veterinarian;
 use App\Models\VeterinarianAppointment;
 use App\Models\VeterinarianAvailabilitySlot;
+use App\Services\ShowcaseAvailability;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Symfony\Component\Process\Process;
@@ -78,6 +79,47 @@ class VeterinarianAppointmentMySqlConcurrencyTest extends TestCase
         sort($statuses);
         $this->assertSame([200, 422], $statuses);
         $this->assertContains($appointment->fresh()->status, ['confirmed', 'rejected']);
+    }
+
+    public function test_two_clients_cannot_book_the_same_slot_concurrently(): void
+    {
+        [, $vet] = $this->veterinarian();
+        $slot = $vet->availabilitySlots()->create(['starts_at' => now()->addDays(3), 'ends_at' => now()->addDays(3)->addMinutes(30), 'is_available' => true]);
+        $this->slotIds[] = $slot->id;
+        $requests = [];
+        foreach ([1, 2] as $index) {
+            $client = $this->user();
+            $token = $client->createToken('concurrent-slot-test')->plainTextToken;
+            $requests[] = ['POST', "/api/veterinarians/{$vet->id}/appointments", ['availability_slot_id' => $slot->id, 'animal_type' => 'cat', 'reason' => 'Fictitious concurrent request '.$index], $token];
+        }
+        $statuses = $this->runConcurrently($requests);
+        $this->appointmentIds = VeterinarianAppointment::query()->where('availability_slot_id', $slot->id)->pluck('id')->all();
+        sort($statuses);
+        $this->assertSame([201, 422], $statuses);
+        $this->assertCount(1, $this->appointmentIds);
+    }
+
+    public function test_concurrent_showcase_generation_never_duplicates_slots(): void
+    {
+        if (! in_array(config('database.connections.mysql.database'), ['yazoo_vet_test', 'yazoo_concurrency'], true)) {
+            $this->markTestSkipped('Requires an allowlisted disposable test database.');
+        }
+        foreach (ShowcaseAvailability::EMAILS as $email) {
+            [$owner, $vet] = $this->veterinarian();
+            $owner->update(['email' => $email]);
+            $vet->update(['name' => 'DEMO AFWAJ', 'description' => 'Profil fictif']);
+        }
+        try {
+            $counts = $this->runConcurrently([['SHOWCASE_REFRESH', '/', [], ''], ['SHOWCASE_REFRESH', '/', [], '']]);
+            sort($counts);
+            $this->assertSame(0, $counts[0]);
+            $this->assertGreaterThan(0, $counts[1]);
+            $this->assertSame($counts[1], VeterinarianAvailabilitySlot::query()->whereIn('veterinarian_id', $this->veterinarianIds)->count());
+            $this->assertCount(0, VeterinarianAvailabilitySlot::query()->whereIn('veterinarian_id', $this->veterinarianIds)
+                ->selectRaw('veterinarian_id, starts_at, COUNT(*) as total')->groupBy('veterinarian_id', 'starts_at')->havingRaw('COUNT(*) > 1')->get());
+        } finally {
+            $this->slotIds = VeterinarianAvailabilitySlot::query()->whereIn('veterinarian_id', $this->veterinarianIds)->pluck('id')->all();
+        }
     }
 
     public function test_booking_and_slot_deletion_never_leave_an_appointment_without_its_slot(): void

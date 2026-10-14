@@ -9,7 +9,7 @@ test.beforeEach(async ({ context, page }) => {
 })
 
 async function mockGuestApi(page) {
-  await page.route('**/health/live', async (route) => {
+  await page.route('**/health/ready', async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -311,7 +311,7 @@ test('marketplace protege redirige vers login si invite', async ({ page }) => {
 
   await page.goto('/marketplace')
 
-  await expect(page).toHaveURL(/\/login$/)
+  await expect(page).toHaveURL(/\/login\?returnTo=%2Fmarketplace$/)
   await expect(page.getByRole('heading', { name: /Welcome back/i })).toBeVisible()
 })
 

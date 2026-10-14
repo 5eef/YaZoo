@@ -18,10 +18,12 @@ function VeterinarianAppointmentsPage() {
   const { t, locale } = useI18n()
   const [searchParams] = useSearchParams()
   const veterinarianId = searchParams.get('veterinarian')
+  const requestedSlot = searchParams.get('slot') ?? ''
   const isOwner = searchParams.get('owner') === '1'
   const [appointments, setAppointments] = useState([])
   const [slots, setSlots] = useState([])
-  const [selection, setSelection] = useState('')
+  const [slotsLoading, setSlotsLoading] = useState(Boolean(veterinarianId))
+  const [selection, setSelection] = useState(requestedSlot)
   const [animalType, setAnimalType] = useState('')
   const [reason, setReason] = useState('')
   const [startsAt, setStartsAt] = useState('')
@@ -31,6 +33,7 @@ function VeterinarianAppointmentsPage() {
   const mutationLock = useRef(false)
   const [pending, setPending] = useState(false)
   const [fieldErrors, setFieldErrors] = useState({})
+  const slotDate = (value) => new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Africa/Casablanca' }).format(new Date(value))
   const beginMutation = () => {
     if (mutationLock.current) return false
     mutationLock.current = true
@@ -46,18 +49,25 @@ function VeterinarianAppointmentsPage() {
   }
 
   const load = async () => {
-    const response = await listVeterinarianAppointmentsRequest()
-    setAppointments(response.data?.data ?? [])
-    if (veterinarianId) {
-      const availability = await listVeterinarianAvailabilityRequest(veterinarianId)
-      setSlots(availability.data?.data ?? [])
-    }
+    setSlotsLoading(Boolean(veterinarianId))
+    try {
+      const [response, availability] = await Promise.all([
+        listVeterinarianAppointmentsRequest(),
+        veterinarianId ? listVeterinarianAvailabilityRequest(veterinarianId) : Promise.resolve(null),
+      ])
+      setAppointments(response.data?.data ?? [])
+      if (availability) {
+        setSlots(availability.data?.data ?? [])
+        setSelection((current) => (availability.data?.data ?? []).some((slot) => String(slot.id) === current) ? current : '')
+      }
+    } finally { setSlotsLoading(false) }
   }
 
   useEffect(() => {
+    setSelection(requestedSlot)
     void load().catch((error) => setMessage(getErrorMessage(error, t('vetAppointments.loadError'))))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [veterinarianId])
+  }, [veterinarianId, requestedSlot])
 
   const submitAppointment = async (event) => {
     event.preventDefault()
@@ -73,6 +83,7 @@ function VeterinarianAppointmentsPage() {
       await load()
     } catch (error) {
       showFailure(error)
+      if ([404, 422].includes(error?.response?.status)) await load().catch(() => {})
     } finally { endMutation() }
   }
 
@@ -124,10 +135,11 @@ function VeterinarianAppointmentsPage() {
       {veterinarianId && !isOwner ? (
         <form onSubmit={submitAppointment} className="grid gap-4 rounded-[28px] bg-white/90 p-5 dark:bg-white/8 md:grid-cols-2">
           <label className="text-sm text-stone-700 dark:text-violet-100">{t('vetAppointments.slot')}
-            <select required value={selection} onChange={(event) => setSelection(event.target.value)} className="mt-2 w-full rounded-2xl border border-violet-200 bg-white px-4 py-3 dark:bg-stone-950">
+            <select required disabled={slotsLoading} aria-busy={slotsLoading} value={selection} onChange={(event) => setSelection(event.target.value)} className="mt-2 w-full rounded-2xl border border-violet-200 bg-white px-4 py-3 dark:bg-stone-950">
               <option value="">{t('vetAppointments.choose')}</option>
-              {slots.map((slot) => <option key={slot.id} value={slot.id}>{formatDate(slot.startsAt, locale)}</option>)}
+              {slots.map((slot) => <option key={slot.id} value={slot.id}>{slotDate(slot.startsAt)} (Africa/Casablanca)</option>)}
             </select>
+            <span role="status" className="mt-2 block text-xs">{slotsLoading ? t('common.loading') : slots.length === 0 ? t('publicVet.noSlots') : ''}</span>
           </label>
           <label className="text-sm text-stone-700 dark:text-violet-100">{t('vetAppointments.animalType')}
             <input required maxLength={80} aria-invalid={Boolean(fieldErrors.animal_type)} value={animalType} onChange={(event) => setAnimalType(event.target.value)} className="mt-2 w-full rounded-2xl border border-violet-200 bg-white px-4 py-3 dark:bg-stone-950" />
@@ -135,7 +147,7 @@ function VeterinarianAppointmentsPage() {
           <label className="text-sm text-stone-700 dark:text-violet-100 md:col-span-2">{t('vetAppointments.reason')}
             <textarea required aria-invalid={Boolean(fieldErrors.reason)} maxLength={500} value={reason} onChange={(event) => setReason(event.target.value)} className="mt-2 w-full rounded-2xl border border-violet-200 bg-white px-4 py-3 dark:bg-stone-950" />
           </label>
-          <Button type="submit" disabled={pending || !selection}>{t('vetAppointments.request')}</Button>
+          <Button type="submit" disabled={pending || slotsLoading || !selection}>{t('vetAppointments.request')}</Button>
         </form>
       ) : null}
 

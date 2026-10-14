@@ -29,6 +29,9 @@ if [ "${YAZOO_RUN_SHOWCASE_BOOTSTRAP:-false}" = "true" ]; then
     php artisan yazoo:sync-showcase-credentials \
         --confirmation="${YAZOO_SHOWCASE_CONFIRMATION}"
 
+    php artisan yazoo:refresh-showcase-availability \
+        --confirmation="${YAZOO_SHOWCASE_CONFIRMATION}"
+
     sh /var/www/html/scripts/run-production-preflight.sh
 else
     if [ "${YAZOO_RUN_DATABASE2_TEST_DATA_BOOTSTRAP:-false}" = "true" ] && [ "${YAZOO_RUN_MIGRATIONS:-false}" != "true" ]; then

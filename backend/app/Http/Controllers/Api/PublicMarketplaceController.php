@@ -7,7 +7,9 @@ use App\Models\Animal;
 use App\Models\Product;
 use App\Models\ServiceListing;
 use App\Models\Veterinarian;
+use App\Models\VeterinarianAppointment;
 use App\Services\MarketplacePublishingResolver;
+use App\Services\ShowcaseAvailability;
 use App\Support\MarketplaceMedia;
 use App\Support\MediaStorage;
 use Illuminate\Database\Eloquent\Builder;
@@ -83,8 +85,43 @@ class PublicMarketplaceController extends Controller
         abort_if($section === 'animals' && ! config('features.animal_listings_public'), 404);
         $item = $this->sectionQuery($section)->findOrFail($listing);
 
+        $payload = $this->sectionPayload($section, $item);
+        if ($item instanceof Veterinarian) {
+            // Only fields intended for a public professional listing. Account
+            // contacts, verification documents and appointments never leave here.
+            $payload['specialties'] = collect($item->specialties ?? [])->map(fn ($value) => $this->sanitizePublicText($value))->filter()->values();
+            $payload['workingHours'] = $item->working_hours ?? [];
+            $payload['ownerId'] = $item->user_id;
+            $payload['services'] = ServiceListing::query()->where('user_id', $item->user_id)
+                ->where('status', 'active')->where('moderation_status', 'active')->latest()->limit(12)
+                ->get(['id', 'title'])->map(fn ($service) => ['id' => $service->id, 'title' => $this->sanitizePublicText($service->title)]);
+            $payload['timezone'] = 'Africa/Casablanca';
+            // Address/location have no publication consent flag in the current
+            // model; expose them only for explicitly fictitious showcase data.
+            $authorizedDemo = in_array($item->user?->email, ShowcaseAvailability::EMAILS, true)
+                && str_contains($item->name, 'DEMO') && str_contains($item->description, 'fictif');
+            $payload['address'] = $authorizedDemo ? $this->sanitizePublicText($item->address) : null;
+            $payload['latitude'] = $authorizedDemo ? $item->latitude : null;
+            $payload['longitude'] = $authorizedDemo ? $item->longitude : null;
+            $payload['availability'] = $item->availabilitySlots()
+                ->where('starts_at', '>', now())->where('starts_at', '<=', now()->addDays(14))
+                ->withExists(['appointments as occupied' => fn ($query) => $query->whereIn('status', VeterinarianAppointment::ACTIVE_STATUSES)])
+                ->orderBy('starts_at')->limit(100)->get()
+                ->map(fn ($slot) => [
+                    'id' => $slot->id,
+                    'startsAt' => $slot->starts_at->toISOString(),
+                    'endsAt' => $slot->ends_at->toISOString(),
+                    'isAvailable' => $slot->is_available && ! $slot->occupied,
+                ]);
+            $reviews = $item->reviews()->published();
+            $payload['reviewsCount'] = (clone $reviews)->count();
+            $payload['averageRating'] = (clone $reviews)->avg('rating');
+            $payload['reviews'] = $reviews->latest()->limit(10)->get(['rating', 'comment', 'created_at'])
+                ->map(fn ($review) => ['rating' => $review->rating, 'comment' => $this->sanitizePublicText($review->comment)]);
+        }
+
         return response()->json([
-            'data' => $this->sectionPayload($section, $item),
+            'data' => $payload,
         ]);
     }
 
@@ -161,6 +198,11 @@ class PublicMarketplaceController extends Controller
                     'description',
                     'city',
                     'image_path',
+                    'specialties',
+                    'working_hours',
+                    'address',
+                    'latitude',
+                    'longitude',
                     'created_at',
                 ])
                 ->with($this->professionalVerificationRelations())
@@ -275,7 +317,7 @@ class PublicMarketplaceController extends Controller
             'price' => $price !== null ? (float) $price : null,
             'imageUrl' => $imageUrl,
             'badge' => $badge,
-            'professionalBadge' => $professionalBadge,
+            'professionalBadge' => str_ends_with((string) $listing->user?->email, '@yazoo.test') || config('operations.deployment_profile') === 'showcase' ? null : $professionalBadge,
             'createdAt' => $listing->created_at?->toISOString(),
             'author' => [
                 'name' => $this->sanitizePublicText($listing->user?->name),

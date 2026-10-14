@@ -2,7 +2,7 @@ import process from 'node:process'
 import { expect, test } from '@playwright/test'
 const pilot = process.env.E2E_STARTUP_PILOT === 'true'
 test.beforeEach(async ({ page }) => {
-  await page.route('**/health/live', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ status: 'ok' }) }))
+  await page.route('**/health/ready', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ status: 'ok' }) }))
   await page.route('**/api/auth/me', route => route.fulfill({ status: 401, contentType: 'application/json', body: '{}' }))
   await page.route('**/api/legal/config', route => route.fulfill({ contentType: 'application/json', body: '{}' }))
   await page.route('**/api/marketplace/public-preview**', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ data: { animals: [], products: [], veterinarians: [], services: [] } }) }))

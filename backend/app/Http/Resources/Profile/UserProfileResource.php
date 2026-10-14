@@ -21,9 +21,12 @@ class UserProfileResource extends JsonResource
     {
         $canViewPrivateDetails = $request->user()?->is($this->resource)
             || (bool) $request->user()?->is_admin;
+        $isDemo = str_ends_with((string) $this->email, '@yazoo.test') || (config('operations.deployment_profile') === 'showcase' && str_contains($this->name, 'DEMO'));
 
         return [
             'id' => $this->id,
+            'isDemo' => $isDemo,
+            'publicVeterinarians' => $this->whenLoaded('veterinarians', fn () => $this->veterinarians->map(fn ($vet) => ['id' => $vet->id, 'name' => $vet->name, 'city' => $vet->city])),
             'name' => $this->name,
             'email' => $canViewPrivateDetails ? $this->publicEmail() : null,
             'phone' => $canViewPrivateDetails ? $this->phone : null,
@@ -48,7 +51,7 @@ class UserProfileResource extends JsonResource
                 ? round((float) $this->reviews_received_avg_rating, 1)
                 : null,
             'isPhoneVerified' => $this->hasVerifiedPhone(),
-            'isProfessionalVerified' => $this->hasApprovedProfessionalVerification(),
+            'isProfessionalVerified' => ! $isDemo && $this->hasApprovedProfessionalVerification(),
             'professionalVerificationStatus' => $this->professionalVerificationStatus(),
             'isSuspended' => (bool) $this->is_suspended,
             'isBanned' => $this->banned_at !== null,

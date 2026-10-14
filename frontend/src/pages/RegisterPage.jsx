@@ -13,6 +13,7 @@ import { useDemoBackendStatus } from '../hooks/useDemoBackendStatus'
 import { getGoogleAuthErrorMessage } from '../lib/googleAuthErrors'
 import { translate } from '../lib/i18n'
 import { getErrorMessage } from '../utils/getErrorMessage'
+import { safeAuthDestination } from '../lib/authDestination'
 
 function RegisterPage() {
   const i18n = useContext(I18nContext)
@@ -48,7 +49,7 @@ function RegisterPage() {
   )
 
   if (isAuthenticated) {
-    return <Navigate to="/feed" replace />
+    return <Navigate to={safeAuthDestination(searchParams.get('returnTo'))} replace />
   }
 
   const handleChange = (field) => (value) => {
@@ -266,7 +267,7 @@ function RegisterPage() {
 
           <p className="mt-5 text-sm text-stone-500 dark:text-violet-100/70">
             {t('auth.register.alreadyAccount')}{' '}
-            <Link className="font-medium text-violet-900 dark:text-violet-300" to="/login">
+            <Link className="font-medium text-violet-900 dark:text-violet-300" to={`/login?returnTo=${encodeURIComponent(safeAuthDestination(searchParams.get('returnTo')))}`}>
               {t('auth.register.login')}
             </Link>
           </p>

@@ -566,8 +566,9 @@ function ProfilePage() {
                   <h2 className="text-2xl font-semibold text-stone-950 sm:text-3xl dark:text-violet-50">
                     {profile?.name ?? user?.name}
                   </h2>
-                  {profile?.isPhoneVerified || (isOwnProfile && user?.isPhoneVerified) ? <VerifiedPhoneBadge /> : null}
+                  {!profile?.isDemo && (profile?.isPhoneVerified || (isOwnProfile && user?.isPhoneVerified)) ? <VerifiedPhoneBadge /> : null}
                   {profile?.isProfessionalVerified ? <ComplianceBadge type="professionalApproved" /> : null}
+                  {profile?.isDemo ? <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-950">{t('startup.demoData')}</span> : null}
                 </div>
                 <p className="mt-1 text-sm text-stone-500 dark:text-violet-100/62">
                   @{(profile?.name ?? user?.name ?? 'username').toLowerCase().replace(/\s+/g, '')}
@@ -578,6 +579,7 @@ function ProfilePage() {
                   {profile?.bio ||
                     t('profile.defaultBio')}
                 </p>
+                {profile?.publicVeterinarians?.map((vet) => <Link key={vet.id} to={`/discover/veterinarians/${vet.id}`} className="mt-3 me-3 inline-flex rounded-full border border-violet-300 px-4 py-2 text-sm font-semibold text-violet-800 dark:text-violet-100">{t('landing.marketplaceDetails')} : {vet.name}</Link>)}
               </div>
             </div>
 

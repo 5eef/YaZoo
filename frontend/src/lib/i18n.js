@@ -17,6 +17,7 @@ export const LOCALE_LABELS = {
 
 export const messages = {
   fr: {
+    publicVet: { unavailable: 'Indisponible', noSlots: 'Aucun créneau disponible pour les 14 prochains jours.', message: 'Envoyer un message', social: 'Profil social' },
     adminKpi: {
       period: 'Période', days: 'jours', notMeasured: 'Donnée non mesurée',
       labels: {
@@ -492,6 +493,7 @@ export const messages = {
     },
   },
   ar: {
+    publicVet: { unavailable: 'غير متاح', noSlots: 'لا توجد مواعيد متاحة خلال الأيام الأربعة عشر القادمة.', message: 'إرسال رسالة', social: 'الملف الاجتماعي' },
     adminKpi: {
       period: 'الفترة', days: 'أيام', notMeasured: 'بيانات غير مقاسة',
       labels: {
@@ -912,6 +914,7 @@ export const messages = {
     },
   },
   en: {
+    publicVet: { unavailable: 'Unavailable', noSlots: 'No available slots for the next 14 days.', message: 'Send a message', social: 'Social profile' },
     adminKpi: {
       period: 'Period', days: 'days', notMeasured: 'Data not measured',
       labels: {

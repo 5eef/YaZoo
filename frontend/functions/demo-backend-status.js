@@ -18,7 +18,7 @@ export async function onRequestGet(context) {
   const timeoutId = setTimeout(() => controller.abort(), HEALTH_TIMEOUT_MS)
 
   try {
-    const response = await fetch(`${backendOrigin}/health/live`, {
+    const response = await fetch(`${backendOrigin}/health/ready`, {
       headers: { Accept: 'application/json' },
       redirect: 'manual',
       signal: controller.signal,

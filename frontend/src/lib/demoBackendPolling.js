@@ -12,7 +12,7 @@ export const DEMO_BACKEND_MAX_WAIT_MS = 90_000
 const STATUS_REQUEST_TIMEOUT_MS = 10_000
 
 const STATUS_ENDPOINT = import.meta.env.DEV
-  ? '/health/live'
+  ? '/health/ready'
   : '/demo-backend-status'
 
 export async function pollDemoBackend({

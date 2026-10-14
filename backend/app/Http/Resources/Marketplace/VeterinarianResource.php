@@ -20,9 +20,14 @@ class VeterinarianResource extends JsonResource
         $professionalBadge = $this->user
             ? app(MarketplacePublishingResolver::class)->badgeFor($this->user, 'veterinarians')
             : null;
+        $isDemo = str_ends_with((string) $this->user?->email, '@yazoo.test') || config('operations.deployment_profile') === 'showcase';
+        if ($isDemo) {
+            $professionalBadge = null;
+        }
 
         return [
             'id' => $this->id,
+            'isDemo' => $isDemo,
             'name' => $this->name,
             'clinicName' => $this->clinic_name,
             'description' => $this->description,
@@ -49,7 +54,7 @@ class VeterinarianResource extends JsonResource
             'owner' => [
                 'id' => $this->user?->id,
                 'name' => $this->user?->name,
-                'isPhoneVerified' => $this->user?->hasVerifiedPhone() ?? false,
+                'isPhoneVerified' => ! $isDemo && ($this->user?->hasVerifiedPhone() ?? false),
                 'isProfessionalVerified' => $professionalBadge !== null,
                 'professionalBadge' => $professionalBadge,
                 'professionalVerificationStatus' => $this->user?->professionalVerificationStatus(),

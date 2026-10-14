@@ -20,6 +20,47 @@ class PublicMarketplaceApiTest extends TestCase
         config(['features.animal_listings_public' => true]);
     }
 
+    public function test_public_veterinarian_detail_exposes_calendar_without_private_fields(): void
+    {
+        $vet = Veterinarian::factory()->create([
+            'is_active' => true, 'moderation_status' => 'active',
+            'specialties' => ['Vaccination'], 'working_hours' => ['09:00-18:00'],
+            'email' => 'private@example.com', 'phone' => '+212611111111',
+            'address' => 'Private address',
+        ]);
+        $slot = $vet->availabilitySlots()->create(['starts_at' => now()->addDay(), 'ends_at' => now()->addDay()->addMinutes(30)]);
+        $response = $this->getJson('/api/marketplace/public/veterinarians/'.$vet->id)
+            ->assertOk()->assertJsonPath('data.specialties.0', 'Vaccination')
+            ->assertJsonPath('data.ownerId', $vet->user_id)
+            ->assertJsonPath('data.availability.0.id', $slot->id)
+            ->assertJsonPath('data.availability.0.isAvailable', true)
+            ->assertJsonPath('data.address', null);
+        $this->assertStringNotContainsString('private@example.com', $response->getContent());
+        $this->assertStringNotContainsString('+212611111111', $response->getContent());
+        $this->assertStringNotContainsString('Private address', $response->getContent());
+        $vet->appointments()->create(['client_id' => User::factory()->create()->id, 'availability_slot_id' => $slot->id,
+            'starts_at' => $slot->starts_at, 'ends_at' => $slot->ends_at, 'animal_type' => 'cat', 'reason' => 'PRIVATE appointment reason', 'status' => 'pending']);
+        $calendar = $this->getJson('/api/marketplace/public/veterinarians/'.$vet->id)->assertOk()
+            ->assertJsonPath('data.availability.0.isAvailable', false);
+        $this->assertStringNotContainsString('PRIVATE appointment reason', $calendar->getContent());
+        $vet->update(['moderation_status' => 'pending_review']);
+        $this->getJson('/api/marketplace/public/veterinarians/'.$vet->id)->assertNotFound();
+    }
+
+    public function test_only_authorized_fictitious_veterinarians_expose_precise_demo_location(): void
+    {
+        config(['operations.deployment_profile' => 'showcase']);
+        $owner = User::factory()->create(['email' => 'veterinaire.agadir@yazoo.test']);
+        $vet = Veterinarian::factory()->create(['user_id' => $owner->id, 'name' => 'DEMO Sefrou', 'description' => 'Profil fictif', 'is_active' => true, 'moderation_status' => 'active', 'address' => 'Cabinet fictif Sefrou', 'latitude' => 33.8305, 'longitude' => -4.8353]);
+        $service = ServiceListing::factory()->create(['user_id' => $owner->id, 'title' => 'Consultation fictive', 'status' => 'active', 'moderation_status' => 'active']);
+        ServiceListing::factory()->create(['user_id' => $owner->id, 'moderation_status' => 'hidden']);
+        $this->getJson('/api/marketplace/public/veterinarians/'.$vet->id)->assertOk()
+            ->assertJsonPath('data.address', 'Cabinet fictif Sefrou')->assertJsonPath('data.professionalBadge', null)
+            ->assertJsonCount(1, 'data.services')->assertJsonPath('data.services.0.id', $service->id);
+        $owner->update(['email' => 'real@example.com']);
+        $this->getJson('/api/marketplace/public/veterinarians/'.$vet->id)->assertOk()->assertJsonPath('data.address', null)->assertJsonPath('data.latitude', null);
+    }
+
     public function test_pilot_disables_animal_preview_and_direct_public_routes(): void
     {
         config(['features.animal_listings_public' => false]);
