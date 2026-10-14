@@ -50,3 +50,5 @@ frontend/src/pages/PublicListingPage.jsx
 frontend/src/pages/RegisterPage.jsx
 frontend/src/pages/VeterinarianAppointmentsPage.jsx
 scripts/start-veterinarian-e2e.ps1
+mobile/package.json
+mobile/package-lock.json
