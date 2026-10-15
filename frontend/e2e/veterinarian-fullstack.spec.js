@@ -32,6 +32,7 @@ test.describe('Veterinarian full stack (isolated Laravel)', () => {
     await page.getByRole('button', { name: 'Demander le rendez-vous', exact: true }).click()
     expect((await booking).ok()).toBeTruthy()
     await expect(page.getByText('Consultation fictive E2E', { exact: true })).toBeVisible()
+    await page.screenshot({ path: '../output/qa/local-booking.png', fullPage: true })
     await page.reload()
     await expect(page.getByText('Consultation fictive E2E', { exact: true })).toBeVisible()
     await page.goto(detailURL)
@@ -48,6 +49,7 @@ test.describe('Veterinarian full stack (isolated Laravel)', () => {
     expect((await sent).ok()).toBeTruthy()
     await page.reload()
     await expect(page.getByText('Message fictif E2E persistant', { exact: true }).last()).toBeVisible()
+    await page.screenshot({ path: '../output/qa/local-messaging.png', fullPage: true })
     expect(directConversationRequests).toBe(1)
     const receiverContext = await browser.newContext()
     try {
@@ -60,6 +62,14 @@ test.describe('Veterinarian full stack (isolated Laravel)', () => {
       await expect(receiver).toHaveURL(/\/messages$/)
       await receiver.getByRole('button', { name: /Client DEMO E2E/ }).click()
       await expect(receiver.getByText('Message fictif E2E persistant', { exact: true }).last()).toBeVisible()
+      await receiver.getByPlaceholder(/message/i).last().fill('Reponse fictive veterinaire E2E')
+      await receiver.getByRole('button', { name: 'Envoyer', exact: true }).click()
+      await expect(receiver.getByText('Reponse fictive veterinaire E2E', { exact: true }).last()).toBeVisible()
+      await expect(page.getByText('Reponse fictive veterinaire E2E', { exact: true }).last()).toBeVisible({ timeout: 25000 })
+      await page.reload()
+      await expect(page.getByText('Reponse fictive veterinaire E2E', { exact: true }).last()).toBeVisible()
+      await receiver.goto(new URL('/veterinarian-appointments', page.url()).href)
+      await expect(receiver.getByText('Consultation fictive E2E', { exact: true })).toBeVisible()
     } finally {
       await receiverContext.close()
     }
@@ -67,7 +77,7 @@ test.describe('Veterinarian full stack (isolated Laravel)', () => {
 
   for (const locale of ['fr', 'en', 'ar']) {
     for (const theme of ['light', 'dark']) {
-      for (const width of [320, 375, 390, 768, 1024, 1440]) {
+      for (const width of [320, 360, 375, 390, 412, 768, 1024, 1440]) {
         test(`public profile ${locale} ${theme} ${width}px`, async ({ page }) => {
           await page.setViewportSize({ width, height: 900 })
           await page.addInitScript(({ locale, theme }) => {
