@@ -144,6 +144,25 @@ if [ "${YAZOO_RUN_QUEUE_WORKER:-false}" = "true" ]; then
 fi
 
 start_managed_process php_fpm php-fpm -F
+
+echo "Waiting for PHP-FPM on 127.0.0.1:9000 (30 attempts, up to approximately 15 seconds)."
+fpm_attempt=1
+while [ "${fpm_attempt}" -le 30 ]; do
+    check_managed_process php-fpm "${php_fpm_pid}"
+    if php -r '$socket = @fsockopen("127.0.0.1", 9000, $errno, $errstr, 0.2); if ($socket === false) { exit(1); } fclose($socket);'; then
+        check_managed_process php-fpm "${php_fpm_pid}"
+        echo "PHP-FPM is ready on 127.0.0.1:9000 (attempt ${fpm_attempt}/30)."
+        break
+    fi
+    check_managed_process php-fpm "${php_fpm_pid}"
+    if [ "${fpm_attempt}" -eq 30 ]; then
+        echo "PHP-FPM readiness timed out on 127.0.0.1:9000 after 30 attempts; Nginx was not started." >&2
+        shutdown_managed_processes 1
+    fi
+    sleep 0.3
+    fpm_attempt=$((fpm_attempt + 1))
+done
+
 start_managed_process nginx nginx -g "daemon off;"
 
 while true; do

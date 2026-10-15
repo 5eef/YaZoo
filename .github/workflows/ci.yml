@@ -244,6 +244,9 @@ jobs:
       - name: Test production preflight startup gate
         run: sh backend/tests/scripts/production-preflight-gate.sh
 
+      - name: Test PHP-FPM readiness startup gate
+        run: sh backend/tests/scripts/php-fpm-readiness.sh
+
       - name: Validate Docker Compose
         env:
           APP_KEY: base64:ci-placeholder-key
@@ -271,6 +274,10 @@ jobs:
       - name: Build showcase API container
         if: github.event_name != 'workflow_call' || inputs.build_containers
         run: docker build --build-arg APP_VERSION="${GITHUB_SHA}" -f Dockerfile.api-demo -t yazoo-api-demo:ci .
+
+      - name: Test showcase startup with isolated database
+        if: github.event_name != 'workflow_call' || inputs.build_containers
+        run: python3 scripts/tests/showcase-startup.py yazoo-api-demo:ci
 
       - name: Smoke-test non-root release containers
         if: github.event_name != 'workflow_call' || inputs.build_containers
