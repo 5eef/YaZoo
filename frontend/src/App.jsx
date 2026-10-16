@@ -1,3 +1,4 @@
+import BrandLogo from './components/ui/BrandLogo'
 import { Suspense, lazy } from 'react'
 import { Navigate, Route, Routes } from 'react-router'
 
@@ -153,10 +154,9 @@ function RouteLoader() {
   const { t } = useI18n()
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top_left,_rgba(168,85,247,0.18),_transparent_24%),linear-gradient(180deg,_#fffaff_0%,_#f7f1ff_100%)] px-4">
+    <div data-testid="route-loader" className="dark:bg-none dark:bg-stone-950 flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top_left,_rgba(168,85,247,0.18),_transparent_24%),linear-gradient(180deg,_#fffaff_0%,_#f7f1ff_100%)] px-4">
       <div className="rounded-[32px] border border-white/80 bg-white/92 px-6 py-5 text-center shadow-[0_20px_48px_rgba(124,58,237,0.08)]">
-        <img
-          src="/brand/yazoo-symbol.svg"
+        <BrandLogo
           alt={t('layout.logoLabel')}
           className="mx-auto h-14 w-14 object-contain"
         />

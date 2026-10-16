@@ -1,3 +1,4 @@
+import BrandLogo from './BrandLogo'
 import { brand } from '../../lib/brand'
 import { useContext } from 'react'
 import { Link } from 'react-router'
@@ -45,8 +46,7 @@ function Footer({ className = '' }) {
           {t('footer.contactUs')}
         </Link>
         <div className="flex flex-wrap items-center justify-center gap-2 text-xs leading-6 text-stone-500 dark:text-violet-100/70">
-          <img
-            src="/brand/yazoo-symbol.svg"
+          <BrandLogo
             alt=""
             className="h-6 w-6 object-contain"
             aria-hidden="true"

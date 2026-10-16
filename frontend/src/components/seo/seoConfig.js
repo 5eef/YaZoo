@@ -7,7 +7,7 @@ const configuredSiteUrl = (
 ).trim()
 export const SITE_URL = configuredSiteUrl.replace(/\/$/, '') ||
   (typeof globalThis.location === 'undefined' ? '' : globalThis.location.origin)
-export const SOCIAL_IMAGE_URL = `${SITE_URL}/icon-512.png`
+export const SOCIAL_IMAGE_URL = `${SITE_URL}/icon-512.png?v=2026`
 export const INDEX_ROBOTS =
   'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1'
 export const NOINDEX_ROBOTS = 'noindex, nofollow'

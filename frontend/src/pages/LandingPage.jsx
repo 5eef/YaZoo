@@ -1,3 +1,4 @@
+import BrandLogo from '../components/ui/BrandLogo'
 import { brand } from '../lib/brand'
 import { features } from '../lib/features'
 import { useEffect, useState } from 'react'
@@ -85,8 +86,7 @@ function LandingPage() {
         <header className="sticky top-3 z-30 rounded-[26px] border border-white/55 bg-[linear-gradient(135deg,_rgba(255,255,255,0.52),_rgba(248,240,255,0.36),_rgba(255,255,255,0.28))] px-4 py-3.5 shadow-[0_24px_60px_rgba(124,58,237,0.1)] backdrop-blur-2xl dark:border-violet-300/16 dark:bg-[linear-gradient(135deg,_rgba(5,3,10,0.96),_rgba(30,15,52,0.9))] sm:top-4 sm:rounded-[30px] sm:py-4 md:px-6">
           <div className="flex items-center justify-between gap-4">
             <a href="#top" className="flex min-w-0 items-center gap-3">
-              <img
-                src="/brand/yazoo-symbol.svg"
+              <BrandLogo
                 alt={t('landing.logoAlt')}
                 className="h-12 w-12 object-contain sm:h-14 sm:w-14"
               />

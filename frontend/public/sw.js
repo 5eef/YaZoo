@@ -1,9 +1,9 @@
-const CACHE_NAME = 'yazoo-public-assets-v3'
-const PUBLIC_ASSETS = ['/brand/yazoo-symbol.svg', '/icon-192.png', '/icon-512.png', '/icon-maskable-512.png', '/apple-touch-icon.png', '/icons.svg']
+const CACHE_NAME = 'yazoo-public-assets-v4-brand-2026'
+const PUBLIC_ASSETS = ['/brand/yazoo-inapp-2026.png', '/brand/login-light-2026.png', '/brand/login-dark-2026.png', '/icon-192.png', '/icon-512.png', '/icon-maskable-512.png', '/apple-touch-icon.png', '/icons.svg']
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(PUBLIC_ASSETS)),
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(PUBLIC_ASSETS.map((path) => new Request(path, { cache: 'reload' })))),
   )
   self.skipWaiting()
 })
@@ -13,7 +13,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((keys) =>
       Promise.all(
         keys
-          .filter((key) => key !== CACHE_NAME)
+          .filter((key) => key.startsWith('yazoo-public-assets-') && key !== CACHE_NAME)
           .map((key) => caches.delete(key)),
       ),
     ),
@@ -34,7 +34,7 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  if (!PUBLIC_ASSETS.includes(url.pathname)) {
+  if (url.search || !PUBLIC_ASSETS.includes(url.pathname)) {
     return
   }
 
