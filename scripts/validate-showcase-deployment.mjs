@@ -16,14 +16,17 @@ assert.match(dockerfile, /nginx\.demo\.conf/u)
 assert.match(startup, /yazoo:bootstrap-showcase/u)
 assert.match(startup, /yazoo:ensure-showcase-media/u)
 const showcaseStartup = startup.slice(0, startup.indexOf('\nelse\n'))
-const orderedStartupSteps = ['yazoo:migrate-production', 'yazoo:bootstrap-showcase', 'yazoo:ensure-showcase-media', 'yazoo:sync-showcase-credentials', 'sh /var/www/html/scripts/run-production-preflight.sh']
+const orderedStartupSteps = ['yazoo:migrate-production', 'yazoo:bootstrap-showcase', 'yazoo:ensure-showcase-media', 'sh /var/www/html/scripts/run-production-preflight.sh']
 let previousStep = -1
 for (const step of orderedStartupSteps) {
   const position = showcaseStartup.indexOf(step)
   assert.ok(position > previousStep, `showcase startup must execute ${step} in order`)
   previousStep = position
 }
-assert.match(showcaseStartup, /yazoo:sync-showcase-credentials\s*\\\r?\n\s*--confirmation="\$\{YAZOO_SHOWCASE_CONFIRMATION\}"/u)
+assert.doesNotMatch(showcaseStartup, /yazoo:sync-showcase-credentials/u)
+assert.ok(showcaseStartup.indexOf('php artisan cache:clear') > showcaseStartup.indexOf('php artisan yazoo:bootstrap-showcase'), 'promote legacy bootstrap marker before cache purge')
+assert.ok(showcaseStartup.indexOf('php artisan cache:clear') < showcaseStartup.indexOf('php artisan yazoo:refresh-showcase-availability'), 'refresh must tolerate the purged cache')
+
 assert.doesNotMatch(showcaseStartup, /--password|YAZOO_SHOWCASE_PASSWORD/u)
 assert.doesNotMatch(startup, /bootstrap-azure-showcase/u)
 assert.match(operations, /YAZOO_DEPLOYMENT_PROFILE/u)
