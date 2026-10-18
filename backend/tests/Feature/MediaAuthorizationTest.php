@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\MediaAsset;
+use App\Models\Story;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -34,6 +35,19 @@ class MediaAuthorizationTest extends TestCase
         Sanctum::actingAs(User::factory()->create());
 
         $this->getJson('/api/media/private/'.self::FILE_ID)->assertNotFound();
+    }
+
+    public function test_story_media_rejects_anonymous_and_expired_access_before_gridfs_streaming(): void
+    {
+        $owner = User::factory()->create();
+        $story = Story::factory()->for($owner)->create();
+        $asset = $this->asset($owner, MediaAsset::VISIBILITY_PUBLIC);
+        $asset->update(['attachable_type' => $story->getMorphClass(), 'attachable_id' => $story->id]);
+        $this->getJson('/api/media/'.self::FILE_ID)->assertNotFound();
+        Sanctum::actingAs($owner);
+        $story->update(['expires_at' => now()->subSecond()]);
+        $this->getJson('/api/media/'.self::FILE_ID, ['Range' => 'bytes=0-10'])->assertNotFound();
+        $this->head('/api/media/'.self::FILE_ID)->assertNotFound();
     }
 
     private function asset(User $owner, string $visibility): MediaAsset

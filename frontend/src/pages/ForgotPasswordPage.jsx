@@ -36,6 +36,7 @@ function ForgotPasswordPage() {
         <section className="yz-form-surface my-auto rounded-[30px] border p-5 sm:p-7">
           <h1 className="text-3xl font-semibold text-stone-950 dark:text-violet-50">{t('auth.forgot.title')}</h1>
           <p className="mt-3 text-sm leading-6 text-stone-600 dark:text-violet-100/76">{t('auth.forgot.subtitle')}</p>
+          <p className="mt-3 text-sm leading-6 text-stone-600 dark:text-violet-100/76">{t('integration.recoveryNotice')}</p>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             <label className="block">

@@ -1,4 +1,5 @@
 import { professionalMarketplaceMessages } from './locales/professionalMarketplace.js'
+import { demoIntegrationMessages } from './locales/demoIntegration.js'
 
 export const LOCALE_STORAGE_KEY = 'yazoo-locale'
 
@@ -8454,6 +8455,11 @@ export function getDateLocale(locale) {
 
   return dateLocales[normalizeLocale(locale)] ?? dateLocales.fr
 }
+
+messages.fr.auth.logoutUnverified = 'Les données privées sont masquées. La déconnexion du serveur n’a pas pu être vérifiée. Reconnectez-vous pour réessayer.'
+for (const locale of ['fr', 'ar', 'en']) messages[locale].integration = demoIntegrationMessages[locale]
+messages.en.auth.logoutUnverified = 'Private data is hidden. Server sign-out could not be verified. Sign in again to retry.'
+messages.ar.auth.logoutUnverified = 'تم إخفاء البيانات الخاصة. تعذر التحقق من تسجيل الخروج من الخادم. سجل الدخول مجدداً للمحاولة.'
 
 messages.fr.startup = { demoData: 'Démonstration — aucun partenariat réel' }
 messages.ar.startup = { demoData: 'بيانات توضيحية — لا شراكة فعلية' }

@@ -135,7 +135,6 @@ class BootstrapReleaseAdmin extends Command
 
             $matchingAdmin->forceFill([
                 'name' => $credentials['name'],
-                'password' => Hash::make($credentials['password']),
                 'email_verified_at' => $matchingAdmin->email_verified_at ?? now(),
                 'admin_mfa_secret' => $credentials['mfa_secret'],
                 'admin_mfa_recovery_codes' => array_map(

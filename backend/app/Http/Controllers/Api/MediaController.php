@@ -58,15 +58,16 @@ class MediaController extends Controller
     {
         $asset = $this->resolveAsset($fileId, MediaAsset::VISIBILITY_PUBLIC);
         abort_if($asset->attachable_type === (new Post)->getMorphClass(), Response::HTTP_NOT_FOUND);
+        if ($asset->attachable_type === (new Story)->getMorphClass()) {
+            $story = $asset->attachable;
+            abort_unless(request()->user('sanctum') && $story?->expires_at?->isFuture(), Response::HTTP_NOT_FOUND);
+        }
         if ($asset->disk === 'r2' && $asset->attachable_type) {
             $subject = $asset->attachable;
             abort_unless($subject, 404);
             $viewer = request()->user('sanctum');
             if (method_exists($subject, 'isPubliclyVisible') && ! $subject->isPubliclyVisible()) {
                 abort_unless($viewer && ($viewer->is_admin || (int) $viewer->id === (int) $asset->owner_id), 404);
-            }
-            if ($subject instanceof Story) {
-                abort_if($subject->expires_at->isPast(), 404);
             }
             if ($subject instanceof Community && $subject->is_private) {
                 abort_unless($viewer && Community::query()->visibleTo($viewer)->whereKey($subject->id)->exists(), 404);
@@ -176,7 +177,8 @@ class MediaController extends Controller
                 'Content-Type' => $file['mime_type'],
                 'Content-Length' => $length,
                 'Accept-Ranges' => 'bytes',
-                'Cache-Control' => $asset->visibility === MediaAsset::VISIBILITY_PRIVATE ? 'private, no-store' : 'public, max-age=300',
+                'Cache-Control' => $asset->visibility === MediaAsset::VISIBILITY_PRIVATE || $asset->attachable_type === (new Story)->getMorphClass()
+                    ? 'private, no-store' : 'public, max-age=300',
                 'Content-Disposition' => HeaderUtils::makeDisposition(
                     HeaderUtils::DISPOSITION_INLINE,
                     $filename,

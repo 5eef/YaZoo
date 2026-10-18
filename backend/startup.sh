@@ -15,7 +15,6 @@ if [ "${YAZOO_RUN_SHOWCASE_BOOTSTRAP:-false}" = "true" ]; then
     php artisan yazoo:migrate-production
 
     if [ "${YAZOO_RESET_RUNTIME_STATE:-false}" = "true" ]; then
-        php artisan cache:clear
         php artisan queue:clear "${QUEUE_CONNECTION:-redis}" --force
     fi
 
@@ -23,11 +22,13 @@ if [ "${YAZOO_RUN_SHOWCASE_BOOTSTRAP:-false}" = "true" ]; then
         --images="${YAZOO_SHOWCASE_IMAGES_PATH:-/opt/yazoo-showcase-images}" \
         --confirmation="${YAZOO_SHOWCASE_CONFIRMATION}"
 
+    # Preserve the legacy completion marker in operation_markers before cache purge.
+    if [ "${YAZOO_RESET_RUNTIME_STATE:-false}" = "true" ]; then
+        php artisan cache:clear
+    fi
+
     php artisan yazoo:ensure-showcase-media \
         --images="${YAZOO_SHOWCASE_IMAGES_PATH:-/opt/yazoo-showcase-images}"
-
-    php artisan yazoo:sync-showcase-credentials \
-        --confirmation="${YAZOO_SHOWCASE_CONFIRMATION}"
 
     php artisan yazoo:refresh-showcase-availability \
         --confirmation="${YAZOO_SHOWCASE_CONFIRMATION}"

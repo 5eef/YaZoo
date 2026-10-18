@@ -6,6 +6,7 @@ use App\Models\User;
 use Database\Seeders\MarketplaceTestSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
@@ -134,11 +135,12 @@ class Database2TestDataBootstrapTest extends TestCase
         $arguments = ['--confirmation' => $this->confirmation];
 
         $this->assertSame(0, Artisan::call('yazoo:bootstrap-database2-test-data', $arguments));
+        $originalHash = User::query()->where('is_admin', true)->sole()->password;
         $this->assertSame(0, Artisan::call('yazoo:bootstrap-release-admin', $arguments));
 
         $admin = User::query()->where('email', 'bough.youssef@gmail.com')->sole();
-        $this->assertTrue(Hash::check('Release-Administrator-2026!', $admin->password));
-        $this->assertFalse(Hash::check(self::TEST_PASSWORD, $admin->password));
+        $this->assertSame($originalHash, $admin->password);
+        $this->assertTrue(Hash::check(self::TEST_PASSWORD, $admin->password));
         $this->assertNotNull($admin->admin_mfa_confirmed_at);
         $this->assertCount(8, $admin->admin_mfa_recovery_codes);
         $this->assertTrue(User::query()->where('is_admin', false)->get()->every(
@@ -148,6 +150,32 @@ class Database2TestDataBootstrapTest extends TestCase
         $adminPassword = $admin->password;
         $this->assertSame(0, Artisan::call('yazoo:bootstrap-database2-test-data', $arguments));
         $this->assertSame($adminPassword, $admin->fresh()->password);
+    }
+
+    public function test_bootstrap_without_marker_preserves_existing_test_account(): void
+    {
+        $user = User::factory()->create(['email' => 'veterinaire.agadir@yazoo.test', 'password' => 'Private-Test-Password!']);
+        $before = $user->fresh()->getRawOriginal();
+        $this->assertSame(0, Artisan::call('yazoo:bootstrap-database2-test-data', ['--confirmation' => $this->confirmation]));
+        $this->assertSame($before, $user->fresh()->getRawOriginal());
+        DB::table('operation_markers')->delete();
+        config(['operations.database2_test_account_password' => 'Another-Test-Only-Password-2026!']);
+        $hashes = User::query()->pluck('password', 'id')->all();
+        $this->assertSame(0, Artisan::call('yazoo:bootstrap-database2-test-data', ['--confirmation' => $this->confirmation]));
+        $this->assertSame($hashes, User::query()->pluck('password', 'id')->all());
+    }
+
+    public function test_completed_marker_preserves_registered_accounts_after_cache_repository_restart(): void
+    {
+        $arguments = ['--confirmation' => $this->confirmation];
+        $this->assertSame(0, Artisan::call('yazoo:bootstrap-database2-test-data', $arguments));
+        User::factory()->create(['email' => 'registered-after-bootstrap@example.test', 'password' => 'Independent-Owner-Test-Password!']);
+        $before = DB::table('users')->orderBy('id')->get()->toJson();
+        Cache::forgetDriver('array');
+        $this->assertDatabaseCount('operation_markers', 1);
+        $this->assertSame(0, Artisan::call('yazoo:bootstrap-database2-test-data', $arguments));
+        $this->assertStringContainsString('already complete', Artisan::output());
+        $this->assertSame($before, DB::table('users')->orderBy('id')->get()->toJson());
     }
 
     public function test_it_refuses_an_unrelated_existing_account(): void
