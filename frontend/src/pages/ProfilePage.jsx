@@ -95,7 +95,7 @@ function ProfilePage() {
       try {
         const response = await getProfileRequest(requestedProfileId)
         const data = normalizeProfileMediaPayload(extractDataObject(response, null))
-        const postsResponse = await getPostsRequest()
+        const postsResponse = await getPostsRequest({ author_id: requestedProfileId })
         const userPosts = extractDataArray(postsResponse).filter(
           (post) => String(post.author?.id) === String(requestedProfileId),
         )

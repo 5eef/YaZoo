@@ -10,6 +10,7 @@ import {
   updateVeterinarianAppointmentStatusRequest,
 } from '../api/veterinarianAppointments'
 import Button from '../components/ui/Button'
+import { deleteAvailability } from '../api/demoIntegration'
 import { useI18n } from '../hooks/useI18n'
 import { getErrorMessage } from '../utils/getErrorMessage'
 import { formatDate } from '../utils/formatDate'
@@ -160,6 +161,17 @@ function VeterinarianAppointmentsPage() {
       ) : null}
 
       {Object.entries(fieldErrors).map(([field, errors]) => <p key={field} role="alert" className="text-sm text-red-700 dark:text-red-200">{Array.isArray(errors) ? errors.join(' ') : String(errors)}</p>)}
+      {veterinarianId && isOwner && <div className="grid gap-3">
+        {slots.map(slot => <div key={slot.id} className="flex flex-wrap items-center gap-3 rounded-2xl bg-white/90 p-4 dark:bg-white/8">
+          <span>{slotDate(slot.startsAt)}</span>
+          <Button disabled={pending} variant="secondary" onClick={async () => {
+            if (!globalThis.confirm(t('integration.confirmChange')) || !beginMutation()) return
+            try { await deleteAvailability(slot.id); await load(); setMessage(t('integration.saved')) }
+            catch (error) { showFailure(error) }
+            finally { endMutation() }
+          }}>{t('integration.deleteSlot')}</Button>
+        </div>)}
+      </div>}
       <div aria-live="polite" className="text-sm text-violet-800 dark:text-violet-100">{message}</div>
       <div className="grid gap-4">
         {appointments.map((appointment) => (

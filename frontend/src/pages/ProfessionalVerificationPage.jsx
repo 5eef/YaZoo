@@ -11,6 +11,7 @@ import { useI18n } from '../hooks/useI18n'
 import { extractDataArray, extractDataObject } from '../utils/apiData'
 import { getErrorMessage } from '../utils/getErrorMessage'
 import { uploadError } from '../utils/uploadValidation'
+import { getBackendBaseUrl } from '../lib/appConfig'
 
 const BUSINESS_TYPES = [
   'veterinarian',
@@ -245,6 +246,9 @@ function ProfessionalVerificationPage() {
                   </p>
                 ) : null}
                 {verification.reviewReason ? <p className="mt-2 text-xs text-stone-500 dark:text-violet-100/64">{verification.reviewReason}</p> : null}
+                {verification.documentDownloadUrl && <a className="mt-3 inline-block underline" href={`${getBackendBaseUrl()}${verification.documentDownloadUrl}`}>
+                  {t('admin.professionalVerifications.downloadDocument')}
+                </a>}
               </article>
             ))}
           </div>
