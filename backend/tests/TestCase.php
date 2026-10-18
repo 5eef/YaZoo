@@ -4,6 +4,7 @@ namespace Tests;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use Tests\Support\DisposableDatabaseTarget;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -13,11 +14,14 @@ abstract class TestCase extends BaseTestCase
 
         // Check before RefreshDatabase can run migrations, even with cached config.
         if (isset($this->traitsUsedByTest[RefreshDatabase::class])) {
-            if (! $app->environment('testing')
-                || config('database.default') !== 'sqlite'
-                || config('database.connections.sqlite.database') !== ':memory:'
-                || ! empty(config('database.connections.sqlite.url'))) {
-                throw new \RuntimeException('Destructive feature tests require testing with SQLite :memory:.');
+            $driver = (string) config('database.default');
+            if (! DisposableDatabaseTarget::permits(
+                $app->environment(),
+                $driver,
+                config("database.connections.{$driver}", []),
+                filter_var(env('YAZOO_MYSQL_CONCURRENCY_TEST', false), FILTER_VALIDATE_BOOL),
+            )) {
+                throw new \RuntimeException('Destructive feature tests require SQLite :memory: or the explicitly enabled loopback MySQL CI fixture.');
             }
         }
 
