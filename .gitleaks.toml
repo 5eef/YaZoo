@@ -305,3 +305,16 @@ regexes = [
   "^AZ8eVUsp0Ldm6EmbH6j7$",
   "^AZ8eVUs-0Ldm6EmbH6kG$",
 ]
+
+
+[[rules.allowlists]]
+description = "Reviewed public immutable Docker Hub references in the published release report; not credentials"
+condition = "AND"
+regexTarget = "secret"
+paths = ["(^|/)docs/YAZOO_PUBLIC_DEPLOYMENT_REPORT_2026-10-18\\.md$"]
+regexes = [
+  "^5eef/yazoo-api-demo:9ef598e4ee79cd8384ef71c485c5c76fd7275d01$",
+  "^9ef598e4ee79cd8384ef71c485c5c76fd7275d01$",
+  "^5eef/yazoo-api-demo:8d4381072c4f1e3d5981283ae44db1fc09c655af$",
+  "^8d4381072c4f1e3d5981283ae44db1fc09c655af$",
+]
