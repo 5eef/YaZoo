@@ -182,6 +182,7 @@ function VeterinarianAppointmentsPage() {
             <p className="mt-2 text-xs font-semibold uppercase text-violet-700">{t(`vetAppointments.status.${appointment.status}`)}</p>
             <div className="mt-3 flex flex-wrap gap-2">
               {appointment.canManage && appointment.status === 'pending' ? <Button type="button" disabled={pending} onClick={() => updateStatus(appointment.id, 'confirmed')}>{t('vetAppointments.confirm')}</Button> : null}
+              {appointment.canManage && appointment.status === 'pending' ? <Button type="button" disabled={pending} variant="ghost" onClick={() => updateStatus(appointment.id, 'rejected')}>{t('vetAppointments.reject')}</Button> : null}
               {appointment.canCancel ? <Button type="button" disabled={pending} variant="ghost" onClick={() => updateStatus(appointment.id, 'cancelled')}>{t('common.cancel')}</Button> : null}
               {appointment.canManage && appointment.status === 'confirmed' && new Date(appointment.endsAt).getTime() < Date.now() ? <Button type="button" disabled={pending} variant="secondary" onClick={() => updateStatus(appointment.id, 'completed')}>{t('vetAppointments.complete')}</Button> : null}
               {appointment.canReview ? (

@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { mockApi } from './branding-fixtures'
 
-const routes = ['/feed', '/profile', '/marketplace/animals', '/marketplace/products', '/marketplace/services', '/marketplace/veterinarians', '/search', '/reservations', '/orders/history', '/messages', '/notifications', '/communities', '/settings', '/admin/moderation', '/admin/users', '/admin/orders', '/admin/stats', '/admin/security', '/admin/professional-verifications', '/veterinarian-appointments']
+const routes = ['/feed', '/reels', '/profile', '/marketplace/animals', '/marketplace/products', '/marketplace/services', '/marketplace/veterinarians', '/search', '/reservations', '/orders/history', '/messages', '/notifications', '/communities', '/settings', '/admin/moderation', '/admin/users', '/admin/orders', '/admin/stats', '/admin/security', '/admin/professional-verifications', '/veterinarian-appointments']
 for (const [width, locale, theme] of [[320, 'ar', 'dark'], [375, 'fr', 'light'], [768, 'en', 'light'], [1024, 'fr', 'dark'], [1440, 'ar', 'light']]) {
   test(`existing demo pages and navigation ${width}px ${locale} ${theme}`, async ({ page }) => {
     test.setTimeout(120000)

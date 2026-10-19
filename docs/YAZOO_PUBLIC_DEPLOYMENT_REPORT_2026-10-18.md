@@ -1,127 +1,144 @@
-# Publication publique YaZoo — 18 octobre 2026
+# YaZoo — publication publique du 18 octobre 2026
 
-## Décision
+**Décision finale : DEPLOYED_WITH_LIMITATIONS.** Le backend, le frontend et les Functions sont publiés sur les services existants. Les parcours nommés ci-dessous disposent de preuves hébergées ; les fonctions non testées ou désactivées ne sont pas certifiées globalement.
 
-**NOT_DEPLOYED_BLOCKED**. Aucun commit, push, envoi Docker Hub, déploiement Render ou Pages n'a été effectué pendant cette mission. La publication reste bloquée par l'absence d'accès Render vérifiable et de preuves de sauvegarde/restauration TiDB. Un frontend seul n'a pas été publié.
+Rapport finalisé le 2026-10-18 à 23:08 UTC. Il remplace le constat initial `NOT_DEPLOYED_BLOCKED`. Les documents inclus dans le commit applicatif décrivent la préparation ; ce rapport local consigne les résultats obtenus après publication.
 
-## A. Références vérifiées
+## A. Références de release
 
-| Élément | Observation |
+| Élément | Valeur vérifiée |
 | --- | --- |
-| Dépôt | `5eef/YaZoo`, session GitHub authentifiée, droits de publication confirmés |
-| Branche de travail initiale | `startup-2026` |
-| SHA de base | `3602ef610e14b8b2878b4935e308a455d5085995` ; distant `startup-2026` identique lors du contrôle |
-| `main` local et référence distante | `f9d369af58235cf4e0ce191ef7fe51c082db60b3` |
-| Candidat isolé | `release/public-2026-10-18`, worktree `output/public-release/source`, modifications non commitées |
-| SHA de release | Aucun : le SHA de base ne représente pas les corrections non commitées |
-| Image candidate locale | `yazoo-api-demo:candidate-public-2026-10-18`, linux/amd64, identifiant local `sha256:3f6524a9c2d2de3e1de87a315e466ba4c3e5f21400ddb6dae708e84cb3e8409b` ; aucun digest de registre publié |
-| Image Docker Hub de release / digest | Non publiée ; non attribués |
-| Render Service ID / Deploy ID / digest courant | Non vérifiés, accès indispensable manquant |
-| Cloudflare Pages | Projet existant `yazoo-showcase`, publication Direct Upload, branche de production `startup-2026` |
-| Déploiement Pages existant | `3520222f-de1a-4ac4-99ff-6eb7f636332d`, créé le 16 octobre 2026 à 16:01:14 UTC, SHA de base ci-dessus, dirty=false |
-| Date de nouvelle publication | Aucune |
+| Branche applicative publiée | `release/public-2026-10-18` |
+| SHA applicatif complet | `9ef598e4ee79cd8384ef71c485c5c76fd7275d01` |
+| Image immuable | `5eef/yazoo-api-demo:9ef598e4ee79cd8384ef71c485c5c76fd7275d01` |
+| Digest déployé | `sha256:3158e25d2fc05412cbb1d07328433eda10e600ca52f5f1a5832276e17406bc66` |
+| Architecture / PHP | Linux amd64 / PHP 8.4.24 |
+| Workflow de release | [39171537980](https://github.com/5eef/YaZoo/actions/runs/39171537980), réussi |
+| Service Render | `srv-dae5dq1t0dsc738tg0l0`, workspace `tea-dadks8afngtc73fgf0gg` |
+| Plan / région / source | Free / Frankfurt / image Docker ; aucun changement de plan |
+| Render Deploy ID | `dep-dbakm3vbtjjs73fhv8qg` |
+| Mise en ligne Render | `2026-10-18T22:41:53.393921Z` |
+| Projet Pages existant | `yazoo-showcase`, Direct Upload |
+| Branche de production Pages | `startup-2026`, confirmée via API ; routage de publication Direct Upload du code de la branche de release |
+| Pages Deployment ID | `97f5d485-5a4b-45c4-9cd6-d9820a2ef375` |
+| Publication Pages | `2026-10-18T22:46:32.814681Z` |
+| Preuve du frontend servi | SHA confirmé dans les métadonnées Pages ; 102 fichiers JS/CSS comparés octet pour octet au build local |
+| Référence Pages précédente | `3520222f-de1a-4ac4-99ff-6eb7f636332d`, conservée comme référence historique, pas comme secours de sécurité |
+| Ancien déploiement Render | `dep-db8cuku89jmc73d2kqhg`, image `bcf017564c9f8f9b38e46728f79f4aa65aa4c300` ; ne pas le redémarrer avec son ancien bootstrap |
 
-Le manifeste explicite sous `output/public-release/` exclut les modifications natives indépendantes, les logos, les candidatures, les secrets et les artefacts. Il est recalculé après la mise à jour Composer et ce rapport. Avant tout commit, contrôler de nouveau l'absence de divergence avec les fichiers sélectionnés. Ne pas employer l'empreinte initiale comme preuve de la version finale.
+La référence persistante Render est le tag SHA complet ci-dessus ; l'API normalise l'affichage de la référence en tag, et le digest du déploiement est vérifié séparément. Les workflows refusent de réutiliser un tag SHA existant. Aucun `latest` n'a été écrasé.
 
-## B. Validations exécutées pendant cette mission
+Le manifeste contient **89 fichiers**, empreinte `e251697e581e26a82d9cb534f242e1882688bc208c33e1fdcbeeba587e7ddc54`. Les branches `main` et `startup-2026` n'ont pas été modifiées. Le worktree applicatif reste propre sur le SHA publié ; les modifications indépendantes de `mobile/`, logos et candidatures ne sont pas incluses. Le dossier `output/`, les fichiers d'environnement, sauvegardes et artefacts de tests ne sont pas publiés.
+
+## B. Tests et preuves techniques
 
 | Contrôle | Résultat et portée |
 | --- | --- |
-| Laravel, dépendances initiales | **PASS_LOCAL**, PHP 8.4.24, SQLite en mémoire, réseau Docker coupé : 480 tests, 2 830 assertions |
-| Laravel après correctif Composer | **PASS_LOCAL**, `php artisan test --compact` : 480 tests, 2 830 assertions, 118,72 s, aucun avertissement dans la relance finale séquentielle ; réseau Docker coupé, SQLite en mémoire |
-| Mémoire du lanceur | Le premier essai à 128 Mo a épuisé la mémoire ; PHPUnit complet passe avec 512 Mo pour le processus de test. Aucun changement de limite du serveur publié |
-| Pint | **PASS_LOCAL**, 465 fichiers ; contrôle répété après mise à jour des dépendances |
-| React/Vitest | **PASS_LOCAL**, 232 tests dans 60 fichiers sur le worktree candidat |
-| ESLint / TypeScript / build React | **PASS_LOCAL** ; le build de validation n'est pas un artefact public approuvé, configuration Render encore inconnue |
-| Traductions / classes Tailwind | **PASS_LOCAL**, 2 062 clés / 187 classes contrôlées |
-| Playwright session/navigation | **PASS_LOCAL**, 33 tests, API interceptée : FR/AR/EN, clair/sombre, RTL, 320/375/768/1024/1440 px ; ne prouve pas le backend hébergé |
-| Déconnexion Playwright | Profil personnel/public, feed, paramètres ; précédent/reload ; 419/429/503 ; cookie encore présent ; client → vétérinaire → client |
-| Sécurité Composer corrigée | **PASS_LOCAL**, `composer audit --locked` : aucun avis après mise à jour ciblée |
-| Sécurité npm | Cinq alertes HIGH dans l'outillage de build ; politique résiduelle existante satisfaite et contrôle runtime sans vulnérabilité. Le résultat brut npm n'est pas vert |
-| Gitleaks | **PASS_LOCAL**, scan du répertoire candidat avec rédaction des secrets, aucune fuite détectée ; ne constitue pas un scan de tout l'historique Git |
-| Garde-fous de release | **PASS_LOCAL**, validate-startup-release-guards, validate-showcase-deployment et deux tests de politique de dépendances |
-| Mobile natif local | **PASS_LOCAL** pour 70 tests Node sur le dossier mobile initial, qui contient des changements indépendants exclus du candidat |
-| Android/iOS sur appareil | **NOT_TESTED**, aucun appareil ADB connecté ; aucune publication native |
-| Lint / types natifs locaux | **PASS_LOCAL** sur le dossier mobile indépendant ; aucune validation d'appareil ni publication native |
-| Docker candidat | **PASS_LOCAL**, build linux/amd64 PHP 8.4.24, Nginx/PHP-FPM UID 82 ; live/ready HTTP 200 avant/après redémarrage ; 64 migrations SQLite et zéro utilisateur inchangés, aucun seeding |
-| Trivy image candidate | **PASS_LOCAL**, Trivy 0.75.0, base téléchargée le 18 octobre 2026, contrôle HIGH/CRITICAL OS et Composer, code de sortie 0 ; preuve JSON sous `output/public-release/trivy-candidate.json` |
-| CI GitHub | Verte pour le SHA de base uniquement ; **NOT_TESTED** pour le candidat non commité |
+| Laravel CI | PASS_LOCAL : **481 tests, 2 840 assertions** ; aucune base TiDB utilisée par les tests destructifs |
+| React/Vitest | PASS_LOCAL : **232 tests**, 60 fichiers |
+| Playwright CI | PASS_LOCAL : **208 smoke tests**, puis **49 tests du parcours vétérinaire et responsive avec API jetable** ; ces nombres ne représentent pas des tests hébergés |
+| Mobile CI du SHA publié | PASS_LOCAL : **63 tests**, zéro échec, lint et types ; les 70 tests locaux antérieurs portaient sur les modifications natives indépendantes, exclues de cette release |
+| Pint / syntaxe / lint / types / build | PASS_LOCAL dans la CI ; builds Pages release et secours également réussis, 14 pages SEO générées |
+| Test du garde-fou de base | PASS_LOCAL : 10 assertions refusant notamment TiDB, DB_URL et les bases persistantes ; les six tests MySQL de bootstrap passent avec 43 assertions |
+| Docker publié, release et secours | PASS_LOCAL : images réellement tirées par digest, amd64, processus serveur UID 82, health checks avant/après redémarrage, SQLite jetable préservée |
+| Trivy / secrets CI | PASS_LOCAL : images backend, showcase et frontend sans HIGH/CRITICAL ; scan de secrets réussi, aucune assertion ni exclusion ajoutée pour contourner un échec |
+| Secrets dans les bundles Pages | PASS_LOCAL : 280 fichiers release/secours inspectés, aucune valeur secrète serveur recherchée détectée ; aucune valeur affichée |
+| npm | Politique résiduelle existante satisfaite ; **cinq alertes HIGH dans l'outillage de build demeurent**. Le contrôle runtime ne signale pas de vulnérabilité. Le résultat npm brut n'est pas présenté comme entièrement vert |
+| Santé hébergée | PASS_HOSTED : `/health/live` et `/health/ready` HTTP 200 au SHA publié, avant et après redémarrage réel |
+| Publication frontend | PASS_HOSTED : URL canonique et 102 assets correspondant au build publié |
+| Parcours fonctionnels publics | PASS_HOSTED : 10 groupes UI/API, détaillés dans la matrice ci-dessous |
+| Données des scénarios | PASS_HOSTED : 13 contrôles SQL en lecture seule sur les seuls acteurs synthétiques, dont un message unique lu, commentaire, vue de story, adhésion approuvée et dossier professionnel non approuvé |
+| Médias hébergés | PASS_HOSTED : sept groupes API/Laravel/R2, plus preuve de suppression physique de l'objet par HEAD 404 |
+| Persistance | PASS_HOSTED : redémarrage Render réellement demandé et nouveau démarrage observé dans les logs ; références et octets avatar/couverture, publication et historique de messages conservés |
+| Android/iOS sur appareil | NOT_TESTED : aucune publication native ni validation sur appareil attribuée à ces tests web |
 
-Les E2E Laravel/S3Mock antérieurs restent détaillés dans [SOCIAL_MARKETPLACE_E2E_VALIDATION.md](SOCIAL_MARKETPLACE_E2E_VALIDATION.md). Ils ne sont pas présentés comme une nouvelle exécution du candidat ou une validation hébergée.
+Deux problèmes de banc de validation ont été identifiés sans modifier l'application : Docker top exige la colonne PID pour son inspection ; le formulaire de profil sans fichier utilise PATCH et non POST. Le premier essai de ce dernier test a expiré en attendant la mauvaise méthode ; une lecture a confirmé la sauvegarde avant une nouvelle transition contrôlée, puis le test corrigé a réussi. Aucune mutation incertaine n'a été répétée aveuglément.
 
-## C. Services externes
+## C. TiDB, sauvegarde et intégrité
 
-| Service | État vérifié |
-| --- | --- |
-| GitHub | Session disponible ; workflow Docker Hub manuel existant, CI préalable et tag SHA immuable requis |
-| Docker Hub | Configuration d'authentification locale présente et secrets de workflow nommés présents ; push candidat non effectué |
-| Render | **BLOCKED_INFRASTRUCTURE** : aucun accès API/CLI utilisable trouvé ; demande d'accès sécurisé transmise, aucun secret demandé dans la conversation |
-| TiDB | **BLOCKED_INFRASTRUCTURE** : aucune connexion distante utilisée ; cible réelle, TLS, inventaire, marqueurs, empreintes de préservation et sauvegarde restaurable non vérifiés |
-| Pages | Accès Cloudflare authentifié et déploiement existant identifié ; page publique HTTP 200 dans Chromium |
-| Functions | Liaison `BACKEND_ORIGIN` de type secret présente, valeur masquée ; `/api/legal/config` passe de 503 à 200 après réveil lors du second contrôle navigateur |
-| R2 | Bucket existant correspondant à la configuration locale, endpoint de compte vérifié ; r2.dev désactivé, aucun domaine public activé ; voir validation ci-dessous |
-| Redis / Reverb / workers / scheduler | **NOT_TESTED** sur l'hébergement ; aucune création de service ; polling HTTP conservé sans revendication WebSocket |
-| Emails / SMS | Livraison réelle **NOT_TESTED** ; aucune livraison simulée annoncée comme réelle |
-| Paiements | Aucune activation ; CMI réel ne doit pas être activé sans environnement approprié |
+La cible vient des **variables réellement lues dans Render**, pas du `.env` local : `yazoo_showcase_afwaj`, port 4000, hôte conforme au garde, TLS avec certificat et nom d'hôte vérifiés. Les paramètres de garde de base sont conservés.
 
-### R2 réel : preuve limitée et réserves
+- Avant publication : 43 tables, 20 utilisateurs, 64 migrations appliquées ; aucune migration du candidat en attente.
+- Sauvegarde logique cohérente : **43 tables, 671 lignes**, chiffrée AES-256-GCM ; clé protégée par DPAPI du propriétaire Windows et dossier sous ACL restrictives. Aucun SQL en clair écrit sur disque.
+- **Restauration exécutée** dans MySQL 8.4 jetable, sans port publié : toutes les tables, tous les nombres de lignes et toutes les empreintes de lignes correspondent. Ce n'est pas une restauration native TiDB Cloud ni une restauration de la base active.
+- Preuves : `output/public-release/backup-proof.json`, snapshot et clé protégés sous `output/public-release/private-backup/`. Ne pas publier ce dossier. La récupération de la clé dépend du profil Windows DPAPI ; une copie de récupération hors machine reste à organiser par le propriétaire.
+- Les sauvegardes automatiques effectives dans le compte TiDB Cloud n'ont pas été consultées, faute d'accès à cette console/API. La récupération démontrée ici est l'export logique chiffré restauré. Les restrictions Starter restent à prendre en compte : [documentation PingCAP](https://docs.pingcap.com/tidbcloud/backup-and-restore-serverless/?plan=starter).
+- Aucun snapshot complet ni comparaison exhaustive des octets du bucket R2 d'origine n'a été réalisé. Les références d'origine sont conservées ; seules les clés synthétiques explicitement créées pour les tests ont été ciblées par les suppressions de QA.
+- Au démarrage, `yazoo:migrate-production` a été invoqué par le script existant et n'avait **aucune migration à appliquer** : aucune nouvelle opération DDL distante. Aucune commande fresh/refresh/wipe/seed/rollback n'a été exécutée contre TiDB.
+- Le marqueur historique `yazoo_cache_yazoo_showcase_bootstrap_v2` était complet ; le correctif a ajouté le marqueur durable `yazoo_showcase_bootstrap_v2` dans `operation_markers`. Aucun reseeding. Les logs confirment la préservation du jeu existant et l'absence de synchronisation des mots de passe.
+- Après déploiement et redémarrage : **20 comptes d'origine conservés**, **22 comptes au total**, dont deux nouveaux comptes synthétiques de validation. Le nombre historique n'a pas été rétabli artificiellement.
+- Les lignes d'origine de **37 tables** sont comparées par empreintes HMAC et inchangées : identifiants, emails, hashes, profils, permissions, vérifications, publications, messages, notifications, réservations, paiements, relations, créneaux d'origine et tokens d'origine. Les valeurs et hashes ne sont jamais affichés.
+- Les tables opérationnelles cache, locks, sessions, jobs et marqueurs sont distinguées de cette comparaison. Des ajouts normaux de créneaux fictifs peuvent résulter du renouvellement existant, sans modifier les rendez-vous ou créneaux d'origine.
 
-L'adaptateur existant `MediaStorage::createR2Disk` a réellement envoyé, lu, remplacé puis supprimé des objets synthétiques dans un préfixe unique `release-validation/2026-10-18/`. Aucun démarrage Laravel ni accès DB pour ces essais. La suppression exigeait une métadonnée d'appartenance au test, puis vérifiait l'absence de l'objet. Les trois objets de chaque essai ont été supprimés.
-
-**PASS_HOSTED, couche SDK R2 uniquement** : upload/lecture image, vidéo et document synthétique, remplacement de l'image, lecture vidéo Range HTTP 206 et suppression des objets du test. Cela ne certifie pas les parcours UI hébergés.
-
-Le premier test attendait 401/403 ; une sonde anonyme sans écriture a établi le refus exact R2 : HTTP 400, XML `Error`, code `InvalidArgument`, message exact `Authorization`. L'assertion finale exige cette erreur précise ou un refus 401/403 XML et vérifie l'absence des octets de l'objet. Le cycle complet réussit : **PASS_HOSTED couche SDK**, lecture anonyme de l'image et du document refusée, lecture persistante par un nouveau client, puis suppression confirmée des trois objets. La persistance après redémarrage Render et le cycle d'autorisation Laravel hébergé restent **NOT_TESTED**. L'essai PHP Windows a rencontré une erreur de chaîne CA ; TLS n'a pas été désactivé, les essais SDK réussis utilisent Linux.
-
-**Uploads non activés.** Aucun secret ni flag Cloudflare/Render modifié. La présence de credentials R2 locaux ne prouve pas leur présence dans Render.
+Les écritures de QA hébergée concernent les deux nouvelles identités et leurs ressources synthétiques. Le vétérinaire existant utilisé est explicitement un profil DEMO fictif : connexion, lecture de son profil et déconnexion uniquement, sans modification métier ni mot de passe. Le dossier professionnel synthétique porte une mention explicite de non-validité et reste en attente ; aucun badge créé.
 
 ## D. Matrice fonctionnelle
 
-L'[inventaire des routes](FULL_DEMO_ROUTE_INVENTORY.md), l'[audit fonctionnel](FULL_DEMO_FUNCTIONAL_AUDIT.md) et le [rapport E2E détaillé](SOCIAL_MARKETPLACE_E2E_VALIDATION.md) donnent la correspondance route/contrôleur/page/test. Les statuts suivants s'appliquent à la couche précisée, sans généralisation des tests backend aux interfaces.
+Les routes, contrôleurs et écrans détaillés restent décrits dans [l'inventaire](FULL_DEMO_ROUTE_INVENTORY.md) et [la validation sociale locale](SOCIAL_MARKETPLACE_E2E_VALIDATION.md). PASS_HOSTED ne concerne que le scénario et la couche nommés.
 
-| Fonctionnalité | Backend | Frontend | Test local | Test hébergé | Statut final / réserve |
-| --- | --- | --- | --- | --- | --- |
-| Inscription / connexion / rôles | Laravel/Sanctum | AuthContext, LoginPage, inscription | Suites Laravel ; erreurs login UI | Non exécuté | PASS_LOCAL backend ; NOT_TESTED hébergé |
-| Déconnexion / changement de compte | Révocation Sanctum, cookie, `/auth/me` | AuthContext, client, Layout | Laravel + 33 E2E dont isolation | Non exécuté | PASS_LOCAL pour scénarios exécutés |
-| Profils et auteur des posts | ProfileController / posts author_id | ProfilePage | Laravel + Vitest ; UI responsive interceptée | Non exécuté | PASS_LOCAL couches testées ; persistance hébergée NOT_TESTED |
-| Avatars / couvertures | MediaAssetService | ProfilePage | Laravel ; E2E antérieurs S3Mock référencés | SDK R2 seulement | Parcours hébergé BLOCKED_INFRASTRUCTURE |
-| Posts / commentaires / likes / visibilité | Controllers/services existants | FeedPage, PostCard | Laravel ; tests UI antérieurs référencés | Non exécuté | PASS_LOCAL backend ; UI complète hébergée NOT_TESTED |
-| Stories / vues / expiration / purge | StoryService, MediaController, PurgeExpiredStories | FeedPage, StoryViewer | Laravel et régressions confidentialité | Non exécuté | PASS_LOCAL backend ; scheduler hébergé NOT_TESTED |
-| Messagerie / historique / lecture | Conversation/Message controllers | MessagesPage, Layout | Laravel ; hook polling Vitest | Non exécuté | PASS_LOCAL backend ; simultané hébergé NOT_TESTED |
-| Notifications liste/compteur/lecture | NotificationController | NotificationContext/NotificationsPage | Laravel ; E2E antérieurs référencés | Non exécuté | PASS_LOCAL backend ; hébergé NOT_TESTED |
-| Communautés privées / adhésion / permissions | CommunityController | CommunityDetailPage | Laravel + Vitest ; navigation UI | Non exécuté | PASS_LOCAL couches testées ; parcours complet hébergé NOT_TESTED |
-| Marketplace animaux/produits/services | Controllers et permissions existants | Pages marketplace | Laravel ; UI responsive interceptée | Non exécuté | PASS_LOCAL couches testées ; médias hébergés bloqués |
-| Réservations / commandes / historique | Services existants | ReservationsPage, OrderHistoryPage | Laravel + Vitest | Non exécuté | PASS_LOCAL backend ; hébergé NOT_TESTED |
-| Vétérinaires / disponibilités / rendez-vous | Services existants | VeterinariansMarketplacePage, rendez-vous | Laravel ; navigation responsive | Non exécuté | PASS_LOCAL backend ; hébergé NOT_TESTED |
-| Vérification professionnelle / badge | ProfessionalVerification et décisions persistées | Vérifications admin/profil | Laravel ; E2E antérieurs référencés | Non exécuté | PASS_LOCAL backend ; aucun badge artificiel attribué |
-| Administration / MFA / audit / modération | Middleware et controllers existants | Pages admin | Laravel ; navigation avec API interceptée | Non exécuté | PASS_LOCAL backend ; administration hébergée NOT_TESTED |
-| Reels et vidéos UI | Médias existants | Interface existante | Navigation responsive seulement | Non exécuté | NOT_TESTED pour le parcours vidéo complet |
-| FR/EN/AR, RTL, clair/sombre | Sans objet | Design existant préservé | 33 E2E, cinq largeurs | Non exécuté | PASS_LOCAL aux combinaisons testées ; 390 px NOT_TESTED |
-| WebSocket Reverb | Architecture conservée | Fallback HTTP existant | Polling testé localement | Non exécuté | NOT_TESTED hébergé ; aucun véritable temps réel annoncé |
+| Fonctionnalité | Backend / frontend | Test local | Test hébergé | Statut et limite |
+| --- | --- | --- | --- | --- |
+| Inscription email/mot de passe | AuthController, Sanctum / RegisterPage | Laravel + React | Deux inscriptions réelles desktop et Chrome mobile émulé | PASS_HOSTED ; validation complète des erreurs reste couverte localement |
+| Connexion, déconnexion, changement de compte | AuthController / AuthContext, client, Layout | Régressions Laravel/Vitest/Playwright | Client → vétérinaire fictif → client ; cookie/session révoqués, me 401, reload, retour navigateur, autre onglet redirigé | PASS_HOSTED pour ces parcours ; erreurs 419/429/503 de logout testées localement |
+| Profils | ProfileController / ProfilePage | Laravel + React | Nom, ville, bio modifiés via UI mobile, PATCH 200, reload ; refus de modification du profil d'autrui 403 | PASS_HOSTED |
+| Avatar et couverture | MediaAssetService / ProfilePage | Laravel + S3Mock | Upload, lecture, remplacement, suppression, ancien URL 404, conservation lors de sauvegarde texte et après restart | PASS_HOSTED Laravel/R2 |
+| Posts image, commentaires, likes | Controllers feed / FeedPage, PostCard | Laravel + UI locale | A publie, B voit/commente/like, A retrouve le commentaire, modification par B refusée | PASS_HOSTED pour ces actions ; réponses/réactions détaillées non exhaustives en hébergé |
+| Vidéos du feed | MediaController / vidéo existante | Laravel + décodage local | Vrais octets WebM, Range 206, décodage 64×64 Chromium, passage privé et accès anonyme refusé, suppression | PASS_HOSTED ; pas une certification de tous les codecs ou navigateurs |
+| Stories image/vidéo | StoryService, MediaController / StoryViewer | Laravel + UI locale | Publication, apparition par polling, vue SQL, durée enregistrée 24 h, lecture privée, no-store, refus anonyme et suppression propriétaire | PASS_HOSTED pour ces cas ; pas d'attente réelle de 24 h |
+| Purge des stories expirées | PurgeExpiredStories / scheduler | Tests locaux | Scheduler désactivé dans Render | DISABLED_BY_DESIGN dans la configuration actuelle ; nettoyage automatique non certifié |
+| Messagerie | Conversation/Message controllers / MessagesPage | Laravel + UI locale | Deux sessions simultanées, réception automatique HTTP, message unique lu, reload et restart | PASS_HOSTED en polling, pas WebSocket |
+| Notifications | NotificationController / NotificationsPage | Laravel + UI locale | Liste visible, suivi/commentaire/message, lecture SQL persistée, refus d'un autre destinataire 404 | PASS_HOSTED pour ces déclencheurs ; autres déclencheurs non exhaustifs |
+| Communauté privée | CommunityController / CommunitiesPage, CommunityDetailPage | Laravel + React | Création avec média, demande, refus de publier avant approbation, approbation par propriétaire, publication membre | PASS_HOSTED ; autres opérations de gestion non exhaustives en hébergé |
+| Marketplace animaux/produits/services | Controllers existants / pages marketplace | Laravel + parcours locaux documentés | Listes HTTP Laravel et rendu desktop 1440/mobile responsive 375 | PASS_HOSTED pour lecture/navigation ; création/modération/favoris détaillés NOT_TESTED en hébergé |
+| Réservations et commandes | Services existants / ReservationsPage, OrderHistoryPage | Laravel et E2E locaux | Liste/historique HTTP et écran | PASS_HOSTED lecture ; nouvelle réservation complète et confirmation NOT_TESTED en hébergé |
+| Vétérinaires et rendez-vous | Controllers existants / pages vétérinaires | 49 tests CI du parcours réel jetable | Liste, écrans de rendez-vous et profil du vétérinaire fictif | PASS_HOSTED lecture ; nouvelle disponibilité/réservation/confirmation NOT_TESTED en hébergé |
+| Vérification professionnelle | ProfessionalVerification / page de soumission | Laravel + revue admin locale | Soumission synthétique, document privé accessible au propriétaire et refusé à l'autre compte, statut pending, aucun statut vérifié attribué | PASS_HOSTED pour ces étapes ; approbation/rejet administratif et badge après décision NOT_TESTED en hébergé |
+| Administration et MFA | Middleware / pages admin | Laravel et CI | Non-admin refusé 403 ; MFA obligatoire confirmé dans Render | PASS_HOSTED refus de rôle ; session admin MFA et actions administratives NOT_TESTED, aucun accès privilégié forcé |
+| FR/EN/AR, RTL, clair/sombre | I18n/Theme providers, Layout | CI responsive | Six largeurs 320/375/390/768/1024/1440, trois langues, deux thèmes ; préférences du seul compte synthétique sauvegardées | PASS_HOSTED aux combinaisons testées ; pas chaque écran dans toutes les combinaisons |
+| Reels | React router / code natif indépendant | Contrats natifs et vidéo feed | Aucun parcours Reels dédié certifié ; `/reels` n'est pas une route React dédiée dans ce SHA | NOT_TESTED ; les redirections vers feed ne comptent pas comme validation Reels ; lecture vidéo du feed validée séparément |
+| Android/iOS natif | Expo / mobile indépendant | CI 63 tests, anciennes preuves locales distinctes | Aucun appareil ni publication native | NOT_TESTED sur appareil |
 
-## E. Corrections et intégrité
+## E. Services et limites réelles
 
-Les corrections d'authentification, préservation des comptes et intégration sociale préexistantes sont conservées dans le candidat. Le défaut de logout provenait notamment de réponses d'authentification obsolètes capables de restaurer l'utilisateur, de données React encore montées et d'une confirmation locale insuffisante. Le correctif conserve la barrière locale, l'invalidation par époque de session, la coordination interonglets, le démontage des données privées et la vérification serveur après logout ; il ne rejoue pas aveuglément une mutation.
+| Service | État vérifié |
+| --- | --- |
+| GitHub / Docker Hub | Deux branches et images immuables publiées ; workflows de release et de secours réussis |
+| Render | Service existant Free réutilisé, image/version/digest et logs contrôlés ; redémarrage réel validé |
+| TiDB | TLS, cible, schéma et préservation contrôlés ; aucune nouvelle base cloud ni migration destructive |
+| Pages / Functions | Projet existant, même SHA, proxy `/api`, `/sanctum`, `/storage`, `/broadcasting`, `/demo-backend-status` conservé ; usages testés de cookies, CSRF, médias et Range |
+| R2 | Credentials Render comparés en mémoire à ceux déjà validés ; bucket privé existant, uploads déjà activés avant intervention ; cycle Laravel réel et persistance après restart validés |
+| Redis | Non utilisé par la configuration actuelle : cache SQL et queue synchrone ; health check Redis skipped ne constitue pas une preuve de connexion |
+| Reverb | Broadcasting log, Vite realtime false ; aucune session WebSocket certifiée. Fallback HTTP effectivement testé |
+| Scheduler / workers | Tous deux désactivés avant intervention et conservés ; queue synchrone. Les tâches planifiées ne sont pas annoncées comme exécutées |
+| Email | MAIL_MAILER=log ; aucune livraison réelle certifiée. L'interface conserve l'avertissement de démonstration |
+| SMS | Driver disabled ; aucune livraison simulée annoncée |
+| CMI / paiements réels | Désactivés, aucune activation ni transaction réelle |
 
-Correction supplémentaire de cette mission : verrou Composer ciblé, `symfony/http-foundation` 7.4.19 → 7.4.21, `symfony/yaml` 8.1.6 → 8.1.9, et trois polyfills requis par le solveur. Aucun changement de contrainte générale Laravel, schéma ou secret.
+Render Free peut dormir et imposer un réveil : le proxy existant est conservé. Il ne faut pas déduire de deux health checks verts une validation des services skipped. Aucune dépense, nouveau service cloud ou montée de plan.
 
-Aucune opération DB hébergée, migration distante, seeder, réinitialisation, modification de mot de passe ou suppression d'utilisateur n'a été effectuée. Les logos, candidatures et modifications natives indépendantes n'ont pas été écrasés. Les volumes Docker préexistants sont conservés. **La conservation réelle des hashes/contenus hébergés n'a pas été comparée**, faute d'accès : absence de mutation de notre part ne remplace pas cette vérification.
+## F. Correctifs et sécurité
 
-## F. Conditions nécessaires avant publication
+Les correctifs locaux d'authentification et de préservation sont publiés : révocation Sanctum, expiration du cookie, barrière locale de session, invalidation des réponses obsolètes par époque, coordination interonglets, démontage des données privées et contrôle me 401. Le profil du vétérinaire précédent n'est pas restauré dans le scénario hébergé exécuté.
 
-1. Fournir une session Render/API sécurisée utilisable localement ; relever service, source réelle, plan, image/digest, déploiement, logs, variables et rollback compatible.
-2. Vérifier en lecture seule la cible TiDB `yazoo_showcase_afwaj`, TLS, variables de garde, `migrations`, `operation_markers` et marqueur historique. Identifier toutes les migrations réellement en attente.
-3. Obtenir une sauvegarde cohérente, chiffrée et restaurable avec preuve de restauration isolée ; relever les empreintes de préservation sans afficher données personnelles ou hashes.
-4. Examiner les écritures de démarrage : `startup.sh` peut appeler `yazoo:migrate-production` avant le bootstrap. L'absence d'un marqueur n'autorise jamais un reseeding. Aucune nouvelle image ne doit démarrer sur TiDB avant validation de ces effets.
-5. Terminer les validations du candidat corrigé, le scan de l'image et les démarrages répétés avec persistance jetable ; compléter les parcours critiques encore non testés.
-6. Certifier les autorisations média R2 réelles, la configuration effective Render et la persistance après redémarrage avant toute activation des uploads.
-7. Recalculer le manifeste, revoir les seuls fichiers sélectionnés, créer le commit de release puis exécuter la CI et le workflow Docker Hub sur ce SHA complet. Conserver le digest immuable.
-8. Publier Render d'abord avec référence de rollback compatible. Après santé, logs, données et parcours réels validés, construire Pages avec les flags publics confirmés, puis publier et vérifier la même release.
-9. Réaliser les tests hébergés avec identités et ressources synthétiques autorisées : deux comptes simultanés, CSRF, isolation, médias privés, réservations, badges, langues/apparences et largeurs dont 390 px.
+Les intégrations sociales existantes sont conservées : posts de l'auteur via author_id, pagination, polling borné suspendu en onglet invisible, liste de notifications actualisée, adhésion privée accessible sans exposer le contenu et contrôle des médias de stories authentifiés/non expirés. Aucun endpoint inventé et aucune réécriture du design.
 
-## G. URLs observées, sans nouvelle publication
+Correctifs de sécurité de la préparation : Symfony http-foundation 7.4.21, yaml 8.1.9 et polyfills associés. Correctif supplémentaire démontré par la CI : libX11 1.8.14-r0 dans l'image frontend. Les gardes CSRF/Sanctum, permissions, MFA et scans ne sont pas désactivés pour publier.
 
-- Frontend existant : https://yazoo-showcase.pages.dev
-- Backend existant : https://yazoo-showcase.onrender.com
-- Déploiement Pages existant : https://3520222f.yazoo-showcase.pages.dev
+Aucun mot de passe existant modifié, utilisateur supprimé ou contenu préexistant supprimé. Aucun secret Render/Cloudflare modifié. La référence d'image applicative du service a été mise à jour et vérifiée. Aucun logo ou dossier de candidature modifié par cette reprise ; les changements indépendants restent dans le workspace initial.
 
-Au premier contrôle Chromium en lecture seule, le frontend renvoyait 200 ; Render `/health/live`, `/health/ready` et le proxy `/api/legal/config` renvoyaient 503 « Application loading ». Au second contrôle, les quatre URLs répondent 200. Cela confirme le réveil observé du service existant et le passage d'une requête par le proxy ; cela ne certifie pas les parcours authentifiés ni une nouvelle release. Aucune release nouvelle n'est déclarée déployée.
+## G. Secours et suite
+
+Révision de secours : `8d4381072c4f1e3d5981283ae44db1fc09c655af` ; image `5eef/yazoo-api-demo:8d4381072c4f1e3d5981283ae44db1fc09c655af` ; digest `sha256:fe0d31787f584e8b122c097743d3c4241bbe54df86ace8298ad3fc55a7b07a30`. [Workflow de secours réussi](https://github.com/5eef/YaZoo/actions/runs/39171539853). Cette révision contient les correctifs backend de préservation et de médias ainsi que les corrections de session ; son image a été testée par digest. Un build frontend de secours est prêt dans le worktree safety.
+
+En cas d'incident, arrêter les publications, garder les preuves et identifier le composant. Si un retour applicatif est nécessaire, employer cette révision compatible sur les services existants et revérifier santé, sessions et empreintes. **Ne pas réactiver l'ancienne image bcf avec synchronisation des credentials ni l'ancien frontend non corrigé. Ne jamais effectuer de restauration SQL automatique comme rollback applicatif.**
+
+Limites à traiter avant de qualifier la démonstration d'intégralement vérifiée : accès admin MFA autorisé et revue professionnelle réelle, mutations complètes de marketplace/réservations/rendez-vous sur ressources de validation autorisées, drivers email/SMS appropriés, ordonnanceur et politique de purge approuvés, suivi des sauvegardes TiDB Cloud et récupération hors machine, validation native sur appareil et parcours Reels réellement disponible. Les paiements réels restent hors activation.
+
+## URLs publiées et preuves
+
+- Frontend : https://yazoo-showcase.pages.dev
+- Backend : https://yazoo-showcase.onrender.com
+- Déploiement Pages : https://97f5d485.yazoo-showcase.pages.dev
+- [Code applicatif publié](https://github.com/5eef/YaZoo/tree/9ef598e4ee79cd8384ef71c485c5c76fd7275d01)
+
+Preuves locales anonymisées sous `output/public-release/` : `release-manifest.json`, `published-images.json`, `published-release-image-proof.json`, `published-safety-image-proof.json`, `backend-hosted-health.json`, `render-new-status.json`, `render-pinned-image.json`, `render-log-summary.json`, `pages-new-deployment.json`, `pages-asset-proof.json`, `backup-proof.json`, `tidb-readonly-inventory.json`, `tidb-precutover-preservation.json`, `tidb-postcutover-preservation.json`, `hosted-functional-validation.json`, `hosted-media-validation.json`, `hosted-vet-isolation.json`, `hosted-database-proof.json`, `hosted-physical-delete.json`, `hosted-profile-fields.json`, `hosted-catalogue-validation.json`, `render-restart-proof.json`, `hosted-restart-persistence.json` et `client-secret-proof.json`. Les preuves chiffrées et identités de validation restent dans le dossier privé, exclu de Git et du déploiement.

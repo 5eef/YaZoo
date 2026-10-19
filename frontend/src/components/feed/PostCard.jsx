@@ -299,6 +299,8 @@ function PostCard({
                 <video
                   src={mediaUrl}
                   controls
+                  playsInline
+                  preload="metadata"
                   className="mx-auto block h-auto max-h-[70vh] w-full max-w-full object-contain md:max-h-[42rem] xl:max-h-[min(62vh,38rem)]"
                   onError={() => setHasMediaError(true)}
                 />

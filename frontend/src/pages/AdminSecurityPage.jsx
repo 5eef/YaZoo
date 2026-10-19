@@ -24,6 +24,8 @@ function AdminSecurityPage() {
   const [recoveryCodes, setRecoveryCodes] = useState([])
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
+  const [statusError, setStatusError] = useState(false)
+  const [statusAttempt, setStatusAttempt] = useState(0)
 
   const load = async () => {
     const response = await getAdminMfaStatusRequest()
@@ -31,8 +33,17 @@ function AdminSecurityPage() {
   }
 
   useEffect(() => {
-    if (user?.isAdmin) void load()
-  }, [user?.isAdmin])
+    let active = true
+    if (user?.isAdmin) {
+      setStatusError(false)
+      getAdminMfaStatusRequest().then((response) => {
+        if (active) { setStatus(response.data); setMessage('') }
+      }).catch((error) => {
+        if (active) { setStatusError(true); setMessage(getErrorMessage(error, t('adminMfa.error'))) }
+      })
+    }
+    return () => { active = false }
+  }, [user?.isAdmin, t, statusAttempt])
 
   if (!user?.isAdmin) return <Navigate to="/feed" replace />
 
@@ -92,8 +103,9 @@ function AdminSecurityPage() {
         <h1 className="mt-2 text-3xl font-semibold text-stone-950 dark:text-white">{t('adminMfa.title')}</h1>
         <p className="mt-3 text-sm leading-7 text-stone-600 dark:text-violet-100/75">{t('adminMfa.description')}</p>
         <p className="mt-3 rounded-2xl bg-violet-50 p-3 text-sm text-violet-900 dark:bg-violet-300/10 dark:text-violet-100">
-          {status?.enabled ? t('adminMfa.statusEnabled') : t('adminMfa.statusDisabled')}
+          {status === null ? t(statusError ? 'adminMfa.error' : 'common.loading') : status.enabled ? t('adminMfa.statusEnabled') : t('adminMfa.statusDisabled')}
         </p>
+        {statusError ? <Button variant="ghost" onClick={() => setStatusAttempt((value) => value + 1)}>{t('common.refresh')}</Button> : null}
       </header>
 
       <section className="space-y-4 rounded-[30px] border border-white/80 bg-white/92 p-6 dark:border-violet-300/15 dark:bg-white/8">
@@ -125,7 +137,7 @@ function AdminSecurityPage() {
         <div className="flex flex-wrap gap-3">
           {!status?.enabled ? (
             <>
-              <Button type="button" disabled={busy || !password} onClick={enroll}>{t('adminMfa.enroll')}</Button>
+              <Button type="button" disabled={busy || status === null || !password} onClick={enroll}>{t('adminMfa.enroll')}</Button>
               {enrollment ? <Button type="button" disabled={busy || !code} onClick={confirm}>{t('adminMfa.confirm')}</Button> : null}
             </>
           ) : (

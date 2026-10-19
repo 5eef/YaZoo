@@ -431,6 +431,7 @@ function Layout() {
 
   const primaryNavigationItems = [
     { to: '/feed', label: t('common.feed'), icon: 'home' },
+    { to: '/reels', label: 'Reels', icon: 'reels' },
     { to: '/marketplace', label: t('common.marketplace'), icon: 'marketplace' },
     { to: '/communities', label: t('common.communities'), icon: 'communities' },
     { to: '/messages', label: t('common.messages'), icon: 'chat' },

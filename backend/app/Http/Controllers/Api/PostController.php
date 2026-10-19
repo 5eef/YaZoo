@@ -28,7 +28,10 @@ class PostController extends Controller
      */
     public function index(Request $request)
     {
-        $request->validate(['author_id' => ['nullable', 'integer', 'min:1']]);
+        $request->validate([
+            'author_id' => ['nullable', 'integer', 'min:1'],
+            'media_kind' => ['nullable', Rule::in(['image', 'video'])],
+        ]);
         $pagination = PaginationData::fromRequest($request, 10, 30);
         $communityId = $request->integer('community_id');
         $authorId = $request->integer('author_id');
@@ -40,6 +43,7 @@ class PostController extends Controller
 
         $posts = Post::query()
             ->visibleTo($request->user())
+            ->when($request->filled('media_kind'), fn ($query) => $query->where('media_kind', $request->string('media_kind')->toString()))
             ->when($authorId, fn ($query) => $query->where('user_id', $authorId))
             ->when(
                 $communityId,

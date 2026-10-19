@@ -18,6 +18,7 @@ export const LOCALE_LABELS = {
 
 export const messages = {
   fr: {
+    reels: { empty: 'Aucune vidéo disponible.', previous: 'Précédent', next: 'Suivant', pagination: 'Navigation des Reels' },
     publicVet: { unavailable: 'Indisponible', noSlots: 'Aucun créneau disponible pour les 14 prochains jours.', message: 'Envoyer un message', social: 'Profil social' },
     adminKpi: {
       period: 'Période', days: 'jours', notMeasured: 'Donnée non mesurée',
@@ -35,7 +36,7 @@ export const messages = {
     },
     vetAppointments: {
       nav: 'Rendez-vous vétérinaires', title: 'Rendez-vous vétérinaires', description: 'Gérez des créneaux et demandes sans transmettre de données médicales inutiles.',
-      book: 'Prendre rendez-vous', manageSlots: 'Gérer les créneaux', slot: 'Créneau', choose: 'Choisir un créneau',
+      book: 'Prendre rendez-vous', reject: 'Refuser', manageSlots: 'Gérer les créneaux', slot: 'Créneau', choose: 'Choisir un créneau',
       animalType: 'Type d’animal', reason: 'Motif', request: 'Demander le rendez-vous', requested: 'Demande envoyée.',
       startsAt: 'Début', endsAt: 'Fin', addSlot: 'Ajouter le créneau', slotCreated: 'Créneau ajouté.',
       confirm: 'Confirmer', complete: 'Terminer', review: 'Publier la note', updated: 'Statut mis à jour.',
@@ -494,6 +495,7 @@ export const messages = {
     },
   },
   ar: {
+    reels: { empty: 'لا توجد فيديوهات متاحة.', previous: 'السابق', next: 'التالي', pagination: 'تصفح الريلز' },
     publicVet: { unavailable: 'غير متاح', noSlots: 'لا توجد مواعيد متاحة خلال الأيام الأربعة عشر القادمة.', message: 'إرسال رسالة', social: 'الملف الاجتماعي' },
     adminKpi: {
       period: 'الفترة', days: 'أيام', notMeasured: 'بيانات غير مقاسة',
@@ -511,7 +513,7 @@ export const messages = {
     },
     vetAppointments: {
       nav: 'مواعيد بيطرية', title: 'المواعيد البيطرية', description: 'إدارة الفترات والطلبات دون جمع بيانات طبية غير ضرورية.',
-      book: 'حجز موعد', manageSlots: 'إدارة الفترات', slot: 'الفترة', choose: 'اختر فترة',
+      book: 'حجز موعد', reject: 'رفض', manageSlots: 'إدارة الفترات', slot: 'الفترة', choose: 'اختر فترة',
       animalType: 'نوع الحيوان', reason: 'السبب', request: 'طلب الموعد', requested: 'تم إرسال الطلب.',
       startsAt: 'البداية', endsAt: 'النهاية', addSlot: 'إضافة فترة', slotCreated: 'تمت إضافة الفترة.',
       confirm: 'تأكيد', complete: 'إكمال', review: 'نشر التقييم', updated: 'تم تحديث الحالة.',
@@ -915,6 +917,7 @@ export const messages = {
     },
   },
   en: {
+    reels: { empty: 'No videos available.', previous: 'Previous', next: 'Next', pagination: 'Reels navigation' },
     publicVet: { unavailable: 'Unavailable', noSlots: 'No available slots for the next 14 days.', message: 'Send a message', social: 'Social profile' },
     adminKpi: {
       period: 'Period', days: 'days', notMeasured: 'Data not measured',
@@ -932,7 +935,7 @@ export const messages = {
     },
     vetAppointments: {
       nav: 'Vet appointments', title: 'Veterinary appointments', description: 'Manage slots and requests without collecting unnecessary medical data.',
-      book: 'Book appointment', manageSlots: 'Manage slots', slot: 'Slot', choose: 'Choose a slot',
+      book: 'Book appointment', reject: 'Reject', manageSlots: 'Manage slots', slot: 'Slot', choose: 'Choose a slot',
       animalType: 'Animal type', reason: 'Reason', request: 'Request appointment', requested: 'Request sent.',
       startsAt: 'Start', endsAt: 'End', addSlot: 'Add slot', slotCreated: 'Slot added.',
       confirm: 'Confirm', complete: 'Complete', review: 'Submit rating', updated: 'Status updated.',
