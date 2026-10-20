@@ -1,5 +1,6 @@
 <?php
 
+use Monolog\Formatter\JsonFormatter;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
@@ -78,7 +79,7 @@ return [
         ],
 
         'observability' => [
-            'formatter' => \Monolog\Formatter\JsonFormatter::class,
+            'formatter' => JsonFormatter::class,
             'driver' => 'daily',
             'path' => storage_path('logs/observability.log'),
             'level' => env('MONITORING_LOG_LEVEL', env('LOG_LEVEL', 'warning')),
