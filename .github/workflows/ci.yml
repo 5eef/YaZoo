@@ -149,7 +149,9 @@ jobs:
           SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
 
   mysql-concurrency:
-    runs-on: ubuntu-latest
+    # MongoDB's pinned allocator rejects Linux 6.19+ (SERVER-121912).
+    # Keep the supported compatible runner; retain MongoDB's startup safety check.
+    runs-on: ubuntu-22.04
     env:
       APP_ENV: testing
       APP_KEY: base64:c49vk2fjl1WJZPUaxanThGkmCDU9hHDldPjseMgdaQc=

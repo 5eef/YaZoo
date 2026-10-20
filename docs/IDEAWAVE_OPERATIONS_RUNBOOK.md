@@ -121,6 +121,11 @@ entries including their dependent packages. No compatible upstream fix was found
 automatic forced fixes propose incompatible Expo downgrades. No waiver, ignored
 advisory or mobile dependency change is introduced. Publication remains blocked.
 
+The first candidate CI could not initialize MongoDB on the new ubuntu-latest
+kernel (SERVER-121912). The concurrency job now uses ubuntu-22.04, retaining the
+pinned MongoDB image, its startup safety check and every concurrency assertion.
+This changes only the disposable test runner, not any YaZoo database or cluster.
+
 - https://github.com/advisories/GHSA-vfj7-8cjw-p6xm
 - https://github.com/advisories/GHSA-86w9-cpqp-85rv
 
