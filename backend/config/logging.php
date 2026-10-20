@@ -78,6 +78,7 @@ return [
         ],
 
         'observability' => [
+            'formatter' => \Monolog\Formatter\JsonFormatter::class,
             'driver' => 'daily',
             'path' => storage_path('logs/observability.log'),
             'level' => env('MONITORING_LOG_LEVEL', env('LOG_LEVEL', 'warning')),
