@@ -1,6 +1,20 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+@config '../tailwind.config.js';
+
+/* Keep the existing form, border and pointer defaults across the v4 upgrade. */
+@layer base {
+  *, ::before, ::after, ::backdrop, ::file-selector-button {
+    border-color: #e5e7eb;
+  }
+  input::placeholder, textarea::placeholder {
+    color: #9ca3af;
+    opacity: 1;
+  }
+  button:not(:disabled), [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
+  dialog { margin: auto; }
+}
 
 :root {
   color-scheme: light;
@@ -255,6 +269,11 @@ svg {
   padding-bottom: 0.25rem;
 }
 
+/* Unlayered app rules must still allow this existing responsive utility. */
+@media (min-width: 640px) {
+  .yz-horizontal-scroll.sm\:inline-flex { display: inline-flex; }
+}
+
 .yz-horizontal-scroll > *,
 .yz-horizontal-scroll-item {
   flex: 0 0 auto;
@@ -329,6 +348,12 @@ svg {
 
 :focus-visible {
   outline: 2px solid rgba(124, 58, 237, 0.75);
+  outline-offset: 2px;
+}
+
+/* Retain the v3 transparent outline, including forced-colors keyboard focus. */
+:is(.outline-none, .focus\:outline-none:focus, .focus-visible\:outline-none:focus-visible) {
+  outline: 2px solid transparent;
   outline-offset: 2px;
 }
 
