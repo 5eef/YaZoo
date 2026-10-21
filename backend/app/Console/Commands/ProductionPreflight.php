@@ -109,6 +109,10 @@ class ProductionPreflight extends Command
 
         if ($isProductionProfile && in_array(config('mail.default'), ['log', 'array'], true)) {
             $failures[] = 'MAIL_MAILER must use a real transport in production.';
+        } elseif (config('mail.default') === 'resend') {
+            $this->requireValue($failures, 'RESEND_API_KEY', config('services.resend.key'));
+            $this->requireValue($failures, 'MAIL_FROM_ADDRESS', config('mail.from.address'));
+            $this->requireValue($failures, 'MAIL_FROM_NAME', config('mail.from.name'));
         } elseif (! in_array(config('mail.default'), ['log', 'array'], true)) {
             $this->requireValue($failures, 'MAIL_HOST', config('mail.mailers.smtp.host'));
             $this->requireValue($failures, 'MAIL_USERNAME', config('mail.mailers.smtp.username'));

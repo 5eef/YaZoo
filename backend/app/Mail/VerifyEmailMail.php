@@ -12,6 +12,9 @@ class VerifyEmailMail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
+    // A timeout can occur after provider acceptance. Never retry this delivery automatically.
+    public int $tries = 1;
+
     public function __construct(
         public readonly User $recipient,
         public readonly string $verificationUrl,
