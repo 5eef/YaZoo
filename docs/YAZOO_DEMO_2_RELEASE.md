@@ -76,3 +76,10 @@ Backend conservé : df06914fc596a73d2b775156f7be0c7b5598cfad, digest sha256:214f
 Conserver l’environnement chiffré existant, puis enregistrer le différentiel exact avant cutover. En cas d’échec, rétablir image/digest et ancien déploiement Pages, préserver TiDB et R2 et désactiver le nouveau transport client si nécessaire. Ne pas rétablir aveuglément des logs contenant mails/messages. Aucune migration nouvelle dans cette candidate ; aucune opération migrate:fresh/reset/db:wipe/db:seed en production. Conserver les nouveaux messages et comptes lors d’un rollback applicatif. Aucun merge automatique dans main.
 
 Le gate final doit donner le nouveau SHA, CI/CodeQL, digest, tests, limites et double décision de déploiement/risque de sauvegarde. SAFE_TO_DEPLOY_FULL_DEMO reste NO tant que les conditions requises et décisions ne sont pas satisfaites.
+
+
+## Correctifs issus de la validation hébergée du 22 octobre 2026
+
+La première livraison a prouvé WSS 101, les canaux privés, les échanges web/client natif, les notifications, la reconnexion et le polling de secours sur Render et Pages. Le message Resend reçu dans Gmail (spam) a révélé que les vues texte échappaient les séparateurs de requête en `&amp;`. Les seules URL produites par le serveur sont maintenant rendues sans échappement HTML dans ces vues texte ; leur signature et leur expiration restent inchangées. Un test de rendu vérifie les deux emails avec une URL comprenant plusieurs paramètres.
+
+Les conteneurs de chargement marketplace utilisent `role="status"`, ce qui rend leur nom ARIA valide sans modifier le design. Le test axe ciblé sur les annonces animales passe localement. La certification du parcours email et du téléphone reste conditionnée aux preuves réelles, et la réception dans les spams ne vaut pas livraison en boîte principale.

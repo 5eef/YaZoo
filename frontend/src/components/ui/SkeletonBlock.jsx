@@ -4,7 +4,7 @@ function SkeletonBlock({ count = 3, label = 'Loading', variant = 'card' }) {
   const rows = Array.from({ length: count })
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2" aria-label={label} aria-busy="true">
+    <div role="status" className="grid gap-4 lg:grid-cols-2" aria-label={label} aria-busy="true">
       {rows.map((_, index) => (
         <div
           key={`skeleton-${variant}-${index}`}
