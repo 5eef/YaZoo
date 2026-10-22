@@ -149,7 +149,9 @@ jobs:
           SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
 
   mysql-concurrency:
-    runs-on: ubuntu-latest
+    # MongoDB 8 cannot start on the newer runner kernel (SERVER-121912).
+    # Keep the pinned database image and every integration test on a compatible VM.
+    runs-on: ubuntu-22.04
     env:
       APP_ENV: testing
       APP_KEY: base64:c49vk2fjl1WJZPUaxanThGkmCDU9hHDldPjseMgdaQc=
