@@ -5,8 +5,10 @@ namespace Tests\Feature;
 use App\Contracts\MediaScanner;
 use App\Models\MediaAsset;
 use App\Models\User;
+use App\Services\Media\VerifiedDemoMediaScanner;
 use App\Services\MediaAssetService;
 use App\ValueObjects\MediaScanResult;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -85,5 +87,35 @@ class ScannedUploadPolicyTest extends TestCase
         $this->scanner(MediaScanResult::failed('scanner_unavailable'));
         $this->expectException(HttpException::class);
         app(MediaAssetService::class)->registerUpload(User::factory()->create(), $this->image(), 'avatars', 'image');
+    }
+
+    public function test_demo_manifest_mode_cannot_be_bypassed_by_disabling_scan_or_using_another_account(): void
+    {
+        config(['media.scanning.enabled' => false, 'media.scanning.driver' => 'verified_demo_manifest', 'media.scanning.demo_allowed_user_ids' => []]);
+        $this->assertTrue(app(MediaAssetService::class)->requiresScan());
+        $this->expectException(HttpException::class);
+        app(MediaAssetService::class)->registerUpload(User::factory()->create(), $this->image(), 'avatars', 'image');
+    }
+
+    public function test_real_pre_scanned_release_asset_is_published_privately_but_modified_bytes_stay_quarantined(): void
+    {
+        $manifest = json_decode(file_get_contents(resource_path('demo-media-manifest.json')), true);
+        $this->travelTo(Carbon::parse($manifest['scanned_at'])->addMinute());
+        $owner = User::factory()->create();
+        config(['operations.deployment_profile' => 'showcase', 'media.scanning.driver' => 'verified_demo_manifest', 'media.scanning.demo_allowed_user_ids' => [$owner->id]]);
+        $this->app->instance(MediaScanner::class, new VerifiedDemoMediaScanner(resource_path('demo-media-manifest.json'), 'showcase', [$owner->id]));
+        $bytes = file_get_contents(database_path('seeders/assets/marketplace/dresseur_chien.png'));
+        $asset = app(MediaAssetService::class)->registerPostUpload($owner, UploadedFile::fake()->createWithContent('demo.png', $bytes), 'image');
+        $this->assertSame(MediaAsset::STATE_CLEAN, $asset->state);
+        $this->assertSame('private', $asset->disk);
+        $this->assertSame($bytes, Storage::disk('private')->get($asset->path));
+        try {
+            app(MediaAssetService::class)->registerPostUpload($owner, UploadedFile::fake()->createWithContent('demo.png', $bytes.'changed'), 'image');
+            $this->fail('Changed bytes must stay in quarantine.');
+        } catch (HttpException $exception) {
+            $this->assertSame(503, $exception->getStatusCode());
+        }
+        $this->assertDatabaseHas('media_assets', ['owner_id' => $owner->id, 'state' => MediaAsset::STATE_SCAN_FAILED]);
+        $this->assertSame([], Storage::disk('public')->allFiles());
     }
 }

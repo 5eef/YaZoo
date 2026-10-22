@@ -70,11 +70,15 @@ class MediaAssetService
     public function requiresScan(): bool
     {
         return (bool) config('media.scanning.enabled')
+            || config('media.scanning.driver') === 'verified_demo_manifest'
             || config('operations.deployment_profile') === 'production';
     }
 
     private function scannedUpload(User $owner, UploadedFile $file, string $directory, string $kind, string $visibility): MediaAsset
     {
+        if (config('media.scanning.driver') === 'verified_demo_manifest') {
+            abort_unless(in_array((int) $owner->id, (array) config('media.scanning.demo_allowed_user_ids', []), true), 403, 'This account is not authorized for pre-scanned demo uploads.');
+        }
         $service = app(MediaQuarantineService::class);
         $asset = $service->quarantine($owner, $file, $directory, $kind, $visibility, dispatchScan: false);
         $asset = $service->scan($asset);

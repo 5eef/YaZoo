@@ -37,7 +37,7 @@ Frontend : VITE_API_URL=/api, VITE_REALTIME_ENABLED=true, VITE_REVERB_HOST=yazoo
 
 ## Preuves locales au 22 octobre 2026
 
-- Backend : 509 tests, 3 000 assertions, SQLite en mémoire et réseau Docker désactivé. Les essais de protocole ClamAV utilisent un serveur de test, pas un antivirus hébergé.
+- Backend : 515 tests, 3 020 assertions, SQLite en mémoire et réseau Docker désactivé. Les essais de protocole ClamAV utilisent un serveur de test ; le pack a aussi été analysé par le vrai moteur local, pas par un antivirus hébergé.
 - Frontend : lint, typecheck, i18n, build ; couverture complète exécutée. Une première répétition en forte concurrence a expiré sur le test d’assets ; la répétition à deux workers passe. Couverture et compte exact conservés dans les artefacts de travail.
 - Responsive : 48 variantes (320/360/375/390/412/768/1024/1440 × FR/EN/AR × light/dark), 21 routes par variante, API simulée. Ce résultat ne prouve pas les mutations hébergées.
 - Mobile : lint/typecheck, 64 tests, Expo Doctor 21/21, export Android Hermes. Le graphe exporté ne contient pas braces/node-forge ; les 19 alertes transitives des outils restent documentées par la politique existante.
@@ -45,11 +45,21 @@ Frontend : VITE_API_URL=/api, VITE_REALTIME_ENABLED=true, VITE_REVERB_HOST=yazoo
 - Ressources locales sous plafond de 512 Mio : environ 108 Mio au repos/avec deux connexions/après plusieurs messages, CPU instantané inférieur à 1 %. Aucun OOM observé dans cette séquence courte. Arrêt de Reverb : superviseur et redémarrage automatique local vérifiés, messages SQLite conservés. Aucune garantie de charge ou disponibilité Render déduite.
 - Scan Trivy de la candidate locale : zéro HIGH/CRITICAL et zéro secret détecté ; avertissement du fournisseur sur une fiche CVE sans détails. Refaire le scan de l’image finale étiquetée par SHA.
 
+L’audit npm complet frontend est sans vulnérabilité. La politique n’appelle plus un second audit du sous-ensemble runtime si l’arbre complet est sain : cette requête redondante basculait vers l’endpoint Quick Audit retiré. Si l’arbre complet contient une alerte, le contrôle runtime reste obligatoire ; une indisponibilité, une alerte nouvelle ou une exposition runtime restent bloquantes. Trois tests de politique couvrent ces cas. Voir https://docs.npmjs.com/cli/commands/npm-audit/ .
+
 Les artefacts détaillés sont dans output/demo2 du workspace principal. Aucun résultat local ne remplace WSS/TiDB/R2/Resend/Pages/APK hébergés.
 
 ## Blocages conservés
 
 Le propriétaire indique qu’aucune infrastructure supplémentaire n’est disponible. Aucun scanner distant n’est configuré. Les uploads exigeant l’analyse ne peuvent pas être certifiés ; ils restent bloqués dans la proposition de déploiement, sans désactiver l’analyse. Les médias existants restent lisibles selon leurs permissions. ClamAV recommande 3 Gio ou davantage avec ses signatures standard, incompatible avec une promesse de cohabitation fiable dans 512 Mio : https://docs.clamav.net/Introduction.html?highlight=clam .
+
+### Alternative de démonstration fermée : quatre fichiers préanalysés
+
+Le mode `MEDIA_SCAN_DRIVER=verified_demo_manifest` permet uniquement les quatre fichiers exacts de `backend/resources/demo-media-manifest.json`, pour les IDs de comptes fictifs explicitement désignés dans `MEDIA_DEMO_ALLOWED_USER_IDS`. Le profil doit être `showcase`. Liste vide, profil production, manifeste périmé/corrompu, signatures trop anciennes, taille/MIME/empreinte différents ou autre compte : refus. Le flag de scanning ne peut pas désactiver ces contrôles. Tout échec reste en quarantaine privée et ne devient pas un média public.
+
+Les quatre fichiers existants ont été analysés localement le 22 octobre avec ClamAV 1.5.4, signatures 28160 du 21 octobre, sans infection détectée. Le manifeste expire le 29 octobre 2026 à 03:17:59 UTC. Avant une démonstration ultérieure, refaire l’analyse avec signatures à jour et produire une nouvelle release du manifeste. Il s’agit de la vérification d’un résultat antivirus préalable sur des octets identiques, pas d’un antivirus hébergé analysant des fichiers nouveaux.
+
+Après approbation, création des seuls comptes fictifs autorisés et preuve R2 isolée, il est possible de proposer `MEDIA_SCAN_ENABLED=true`, ce driver, les IDs désignés puis `YAZOO_SHOWCASE_UPLOADS_ENABLED=true` pour le pack exclusivement. Les autres uploads restent bloqués. Le pack peut servir aux parcours avatar/couverture/post/story/vidéo, en transférant les originaux sans recompression. Les justificatifs professionnels arbitraires et l’upload général restent PARTIAL/BLOCKED. Ne pas qualifier ce mode d’ouverture publique des uploads.
 
 La sauvegarde et sa clé restent sur un seul ordinateur ; deuxième support physique non prouvé, risque non accepté. La fraîcheur TiDB doit être relue avant toute mutation publique. Aucun snapshot ancien ne sera restauré automatiquement sur la production.
 

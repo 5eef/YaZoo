@@ -104,6 +104,7 @@ final class MediaQuarantineService
                     'mime_type' => $asset->mime_type,
                     'size' => $asset->size !== null ? (int) $asset->size : null,
                     'original_name' => $asset->original_name,
+                    'owner_id' => (int) $asset->owner_id,
                 ])
                 : MediaScanResult::failed();
         } catch (Throwable $exception) {
