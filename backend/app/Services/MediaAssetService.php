@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\MediaAsset;
 use App\Models\User;
+use App\Services\Media\MediaQuarantineService;
 use App\Support\MediaStorage;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\UploadedFile;
@@ -17,6 +18,9 @@ class MediaAssetService
 {
     public function registerPostUpload(User $owner, UploadedFile $file, string $kind): MediaAsset
     {
+        if ($this->requiresScan()) {
+            return $this->scannedUpload($owner, $file, 'feed/posts', $kind, MediaAsset::VISIBILITY_PRIVATE);
+        }
         if (in_array(config('media.driver'), ['mongodb', 'r2'], true)) {
             return $this->registerUpload($owner, $file, 'feed/posts', $kind, MediaAsset::VISIBILITY_PRIVATE);
         }
@@ -41,6 +45,9 @@ class MediaAssetService
         string $kind,
         string $visibility = MediaAsset::VISIBILITY_PUBLIC,
     ): MediaAsset {
+        if ($this->requiresScan()) {
+            return $this->scannedUpload($owner, $file, $directory, $kind, $visibility);
+        }
         $path = MediaStorage::storeUploadedFile($file, $directory);
 
         try {
@@ -58,6 +65,24 @@ class MediaAssetService
 
             throw $exception;
         }
+    }
+
+    public function requiresScan(): bool
+    {
+        return (bool) config('media.scanning.enabled')
+            || config('operations.deployment_profile') === 'production';
+    }
+
+    private function scannedUpload(User $owner, UploadedFile $file, string $directory, string $kind, string $visibility): MediaAsset
+    {
+        $service = app(MediaQuarantineService::class);
+        $asset = $service->quarantine($owner, $file, $directory, $kind, $visibility, dispatchScan: false);
+        $asset = $service->scan($asset);
+        if ($asset->state !== MediaAsset::STATE_CLEAN) {
+            abort(503, 'Media scanning did not authorize publication.');
+        }
+
+        return $asset;
     }
 
     public function registerStoredPath(
@@ -97,7 +122,7 @@ class MediaAssetService
         $asset = MediaAsset::query()
             ->whereKey($assetId)
             ->where('owner_id', $owner->id)
-            ->where('state', MediaAsset::STATE_ACTIVE)
+            ->whereIn('state', [MediaAsset::STATE_ACTIVE, MediaAsset::STATE_CLEAN])
             ->first();
 
         if (! $asset || ($asset->attachable_id !== null && ! $this->isAttachedTo($asset, $current))) {

@@ -2,7 +2,10 @@ import { expect, test } from '@playwright/test'
 import { mockApi } from './branding-fixtures'
 
 const routes = ['/feed', '/reels', '/profile', '/marketplace/animals', '/marketplace/products', '/marketplace/services', '/marketplace/veterinarians', '/search', '/reservations', '/orders/history', '/messages', '/notifications', '/communities', '/settings', '/admin/moderation', '/admin/users', '/admin/orders', '/admin/stats', '/admin/security', '/admin/professional-verifications', '/veterinarian-appointments']
-for (const [width, locale, theme] of [[320, 'ar', 'dark'], [375, 'fr', 'light'], [768, 'en', 'light'], [1024, 'fr', 'dark'], [1440, 'ar', 'light']]) {
+const variants = [320, 360, 375, 390, 412, 768, 1024, 1440].flatMap(width =>
+  ['fr', 'en', 'ar'].flatMap(locale => ['light', 'dark'].map(theme => [width, locale, theme])),
+)
+for (const [width, locale, theme] of variants) {
   test(`existing demo pages and navigation ${width}px ${locale} ${theme}`, async ({ page }) => {
     test.setTimeout(120000)
     await page.setViewportSize({ width, height: 900 })

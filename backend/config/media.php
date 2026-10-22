@@ -10,6 +10,10 @@ return [
             FILTER_VALIDATE_BOOL,
         ),
         'driver' => env('MEDIA_SCAN_DRIVER', 'unavailable'),
+        'clamav' => [
+            'endpoint' => env('CLAMAV_ENDPOINT', 'tcp://127.0.0.1:3310'),
+            'timeout_seconds' => (int) env('CLAMAV_TIMEOUT_SECONDS', 20),
+        ],
         'quarantine_disk' => env('MEDIA_QUARANTINE_DISK', 'private'),
         'unique_lock_store' => env('MEDIA_SCAN_UNIQUE_LOCK_STORE', env('CACHE_STORE', 'database')),
         'max_attempts' => (int) env('MEDIA_SCAN_MAX_ATTEMPTS', 3),

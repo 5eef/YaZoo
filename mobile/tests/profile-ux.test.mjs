@@ -24,6 +24,7 @@ function harness(path, extra = {}, initial = {}) {
   };
   const native=Object.fromEntries(['View','Text','Pressable','Modal','ScrollView','Image','TextInput','ActivityIndicator','KeyboardAvoidingView','RefreshControl'].map(n=>[n,n]));
   const mocks={react:React,'react-native':{...native, Keyboard:{dismiss(){}},Platform:{OS:'android'},StyleSheet:{create:v=>v},useWindowDimensions:()=>({width:400})},
+    './src/api/realtime':{connectRealtime:()=>()=>{}},'./src/api/realtimeConfig':{realtimeUrl:()=>null},
     'react-native-safe-area-context':{SafeAreaView:'SafeAreaView'},'expo-linear-gradient':{LinearGradient:'Gradient'},
     '../theme/ThemeProvider':{useTheme:()=>({colors:themes.light})},'../theme/tokens':{radius,spacing},'../i18n/messages':{dictionaries},
     './ui':{Avatar:'Avatar',mediaUrl:v=>v},'./ProfileActionsMenu':{ProfileActionsMenu:'ProfileActionsMenu'},...extra};

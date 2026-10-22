@@ -15,7 +15,10 @@ import { screens, socialScreens, type Screen } from './src/navigation/destinatio
 import { useSocial } from './src/features/social/useSocial';
 import { Avatar, Button } from './src/components/ui';
 import { ProfessionalCard } from './src/components/ProfessionalCard';
-import { api, configureSession } from './src/api/client';
+import { api, authorizeBroadcast, configureSession } from './src/api/client';
+import { connectRealtime, type RealtimeEvent } from './src/api/realtime';
+import { realtimeUrl } from './src/api/realtimeConfig';
+import type { Notification } from './src/features/social/types';
 import { ApiError, failureKey } from './src/api/errors';
 import { clearSession, readSession, saveSession, type Session } from './src/auth/session';
 import { dictionaries, type Locale, type TranslationKey } from './src/i18n/messages';
@@ -59,6 +62,7 @@ function PilotApp() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+  const [realtimeConnected, setRealtimeConnected] = useState(false);
   const [services, setServices] = useState<Service[]>([]);
   const [reason, setReason] = useState('');
   const [animal, setAnimal] = useState('');
@@ -90,6 +94,39 @@ function PilotApp() {
   }, [invalidate]);
   const refreshScreen = useEffectEvent(() => { if (session) void perform(() => load(screen, 1)); });
   useEffect(() => { refreshScreen(); }, [screen, session?.user.id]);
+  const receiveRealtime = useEffectEvent((event: RealtimeEvent) => {
+    if (!session) return;
+    if (event.event === 'message.sent') {
+      const payload = event.data as { message?: Conversation['latestMessage'] };
+      if (!payload.message?.id || !payload.message.body) return;
+      const message = { ...payload.message, isOwn: payload.message.sender?.id === session.user.id };
+      setSelectedConversation(previous => {
+        if (!previous || event.channel !== `private-conversations.${previous.id}`) return previous;
+        const messages = [...(previous.messages || []).filter(item => item.id !== message.id), message].sort((a, b) => a.id - b.id);
+        return { ...previous, messages, latestMessage: message };
+      });
+      if (screen === 'conversation' && selectedConversation) void api(`/conversations/${selectedConversation.id}/read`, locale, 'PATCH').catch(() => {});
+    }
+    if (event.event === 'notification.created') {
+      const payload = event.data as { notification?: Notification };
+      if (payload.notification?.id) social.receiveNotification(payload.notification);
+      if (screen === 'messages') refreshScreen();
+    }
+  });
+  useEffect(() => {
+    const url = realtimeUrl();
+    if (!session || !url) return;
+    return connectRealtime({ url, origin: 'https://yazoo-showcase.pages.dev',
+      channels: [`private-users.${session.user.id}`, ...(screen === 'conversation' && selectedConversation ? [`private-conversations.${selectedConversation.id}`] : [])],
+      authorize: authorizeBroadcast, receive: event => receiveRealtime(event),
+      status: setRealtimeConnected, resync: () => refreshScreen(),
+    });
+  }, [session?.token, session?.user.id, screen, selectedConversation?.id]);
+  useEffect(() => {
+    if (!session || realtimeConnected || !['conversation', 'messages', 'notifications'].includes(screen)) return;
+    const interval = setInterval(() => refreshScreen(), 30000);
+    return () => clearInterval(interval);
+  }, [session?.user.id, screen, realtimeConnected]);
   async function changeLocale(next: Locale) {
     try {
       await SecureStore.setItemAsync('yazoo-native-locale', next);

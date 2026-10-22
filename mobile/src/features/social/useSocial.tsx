@@ -195,6 +195,9 @@ export function useSocial(locale: Locale, user: User | undefined, navigate: (scr
   function latestReelPost(post: Post) { return selectedPost?.id === post.id ? selectedPost : posts.find(value => value.id === post.id) || post; }
   function reelComments(post: Post) { return postCard(selectedPost?.id === post.id ? selectedPost : post, true, true); }
   const selectOwnProfile = () => { setOwnProfileSelected(true); profileId.current = user?.id || null; };
+  const receiveNotification = (notification: Notification) => {
+    setNotifications(current => [notification, ...current.filter(item => item.id !== notification.id)].slice(0, 50));
+  };
   const preparePost = () => { setCommunity(null); setEditing(null); setNewStory(false); setContent(''); setAsset(null); };
-  return { isOwnProfile: ownProfileSelected, prepareReelComments: setSelectedPost, latestReelPost, getReelsSnapshot, saveReelsSnapshot, openProfile, reelComments, load, render, flags, reset, clearError, selectOwnProfile, preparePost, openWeb: web };
+  return { receiveNotification, isOwnProfile: ownProfileSelected, prepareReelComments: setSelectedPost, latestReelPost, getReelsSnapshot, saveReelsSnapshot, openProfile, reelComments, load, render, flags, reset, clearError, selectOwnProfile, preparePost, openWeb: web };
 }

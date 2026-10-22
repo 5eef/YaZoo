@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Contracts\MediaScanner;
 use App\Events\UserNotificationCreated;
 use App\Notifications\NewMessageNotification;
+use App\Services\Media\ClamAvMediaScanner;
 use App\Services\Media\UnavailableMediaScanner;
 use App\Services\ResendTransportFactory;
 use App\Support\MediaStorage;
@@ -28,7 +29,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->bind(MediaScanner::class, UnavailableMediaScanner::class);
+        $this->app->bind(MediaScanner::class, fn () => config('media.scanning.driver') === 'clamav'
+            ? new ClamAvMediaScanner(
+                (string) config('media.scanning.clamav.endpoint'),
+                (int) config('media.scanning.clamav.timeout_seconds', 20),
+                (int) config('media.scanning.max_bytes', 52_428_800),
+            )
+            : new UnavailableMediaScanner);
     }
 
     /**
