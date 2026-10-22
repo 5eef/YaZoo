@@ -16,7 +16,9 @@ const data=audit();
 const allowedIds=new Set(['GHSA-vfj7-8cjw-p6xm',...(component==='mobile'?['GHSA-86w9-cpqp-85rv']:[])]);
 const allowedNames=new Set(component==='frontend' ? ['braces','chokidar','fast-glob','micromatch','tailwindcss'] : ['@expo/cli','@expo/code-signing-certificates','@expo/metro','@expo/metro-config','@react-native/community-cli-plugin','@react-native/metro-config','@react-native/virtualized-lists','braces','expo','expo-updates','metro','metro-config','metro-file-map','metro-transform-worker','micromatch','node-forge','react-native','react-native-reanimated','react-native-worklets']);
 if(component==='frontend'){
- const runtime=audit(['--omit=dev']);if(runtime.metadata.vulnerabilities.total!==0)throw new Error('Browser runtime advisory: review required');
+ // A clean audit of the complete tree already proves the runtime subset clean.
+ // Avoid a redundant request that npm may route to the retired Quick endpoint.
+ const runtime=data.metadata.vulnerabilities.total===0?data:audit(['--omit=dev']);if(runtime.metadata.vulnerabilities.total!==0)throw new Error('Browser runtime advisory: review required');
 }else{
  // npm's production tree contains Expo CLI/Metro. Inspect the actual exported
  // Android graph rather than treating every propagated parent as shipped code.

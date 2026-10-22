@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 
 import {
@@ -40,6 +40,7 @@ function MessagesPage() {
   const [search, setSearch] = useState(queryFromUrl)
   const [selectedConversationId, setSelectedConversationId] = useState(null)
   const [selectedConversation, setSelectedConversation] = useState(null)
+  const receivedMessageIds = useRef(new Set())
   const [conversationForm, setConversationForm] = useState(defaultConversationForm)
   const [recipientQuery, setRecipientQuery] = useState('')
   const [recipientSuggestions, setRecipientSuggestions] = useState([])
@@ -251,6 +252,11 @@ function MessagesPage() {
       if (!incomingConversationId || !incomingMessage) {
         return
       }
+      if (receivedMessageIds.current.has(incomingMessage.id)) return
+      receivedMessageIds.current.add(incomingMessage.id)
+      if (receivedMessageIds.current.size > 1000) {
+        receivedMessageIds.current.delete(receivedMessageIds.current.values().next().value)
+      }
 
       const normalizedMessage = {
         ...incomingMessage,
@@ -297,13 +303,10 @@ function MessagesPage() {
       })
 
       if (selectedConversationId === incomingConversationId) {
-        void openConversation(incomingConversationId, {
-          updateQuery: false,
-          silent: true,
-        })
+        void markConversationReadRequest(incomingConversationId).catch(() => {})
       }
     },
-    [openConversation, selectedConversationId, user?.id],
+    [selectedConversationId, user?.id],
   )
 
   useEffect(() => {
@@ -345,6 +348,14 @@ function MessagesPage() {
     await loadConversations({ silent: true })
     if (selectedConversationId) await openConversation(selectedConversationId, { updateQuery: false, silent: true })
   }, { enabled: Boolean(user?.id) && realtimeStatus !== 'connected', intervalMs: selectedConversationId ? 15000 : 30000 })
+
+  const reconcileAfterReconnect = useEffectEvent(() => {
+    void loadConversations({ silent: true })
+    if (selectedConversationId) void openConversation(selectedConversationId, { updateQuery: false, silent: true })
+  })
+  useEffect(() => {
+    if (realtimeStatus === 'connected') reconcileAfterReconnect()
+  }, [realtimeStatus])
 
   useEffect(() => {
     const trimmedQuery = recipientQuery.trim()

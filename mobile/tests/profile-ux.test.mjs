@@ -24,6 +24,7 @@ function harness(path, extra = {}, initial = {}) {
   };
   const native=Object.fromEntries(['View','Text','Pressable','Modal','ScrollView','Image','TextInput','ActivityIndicator','KeyboardAvoidingView','RefreshControl'].map(n=>[n,n]));
   const mocks={react:React,'react-native':{...native, Keyboard:{dismiss(){}},Platform:{OS:'android'},StyleSheet:{create:v=>v},useWindowDimensions:()=>({width:400})},
+    './src/api/realtime':{connectRealtime:()=>()=>{}},'./src/api/realtimeConfig':{realtimeUrl:()=>null},
     'react-native-safe-area-context':{SafeAreaView:'SafeAreaView'},'expo-linear-gradient':{LinearGradient:'Gradient'},
     '../theme/ThemeProvider':{useTheme:()=>({colors:themes.light})},'../theme/tokens':{radius,spacing},'../i18n/messages':{dictionaries},
     './ui':{Avatar:'Avatar',mediaUrl:v=>v},'./ProfileActionsMenu':{ProfileActionsMenu:'ProfileActionsMenu'},...extra};
@@ -124,7 +125,7 @@ test('profile menu wiring reuses uploads, edit PATCH, Settings navigation and ex
     '../../components/feed/FeedScreen':{FeedScreen:'FeedScreen'},'../../components/EdgeSwipeBack':{EdgeSwipeBack:'EdgeSwipeBack'},
     '../../components/PostHeaderActions':{PostHeaderActions:'PostHeaderActions'},'../../components/PostActions':{PostActions:'PostActions'},
     './reelsModel':{},'../../components/BackButton':{BackButton:'BackButton'},'../../components/ProfileHeader':{ProfileHeader:'ProfileHeader'},
-    'expo-image-picker':{launchImageLibraryAsync:async()=>({canceled:false,assets:[{uri:'file:///qa.png',fileName:'qa.png',mimeType:'image/png'}]})},
+    'expo-image-picker':{launchImageLibraryAsync:async(options)=>{assert.equal(options.quality,1);return {canceled:false,assets:[{uri:'file:///qa.png',fileName:'qa.png',mimeType:'image/png'}]};}},
     '../../api/client':{api},'../../api/errors':{ApiError,failureKey},'../../components/ui':{...ui,mediaUrl:v=>v},'../../components/Media':{Media:'Media'},
     '../../i18n/messages':{dictionaries},'../../theme/ThemeProvider':{useTheme:()=>({colors:themes.light})},
     'react-native':{View:'View',Text:'Text',Image:'Image',Modal:'Modal',Pressable:'Pressable',ScrollView:'ScrollView',Linking:{openURL:async url=>links.push(url)}},

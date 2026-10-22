@@ -71,7 +71,6 @@ jobs:
       - name: Audit frontend dependencies
         working-directory: frontend
         run: |
-          npm audit --omit=dev
           node ../scripts/audit-dependency-policy.mjs frontend
 
       - name: Validate active release guards and fail-closed audit policy

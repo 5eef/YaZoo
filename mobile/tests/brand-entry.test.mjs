@@ -70,6 +70,7 @@ test('Reduce Motion exposes final form without waiting for intro timer', async (
 test('restoring session renders brand only, a saved session renders shell, a guest renders entry', () => {
   const saved = { token: 'test-only', user: { id: 1, name: 'DEMO' } };
   const mocks = {
+    './src/api/realtime': { connectRealtime: () => () => {} }, './src/api/realtimeConfig': { realtimeUrl: () => null },
     './src/components/reels/ReelsScreen': { ReelsScreen: 'Reels' }, 'expo-router': { Stack: 'Stack', router: {}, usePathname: () => '/feed' },
     'react-native': { StyleSheet: { create: value => value } }, 'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView' }, 'expo-secure-store': {}, 'expo-localization': { getLocales: () => [{ languageCode: 'ar' }] },
     './src/i18n/deviceLocale': { deviceLocale, startupLocale }, './src/components/auth/BrandLoading': { BrandLoading: 'BrandLoading' }, './src/components/auth/MobileAuthEntry': { MobileAuthEntry: 'MobileAuthEntry' },

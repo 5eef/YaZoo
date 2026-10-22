@@ -42,7 +42,16 @@ class ProfessionalVerificationController extends Controller
         $documentAsset = null;
 
         if ($document) {
-            $path = MediaStorage::storePrivateDocument($document, $this->documentDisk(), $request->user()->id);
+            if ($this->mediaAssets->requiresScan()) {
+                $documentAsset = $this->mediaAssets->registerUpload(
+                    $request->user(), $document,
+                    'private/professional-verifications/'.$request->user()->id,
+                    'document', MediaAsset::VISIBILITY_PRIVATE,
+                );
+                $path = $documentAsset->path;
+            } else {
+                $path = MediaStorage::storePrivateDocument($document, $this->documentDisk(), $request->user()->id);
+            }
 
             $validated = [
                 ...$validated,
@@ -52,7 +61,7 @@ class ProfessionalVerificationController extends Controller
                 'document_size' => $document->getSize(),
             ];
             try {
-                $documentAsset = $this->mediaAssets->registerStoredPath(
+                $documentAsset ??= $this->mediaAssets->registerStoredPath(
                     $request->user(),
                     $path,
                     'document',

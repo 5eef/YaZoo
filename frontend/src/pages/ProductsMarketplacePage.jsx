@@ -138,7 +138,7 @@ function StatusMessage({ tone, message }) {
 function MarketplaceGrid({ isLoading, items, loadingText, emptyText, renderItem }) {
   if (isLoading) {
     return (
-      <div className="grid gap-4 lg:grid-cols-2" aria-label={loadingText}>
+      <div role="status" className="grid gap-4 lg:grid-cols-2" aria-label={loadingText}>
         {Array.from({ length: 4 }).map((_, index) => (
           <div
             key={`product-marketplace-skeleton-${index}`}

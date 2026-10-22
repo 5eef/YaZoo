@@ -5,6 +5,23 @@ export const baseUrl = normalizeBaseUrl(configured);
 let token: string | null = null;
 let invalidSession: () => void = () => {};
 export function configureSession(value: string | null, onInvalid: () => void) { token = value; invalidSession = onInvalid; }
+export async function authorizeBroadcast(socketId: string, channel: string): Promise<{ auth: string }> {
+  const requestToken = token;
+  if (!requestToken) throw new ApiError(401);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+  try {
+    const response = await fetch(`${baseUrl.replace(/\/api$/, '')}/broadcasting/auth`, {
+      method: 'POST', credentials: 'omit', signal: controller.signal,
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${requestToken}` },
+      body: JSON.stringify({ socket_id: socketId, channel_name: channel }),
+    });
+    if (requestToken !== token || !response.ok) throw new ApiError(response.status || 401);
+    const result = await response.json();
+    if (requestToken !== token || typeof result.auth !== 'string') throw new ApiError(401);
+    return { auth: result.auth };
+  } finally { clearTimeout(timeout); }
+}
 export function mediaHeaders(uri: string): Record<string, string> | undefined {
   try {
     const url = new URL(uri);

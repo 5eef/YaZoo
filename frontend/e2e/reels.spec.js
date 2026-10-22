@@ -30,10 +30,13 @@ for (const width of [320, 375, 768, 1024, 1440]) {
       return Array.from(new Uint8Array(await new Blob(chunks, { type: 'video/webm' }).arrayBuffer()))
     }))
     let liked = false
+    let videoRequests = 0
     const post = () => ({ id: 8, content: 'Synthetic vertical reel', mediaKind: 'video', mediaUrl: '/api/media/posts/8', visibility: 'public', author: { id: 1, name: 'Synthetic owner' }, comments: [], likes: liked ? 1 : 0, liked, userReaction: liked ? 'like' : null })
     await page.route('**/api/posts?**', async (route) => {
       const url = new URL(route.request().url())
-      expect(url.searchParams.get('media_kind')).toBe('video')
+      // The shared layout may still finish a general feed request after navigation.
+      if (url.searchParams.get('media_kind') !== 'video') return route.fallback()
+      videoRequests += 1
       await route.fulfill({ json: { data: [post()], meta: { last_page: 1 } } })
     })
     await page.route('**/api/posts/8/like', async (route) => {
@@ -44,6 +47,7 @@ for (const width of [320, 375, 768, 1024, 1440]) {
     await page.route('**/api/media/posts/8', (route) => route.fulfill({ contentType: 'video/webm', body: bytes }))
     await page.goto('/reels')
     await expect(page.getByRole('heading', { name: 'Reels', exact: true })).toBeVisible()
+    await expect.poll(() => videoRequests).toBeGreaterThan(0)
     const video = page.locator('video')
     await expect(video).toHaveAttribute('playsinline', '')
     await expect.poll(() => video.evaluate((element) => element.videoWidth)).toBe(64)
@@ -53,7 +57,9 @@ for (const width of [320, 375, 768, 1024, 1440]) {
     const reaction = page.locator('button[title="J\'aime"]').first()
     await reaction.click()
     await expect.poll(() => liked).toBe(true)
+    const requestsBeforeReload = videoRequests
     await page.reload()
+    await expect.poll(() => videoRequests).toBeGreaterThan(requestsBeforeReload)
     await expect(page.getByText('Synthetic vertical reel', { exact: true })).toBeVisible()
     await expect(page.locator('button[title="J\'aime"]').first()).toHaveClass(/bg-violet-600/)
     // Existing shared desktop/sidebar and mobile drawer expose the new destination.

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Mail\AccountRecoveryMail;
 use App\Mail\VerifyEmailMail;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -15,6 +16,18 @@ use Tests\TestCase;
 class ResendProductionTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_plain_text_account_emails_preserve_url_query_separators(): void
+    {
+        $user = User::factory()->make();
+        $url = 'https://yazoo.example/verify?expires=123&signature=synthetic';
+
+        foreach ([new VerifyEmailMail($user, $url, 30), new AccountRecoveryMail($user, $url, 15)] as $mail) {
+            $body = $mail->render();
+            $this->assertStringContainsString($url, $body);
+            $this->assertStringNotContainsString('&amp;', $body);
+        }
+    }
 
     public function test_resend_preflight_checks_api_configuration_without_smtp_credentials(): void
     {
