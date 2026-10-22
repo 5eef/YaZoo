@@ -59,9 +59,13 @@ Le mode `MEDIA_SCAN_DRIVER=verified_demo_manifest` permet uniquement les quatre 
 
 Les quatre fichiers existants ont été analysés localement le 22 octobre avec ClamAV 1.5.4, signatures 28160 du 21 octobre, sans infection détectée. Le manifeste expire le 29 octobre 2026 à 03:17:59 UTC. Avant une démonstration ultérieure, refaire l’analyse avec signatures à jour et produire une nouvelle release du manifeste. Il s’agit de la vérification d’un résultat antivirus préalable sur des octets identiques, pas d’un antivirus hébergé analysant des fichiers nouveaux.
 
+Le sélecteur Android conserve les octets originaux (`quality: 1`, RawImageExporter dans la version Expo installée), nécessaire pour ces empreintes. Les limites de taille restent appliquées. Le comportement effectif du fournisseur de fichiers du téléphone doit encore être vérifié sur l’appareil.
+
 Après approbation, création des seuls comptes fictifs autorisés et preuve R2 isolée, il est possible de proposer `MEDIA_SCAN_ENABLED=true`, ce driver, les IDs désignés puis `YAZOO_SHOWCASE_UPLOADS_ENABLED=true` pour le pack exclusivement. Les autres uploads restent bloqués. Le pack peut servir aux parcours avatar/couverture/post/story/vidéo, en transférant les originaux sans recompression. Les justificatifs professionnels arbitraires et l’upload général restent PARTIAL/BLOCKED. Ne pas qualifier ce mode d’ouverture publique des uploads.
 
 La sauvegarde et sa clé restent sur un seul ordinateur ; deuxième support physique non prouvé, risque non accepté. La fraîcheur TiDB doit être relue avant toute mutation publique. Aucun snapshot ancien ne sera restauré automatiquement sur la production.
+
+Lecture R2 du 22 octobre : 18 assets R2 enregistrés, 13 objets présents et cinq absents, sans erreur d’accès. Les cinq références manquantes sont donc toujours constatées. Aucun original correspondant au nom stocké n’a été retrouvé dans les dossiers d’assets examinés ; aucune référence de compte ni objet n’a été remplacé. L’absence de hash de contenu historique ne permet pas de certifier un substitut. Les références legacy hors media_assets ne sont pas toutes couvertes par ce relevé.
 
 Resend réel, WSS public, persistance TiDB/R2 après redémarrage Render et nouveau build APK signé restent NOT_TESTED avant autorisation. L’ancien APK EAS preview est historique ; il ne constitue pas cette release. L’installation par QR est possible après génération du nouvel APK et contrôle d’accès à sa distribution. L’appareil physique sera validé séparément.
 

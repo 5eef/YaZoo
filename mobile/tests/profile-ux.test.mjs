@@ -125,7 +125,7 @@ test('profile menu wiring reuses uploads, edit PATCH, Settings navigation and ex
     '../../components/feed/FeedScreen':{FeedScreen:'FeedScreen'},'../../components/EdgeSwipeBack':{EdgeSwipeBack:'EdgeSwipeBack'},
     '../../components/PostHeaderActions':{PostHeaderActions:'PostHeaderActions'},'../../components/PostActions':{PostActions:'PostActions'},
     './reelsModel':{},'../../components/BackButton':{BackButton:'BackButton'},'../../components/ProfileHeader':{ProfileHeader:'ProfileHeader'},
-    'expo-image-picker':{launchImageLibraryAsync:async()=>({canceled:false,assets:[{uri:'file:///qa.png',fileName:'qa.png',mimeType:'image/png'}]})},
+    'expo-image-picker':{launchImageLibraryAsync:async(options)=>{assert.equal(options.quality,1);return {canceled:false,assets:[{uri:'file:///qa.png',fileName:'qa.png',mimeType:'image/png'}]};}},
     '../../api/client':{api},'../../api/errors':{ApiError,failureKey},'../../components/ui':{...ui,mediaUrl:v=>v},'../../components/Media':{Media:'Media'},
     '../../i18n/messages':{dictionaries},'../../theme/ThemeProvider':{useTheme:()=>({colors:themes.light})},
     'react-native':{View:'View',Text:'Text',Image:'Image',Modal:'Modal',Pressable:'Pressable',ScrollView:'ScrollView',Linking:{openURL:async url=>links.push(url)}},

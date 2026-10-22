@@ -106,7 +106,8 @@ export function useSocial(locale: Locale, user: User | undefined, navigate: (scr
   const button = (label: string, action: () => void, secondary = false) => <Button key={label} label={label} onPress={action} secondary={secondary} disabled={busy} />;
   async function pick() {
     await run(async () => {
-      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images', 'videos'], quality: 0.85 });
+      // Expo Android uses RawImageExporter at quality 1, preserving scanned bytes.
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images', 'videos'], quality: 1 });
       if (!result.canceled) {
         const value = result.assets[0];
         if (value.fileSize && value.fileSize > 20 * 1024 * 1024) { setError(t('mediaLimit')); return; }
@@ -124,7 +125,7 @@ export function useSocial(locale: Locale, user: User | undefined, navigate: (scr
   async function pickProfileMedia(field: 'avatar_file' | 'cover_photo_file') {
     if (!profile?.isOwner) return;
     await run(async () => {
-      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.85 });
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 1 });
       if (result.canceled) return;
       const value = result.assets[0];
       if (value.fileSize && value.fileSize > 5 * 1024 * 1024) { setError(t('profileMediaLimit')); return; }
