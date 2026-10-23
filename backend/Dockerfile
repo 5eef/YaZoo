@@ -36,7 +36,8 @@ RUN set -eux; \
         icu-libs \
         libzip \
         nginx \
-        su-exec; \
+        su-exec \
+        'brotli-libs>=1.2.1-r0'; \
     apk upgrade --no-cache libcrypto3 libssl3 openssl; \
     apk add --no-cache --virtual .build-deps \
         $PHPIZE_DEPS \

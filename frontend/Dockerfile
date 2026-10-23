@@ -1,4 +1,4 @@
-FROM node:22.22-alpine@sha256:e58326d0d441090181ac150dc2078d3e2cf6a0d42e809aebba3ef5880935ffdd AS build
+FROM node:22.23.4-alpine3.24@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914 AS build
 
 WORKDIR /app/frontend
 
@@ -52,6 +52,7 @@ COPY infra/nginx/frontend.conf /etc/nginx/templates/default.conf.template
 COPY --from=build /app/frontend/dist /usr/share/nginx/html
 COPY LICENSE /usr/share/nginx/html/LICENSE.txt
 RUN set -eux; \
+    if apk info --exists brotli-libs >/dev/null; then apk add --no-cache 'brotli-libs>=1.2.1-r0'; fi; \
     apk upgrade --no-cache libcrypto3 libssl3 libexpat libuuid pcre2 tiff libx11; \
     printf '{"version":"%s"}\n' "$APP_VERSION" > /usr/share/nginx/html/version.json; \
     sed -i 's/listen  *80;/listen 8080;/' /etc/nginx/templates/default.conf.template; \

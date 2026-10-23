@@ -13,3 +13,9 @@ Render Free peut dormir. Queue sync et processus Reverb supervises ne prouvent p
 Les alertes runtime et tooling sont separees. Une politique runtime PASS ne signifie pas audit npm complet propre. Sonar exclu a la demande du proprietaire ; CodeQL, secrets, audits et scans restent requis. Les revues contextuelles de faux positifs conservent leurs justifications et ne desactivent pas une regle.
 
 COMMERCIAL PRODUCTION READY : NO. Aucune conformite CNDP/ONSSA, verification veterinaire reelle, autorisation de vente ou exercice professionnel n'est certifiee par ces tests. Les badges DEMO et dossiers de candidature ne constituent pas des justificatifs administratifs.
+
+Le scan de la premiere candidate a detecte CVE-2026-111497 dans brotli-libs 1.2.0-r1. Les images exigent desormais la version corrigee >=1.2.1-r0 ; la construction Node et les jobs CI/EAS utilisent les versions de securite Node 22.23.4 / 24.22.1. Aucun ignore de CVE, seuil reduit ou exception Trivy n'est ajoute. Les nouveaux scans doivent confirmer le correctif sur les artefacts exacts.
+
+L'avis [GHSA-mrhx-c7xc-m3w5](https://github.com/advisories/GHSA-mrhx-c7xc-m3w5) est corrige par Zod 4.6.7 dans les deux lockfiles. L'override mobile est limite a Expo CLI ; le SDK reste 57. Les vrais schemas de plugins/commandes Expo et le rejet des collections trop grandes font l'objet de tests, puis Doctor et export sont relances. Aucun alias vers l'ancien parseur v3, suppression d'avis ou nouvelle exception d'audit n'est utilise. La politique runtime reste inchangee ; les cinq alertes de tooling Node deja documentees ne deviennent pas un faux audit propre.
+
+Source Node : [publication de securite du 21 octobre](https://nodejs.org/en/blog/vulnerability/october-2026-security-releases). La livraison locale utilise un binaire portable 24.22.1 verifie par SHA256 officiel, sans remplacer l'installation globale du poste.
