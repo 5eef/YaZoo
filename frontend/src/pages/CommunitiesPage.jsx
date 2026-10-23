@@ -100,7 +100,7 @@ function CommunitiesPage() {
       }
     }
 
-    loadInitialCommunities()
+    void loadInitialCommunities()
 
     return () => {
       cancelled = true

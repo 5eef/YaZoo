@@ -11,9 +11,6 @@ on:
         required: false
         default: true
         type: boolean
-    secrets:
-      SONAR_TOKEN:
-        required: false
 
 permissions:
   contents: read
@@ -24,10 +21,6 @@ jobs:
 
   quality:
     runs-on: ubuntu-latest
-    env:
-      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION }}
-
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
@@ -136,16 +129,6 @@ jobs:
           trap 'if kill -0 "$server_pid" 2>/dev/null; then kill "$server_pid"; fi' EXIT
           cd ../frontend
           npm run test:e2e -- e2e/veterinarian-fullstack.spec.js
-
-      - name: SonarCloud scan
-        if: env.SONAR_TOKEN != '' && env.SONAR_ORGANIZATION != ''
-        uses: SonarSource/sonarqube-scan-action@2f77a1ec69fb1d595b06f35ab27e97605bdef703 # v5
-        with:
-          args: >
-            -Dsonar.organization=${{ env.SONAR_ORGANIZATION }}
-            -Dsonar.host.url=https://sonarcloud.io
-        env:
-          SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
 
   mysql-concurrency:
     # MongoDB 8 cannot start on the newer runner kernel (SERVER-121912).

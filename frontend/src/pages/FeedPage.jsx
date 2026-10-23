@@ -884,7 +884,7 @@ function FeedPage() {
         onConfirm={() => {
           const story = storyPendingDelete
           setStoryPendingDelete(null)
-          handleDeleteStory(story)
+          void handleDeleteStory(story)
         }}
       />
 

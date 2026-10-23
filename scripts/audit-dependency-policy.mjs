@@ -6,8 +6,10 @@ if (!['frontend','mobile'].includes(component)) throw new Error('Specify fronten
 const root=path.resolve(import.meta.dirname,'..'); const cwd=path.join(root,component);
 function audit(extra=[]){
   // Call npm's JS CLI directly: no shell, reproducible on Windows and Linux.
-  const cli=process.env.npm_execpath || (process.platform==='win32' ? path.join(path.dirname(process.execPath),'node_modules/npm/bin/npm-cli.js') : undefined);
-  const result=cli ? spawnSync(process.execPath,[cli,'audit','--json',...extra],{cwd,encoding:'utf8'}) : spawnSync('npm',['audit','--json',...extra],{cwd,encoding:'utf8'});
+  const nodeDirectory=path.dirname(process.execPath);
+  const cli=process.env.npm_execpath || [path.join(nodeDirectory,'node_modules/npm/bin/npm-cli.js'),path.join(nodeDirectory,'../lib/node_modules/npm/bin/npm-cli.js')].find(candidate=>fs.existsSync(candidate));
+  if(!cli || !path.isAbsolute(cli))throw new Error('An absolute npm CLI path from the Node installation is required');
+  const result=spawnSync(process.execPath,[cli,'audit','--json',...extra],{cwd,encoding:'utf8'});
   if(result.error || ![0,1].includes(result.status))throw new Error('npm audit failed to execute');
   const data=JSON.parse(result.stdout); if(!data.metadata?.vulnerabilities || data.error)throw new Error('npm audit unavailable: fail closed');
   return data;

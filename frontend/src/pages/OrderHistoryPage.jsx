@@ -45,7 +45,7 @@ function OrderHistoryPage() {
       }
     }
 
-    loadHistory()
+    void loadHistory()
 
     return () => {
       cancelled = true

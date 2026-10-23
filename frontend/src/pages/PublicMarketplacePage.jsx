@@ -68,7 +68,7 @@ function PublicMarketplacePage() {
       }
     }
 
-    loadListings()
+    void loadListings()
 
     return () => {
       cancelled = true

@@ -446,7 +446,7 @@ function PostCard({
         onCancel={() => setIsDeleteDialogOpen(false)}
         onConfirm={() => {
           setIsDeleteDialogOpen(false)
-          handleDeletePost()
+          void handleDeletePost()
         }}
       />
     </article>

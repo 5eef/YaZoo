@@ -77,7 +77,7 @@ function VeterinariansMarketplacePage() {
       }
     }
 
-    loadVeterinarians()
+    void loadVeterinarians()
 
     return () => {
       isMounted = false

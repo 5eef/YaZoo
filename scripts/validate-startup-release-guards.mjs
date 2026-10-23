@@ -6,7 +6,7 @@ const ci=read('.github/workflows/ci.yml'),mobile=read('.github/workflows/mobile.
 assert.match(ci,/uses: \.\/\.github\/workflows\/mobile\.yml/);
 assert.match(ci,/audit-dependency-policy\.mjs frontend/);
 assert.match(mobile,/audit-dependency-policy\.mjs mobile/);
-assert.match(mobile,/expo export --platform android --source-maps/);
+assert.match(mobile,/node node_modules\/expo\/bin\/cli export --platform android --source-maps/);
 assert.match(codeql,/languages: javascript-typescript/);
 for(const text of [ci,mobile,codeql]){
  assert.doesNotMatch(text,/pull_request_target|continue-on-error:\s*true|\|\|\s*true/);

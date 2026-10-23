@@ -60,7 +60,7 @@ function PublicListingPage() {
       }
     }
 
-    loadListing()
+    void loadListing()
 
     return () => {
       cancelled = true

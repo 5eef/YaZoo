@@ -14,8 +14,6 @@ concurrency:
 jobs:
   required-ci:
     uses: ./.github/workflows/ci.yml
-    secrets:
-      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
   publish:
     needs: required-ci

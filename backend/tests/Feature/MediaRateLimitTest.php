@@ -15,17 +15,13 @@ class MediaRateLimitTest extends TestCase
         Route::get('/api/action-rate-fixture', fn () => response()->noContent())->middleware('throttle:api');
         $limiter = RateLimiter::limiter('api');
         $media = $limiter(Request::create('/api/media/rate-fixture', 'GET', [], [], [], ['REMOTE_ADDR' => '127.0.0.1']));
-        $key = md5('api'.$media->key);
-        try {
-            for ($i = 0; $i < $media->maxAttempts; $i++) {
-                RateLimiter::hit($key, 60);
-            }
-            $this->get('/api/media/rate-fixture', ['Range' => 'bytes=0-3'])->assertStatus(429)->assertHeader('Retry-After');
-            $this->head('/api/media/rate-fixture')->assertStatus(429);
-            $this->get('/api/action-rate-fixture')->assertNoContent();
-        } finally {
-            RateLimiter::clear($key);
+        // Exercise the public middleware contract instead of copying its private key hash.
+        for ($i = 0; $i < $media->maxAttempts; $i++) {
+            $this->get('/api/media/rate-fixture')->assertNoContent();
         }
+        $this->get('/api/media/rate-fixture', ['Range' => 'bytes=0-3'])->assertStatus(429)->assertHeader('Retry-After');
+        $this->head('/api/media/rate-fixture')->assertStatus(429);
+        $this->get('/api/action-rate-fixture')->assertNoContent();
     }
 
     public function test_media_ranges_have_a_separate_bounded_budget_from_api_actions(): void

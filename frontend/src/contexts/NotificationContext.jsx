@@ -100,7 +100,7 @@ export function NotificationProvider({ children }) {
       }
     }
 
-    syncUnreadCount()
+    void syncUnreadCount()
 
     return () => {
       cancelled = true

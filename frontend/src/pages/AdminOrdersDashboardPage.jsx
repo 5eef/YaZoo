@@ -50,7 +50,7 @@ function AdminOrdersDashboardPage() {
       }
     }
 
-    bootstrap()
+    void bootstrap()
 
     return () => {
       cancelled = true

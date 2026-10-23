@@ -15,18 +15,18 @@ jobs:
           cache-dependency-path: mobile/package-lock.json
       - name: Reproducible install
         working-directory: mobile
-        run: npm ci
+        run: npm ci --ignore-scripts
       - name: Static and unit checks
         working-directory: mobile
         run: |
           npm run lint
           npm run typecheck
           npm test
-          npx expo install --check
-          npx expo-doctor
+          node node_modules/expo/bin/cli install --check
+          node node_modules/expo-doctor/bin/expo-doctor.js
       - name: Android JavaScript export
         working-directory: mobile
-        run: npx expo export --platform android --source-maps
+        run: node node_modules/expo/bin/cli export --platform android --source-maps
       - name: Generate mobile CycloneDX dependency inventory
         working-directory: mobile
         run: npm sbom --omit=dev --sbom-format cyclonedx > mobile.cdx.json

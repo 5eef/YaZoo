@@ -130,7 +130,7 @@ function ProfilePage() {
       }
     }
 
-    fetchProfile()
+    void fetchProfile()
 
     return () => {
       cancelled = true

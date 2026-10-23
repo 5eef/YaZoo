@@ -57,7 +57,7 @@ function PublicMarketplaceShowcase({ careOnly = false }) {
       }
     }
 
-    loadPreview()
+    void loadPreview()
 
     return () => {
       cancelled = true

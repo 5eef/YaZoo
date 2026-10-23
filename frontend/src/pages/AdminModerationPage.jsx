@@ -91,7 +91,7 @@ function AdminModerationPage() {
       }
     }
 
-    bootstrap()
+    void bootstrap()
 
     return () => {
       cancelled = true
