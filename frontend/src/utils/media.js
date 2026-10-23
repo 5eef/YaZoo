@@ -1,5 +1,18 @@
 import { getBackendBaseUrl } from '../lib/appConfig'
 
+export function safeMediaSource(value) {
+  if (typeof value !== 'string' || /[<>"']/.test(value) || [...value].some(character => character.charCodeAt(0) < 32)) return ''
+  if (/^data:/i.test(value)) {
+    return /^data:(?:image\/(?:png|jpeg|webp|gif)|video\/(?:mp4|webm|quicktime));base64,[a-z0-9+/=\s]+$/i.test(value) ? value : ''
+  }
+  try {
+    const url = new URL(value, globalThis.location?.origin ?? 'http://localhost')
+    return ['http:', 'https:', 'blob:'].includes(url.protocol) ? value : ''
+  } catch {
+    return ''
+  }
+}
+
 export function getMediaUrl(value) {
   if (!value) {
     return ''
@@ -19,7 +32,6 @@ export function getMediaUrl(value) {
   const normalizedPath = rawUrl
     .replace(/^\/+/, '')
     .replace(/^public\//, '')
-    .replace(/^storage\//, 'storage/')
 
   if (normalizedPath.startsWith('storage/') || normalizedPath.startsWith('api/media/')) {
     return `${backendBaseUrl}/${normalizedPath}`

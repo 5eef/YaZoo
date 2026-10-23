@@ -10,6 +10,12 @@ type Options = {
   resync: () => void;
 };
 
+function connectionId(payload: unknown): string {
+  const value = payload && typeof payload === 'object' && 'socket_id' in payload ? payload.socket_id : null;
+  if (typeof value !== 'string' || !/^\d{1,20}\.\d{1,20}$/.test(value)) throw new Error('Invalid connection identifier');
+  return value;
+}
+
 export function connectRealtime(options: Options): () => void {
   let stopped = false;
   let socket: WebSocket | null = null;
@@ -38,9 +44,9 @@ export function connectRealtime(options: Options): () => void {
         const frame = JSON.parse(data);
         const payload = typeof frame.data === 'string' ? JSON.parse(frame.data) : frame.data;
         if (frame.event === 'pusher:connection_established') {
-          if (typeof payload?.socket_id !== 'string') { current.close(); return; }
+          const socketId = connectionId(payload);
           for (const channel of options.channels) {
-            const auth = await options.authorize(payload.socket_id, channel);
+            const auth = await options.authorize(socketId, channel);
             if (!live()) return;
             send('pusher:subscribe', { channel, auth: auth.auth });
           }

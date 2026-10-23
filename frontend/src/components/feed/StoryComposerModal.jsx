@@ -1,3 +1,4 @@
+import { safeMediaSource } from '../../utils/media'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import PropTypes from 'prop-types'
@@ -260,7 +261,7 @@ function renderMediaPreview(mediaPreviewUrl, mediaPreviewKind, t) {
   if (mediaPreviewKind === 'video') {
     return (
       <video
-        src={mediaPreviewUrl}
+        src={safeMediaSource(mediaPreviewUrl)}
         controls
         className="h-64 w-full object-cover sm:h-80 md:h-96 lg:h-[28rem]"
       />
@@ -269,7 +270,7 @@ function renderMediaPreview(mediaPreviewUrl, mediaPreviewKind, t) {
 
   return (
     <img
-      src={mediaPreviewUrl}
+      src={safeMediaSource(mediaPreviewUrl)}
       alt={t('story.previewAlt')}
       className="h-64 w-full object-cover sm:h-80 md:h-96 lg:h-[28rem]"
     />

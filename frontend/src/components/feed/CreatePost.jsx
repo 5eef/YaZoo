@@ -1,3 +1,4 @@
+import { safeMediaSource } from '../../utils/media'
 import { uploadError } from '../../utils/uploadValidation'
 import { useEffect, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
@@ -259,7 +260,7 @@ function renderPostMediaPreview(mediaPreviewUrl, mediaPreviewKind, t) {
   if (mediaPreviewKind === 'video') {
     return (
       <video
-        src={mediaPreviewUrl}
+        src={safeMediaSource(mediaPreviewUrl)}
         controls
         className="h-64 w-full rounded-[20px] object-cover sm:h-80 md:h-96 lg:h-[28rem]"
       />
@@ -268,7 +269,7 @@ function renderPostMediaPreview(mediaPreviewUrl, mediaPreviewKind, t) {
 
   return (
     <img
-      src={mediaPreviewUrl}
+      src={safeMediaSource(mediaPreviewUrl)}
       alt={t('feed.mediaPreviewAlt')}
       className="h-64 w-full rounded-[20px] object-cover sm:h-80 md:h-96 lg:h-[28rem]"
     />

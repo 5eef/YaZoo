@@ -28,7 +28,7 @@ import { useI18n } from '../hooks/useI18n'
 import { openMessageDock } from '../lib/messageDock'
 import { asArray, extractDataArray, extractDataObject } from '../utils/apiData'
 import { getErrorMessage } from '../utils/getErrorMessage'
-import { normalizeAuthUserMedia, normalizeProfileMediaPayload } from '../utils/media'
+import { normalizeAuthUserMedia, normalizeProfileMediaPayload, safeMediaSource } from '../utils/media'
 import {
   addCommentToPost,
   filterSocialPosts as filterPublications,
@@ -536,7 +536,7 @@ function ProfilePage() {
         >
           {coverImage ? (
             <img
-              src={coverImage}
+              src={safeMediaSource(coverImage)}
               alt={t('profile.coverAlt')}
               className="absolute inset-0 h-full w-full object-cover"
             />
@@ -795,7 +795,7 @@ function ProfilePage() {
                   <div className="relative mt-4 h-40 overflow-hidden rounded-[24px] bg-[linear-gradient(135deg,#5b21b6_0%,#8b5cf6_45%,#ddd6fe_100%)]">
                     {coverPreview ? (
                       <img
-                        src={coverPreview}
+                        src={safeMediaSource(coverPreview)}
                         alt={t('profile.coverPreview')}
                         className="absolute inset-0 h-full w-full object-cover"
                       />

@@ -2,6 +2,30 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { connectRealtime } from '../src/api/realtime.ts';
 
+test('malformed remote connection identifiers never reach private authorization', async () => {
+  const original = globalThis.WebSocket;
+  const sockets = [];
+  let authorizations = 0;
+  class Socket {
+    readyState = 1;
+    closed = false;
+    constructor() { sockets.push(this); }
+    send() {}
+    close() { this.closed = true; this.onclose?.(); }
+  }
+  globalThis.WebSocket = Socket;
+  try {
+    for (const socket_id of [null, {}, 'invalid', '123', `${'1'.repeat(21)}.2`]) {
+      const stop = connectRealtime({ url: 'wss://fixture.test', channels: ['private-users.1'], authorize: async () => { authorizations++; return { auth: 'fixture' }; }, receive: () => {}, status: () => {}, resync: () => {} });
+      const socket = sockets.at(-1);
+      await socket.onmessage({ data: JSON.stringify({ event: 'pusher:connection_established', data: { socket_id } }) });
+      assert.equal(socket.closed, true);
+      stop();
+    }
+    assert.equal(authorizations, 0);
+  } finally { globalThis.WebSocket = original; }
+});
+
 test('private events require subscription acknowledgement; cleanup rejects late auth and closes transport', async () => {
   const original = globalThis.WebSocket;
   const received = [], statuses = [], sockets = [];
