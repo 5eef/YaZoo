@@ -39,6 +39,7 @@ function CommunityDetailPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isPostsLoading, setIsPostsLoading] = useState(true)
   const [isJoining, setIsJoining] = useState(false)
+  const [accessDenied, setAccessDenied] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isDeletingCommunity, setIsDeletingCommunity] = useState(false)
   const [likePendingIds, setLikePendingIds] = useState([])
@@ -48,8 +49,10 @@ function CommunityDetailPage() {
     try {
       const response = await getCommunityRequest(communityId)
       setCommunity(extractDataObject(response, null))
+      setAccessDenied(false)
       setErrorMessage('')
     } catch (error) {
+      setAccessDenied(error.response?.status === 403)
       setErrorMessage(getErrorMessage(error, t('communities.detailLoadError')))
     } finally {
       setIsLoading(false)
@@ -82,8 +85,8 @@ function CommunityDetailPage() {
     setErrorMessage('')
 
     try {
-      const response = await joinCommunityRequest(community.id)
-      setCommunity(extractDataObject(response, community))
+      const response = await joinCommunityRequest(community?.id ?? communityId)
+      if (community) setCommunity(extractDataObject(response, community))
       setSuccessMessage(response.data.message)
     } catch (error) {
       setErrorMessage(getErrorMessage(error, t('communities.detail.joinError')))
@@ -239,7 +242,10 @@ function CommunityDetailPage() {
   }
 
   if (!community) {
-    return <StateBox>{errorMessage || t('communities.detail.notFound')}</StateBox>
+    return <StateBox>
+      <p>{successMessage || errorMessage || t('communities.detail.notFound')}</p>
+      {accessDenied && !successMessage ? <Button type="button" onClick={handleJoin} disabled={isJoining} className="mt-4">{t('communities.requestAccess')}</Button> : null}
+    </StateBox>
   }
 
   const safePosts = asArray(posts)

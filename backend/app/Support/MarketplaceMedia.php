@@ -8,6 +8,7 @@ use App\Services\MediaAssetService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\ValidationException;
 
 class MarketplaceMedia
 {
@@ -46,15 +47,26 @@ class MarketplaceMedia
             : $currentAssets->where('role', 'gallery')->values();
         $createdAssets = collect();
 
-        if ($request->hasFile($mainFileField)) {
-            $mainAsset = $assets->registerUpload($owner, $request->file($mainFileField), $directory, 'image');
-            $createdAssets->push($mainAsset);
+        $total = ($request->hasFile($mainFileField) || $mainAsset ? 1 : 0)
+            + $galleryAssets->count() + count($request->file('gallery_files', [])) + $externalGallery->count();
+        if ($total > 6) {
+            throw ValidationException::withMessages(['gallery_files' => [__('validation.max.array', ['attribute' => 'gallery', 'max' => 6])]]);
         }
 
-        foreach ($request->file('gallery_files', []) as $file) {
-            $asset = $assets->registerUpload($owner, $file, $directory, 'image');
-            $galleryAssets->push($asset);
-            $createdAssets->push($asset);
+        try {
+            if ($request->hasFile($mainFileField)) {
+                $mainAsset = $assets->registerUpload($owner, $request->file($mainFileField), $directory, 'image');
+                $createdAssets->push($mainAsset);
+            }
+
+            foreach ($request->file('gallery_files', []) as $file) {
+                $asset = $assets->registerUpload($owner, $file, $directory, 'image');
+                $galleryAssets->push($asset);
+                $createdAssets->push($asset);
+            }
+        } catch (\Throwable $exception) {
+            $createdAssets->each(fn ($asset) => $assets->discardUnattached($asset, $owner));
+            throw $exception;
         }
 
         /** @var Collection<int, MediaAsset> $desiredAssets */
@@ -75,7 +87,7 @@ class MarketplaceMedia
         );
 
         $legacyMain = $current?->getAttribute($mainField);
-        $legacyGallery = collect($current?->getAttribute('gallery_urls') ?? []);
+        $legacyGallery = collect($current?->getAttribute('gallery_urls') ?? [])->diff($currentAssets->pluck('path'));
         $mainPath = $mainAsset?->path ?? $externalMain ?? ($controlsReferences ? null : $legacyMain);
         $galleryPaths = $desiredAssets->pluck('path')->merge($externalGallery);
 

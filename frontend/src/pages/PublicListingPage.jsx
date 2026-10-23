@@ -8,6 +8,7 @@ import {
   getBadgeTranslationKey,
 } from '../components/marketplace/publicListingFormat'
 import PublicMarketplaceShell from '../components/marketplace/PublicMarketplaceShell'
+import PublicVeterinarianDetails from '../components/marketplace/PublicVeterinarianDetails'
 import {
   getPublicMarketplaceSection,
   getPublicMarketplaceSectionPath,
@@ -59,7 +60,7 @@ function PublicListingPage() {
       }
     }
 
-    loadListing()
+    void loadListing()
 
     return () => {
       cancelled = true
@@ -202,7 +203,7 @@ function PublicListingPage() {
               ) : null}
 
               <div className="mt-4 flex flex-wrap gap-2">
-                {professionalBadgeKey ? (
+                {professionalBadgeKey && !listing.isDemo ? (
                   <DetailBadge className="border border-emerald-200 bg-emerald-100 text-emerald-900 dark:border-emerald-300/30 dark:bg-emerald-950/80 dark:text-emerald-100">
                     {t(professionalBadgeKey)}
                   </DetailBadge>
@@ -259,7 +260,7 @@ function PublicListingPage() {
                 </div>
               </div>
 
-              <div className="mt-auto pt-6">
+              {section === 'veterinarians' ? <PublicVeterinarianDetails key={listing.id} listing={listing} /> : <div className="mt-auto pt-6">
                 <p className="rounded-[20px] border border-amber-200/70 bg-amber-50/85 px-4 py-3 text-sm leading-6 text-amber-950 dark:border-amber-300/18 dark:bg-amber-400/10 dark:text-amber-100">
                   {t('publicMarketplace.readOnlyNotice')}
                 </p>
@@ -269,7 +270,7 @@ function PublicListingPage() {
                 >
                   {t('publicMarketplace.signInToContact')}
                 </Link>
-              </div>
+              </div>}
             </div>
           </div>
         </article>

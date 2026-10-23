@@ -30,7 +30,7 @@ class UpdateProfileRequest extends FormRequest
         $routeUser = $this->routeUser();
 
         return [
-            'name' => ['required', 'string', 'max:120'],
+            'name' => ['sometimes', 'required', 'string', 'max:120'],
             'email' => [
                 'sometimes',
                 'email',

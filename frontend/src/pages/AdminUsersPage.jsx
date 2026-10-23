@@ -7,6 +7,7 @@ import {
   updateAdminUserSuspensionRequest,
 } from '../api/adminUsers'
 import Button from '../components/ui/Button'
+import CreateUserForm from '../components/admin/CreateUserForm'
 import { useAuth } from '../hooks/useAuth'
 import { useI18n } from '../hooks/useI18n'
 import { extractDataArray } from '../utils/apiData'
@@ -77,6 +78,7 @@ function AdminUsersPage() {
 
   return (
     <section className="space-y-6">
+      <CreateUserForm />
       <header className="rounded-[30px] border border-white/80 bg-white/92 p-5 shadow-[0_24px_60px_rgba(124,58,237,0.1)] dark:border-violet-300/14 dark:bg-white/8 sm:p-6">
         <p className="text-xs uppercase tracking-[0.2em] text-violet-700 dark:text-violet-200">{t('adminUsers.eyebrow')}</p>
         <h1 className="mt-2 text-2xl font-semibold text-stone-950 dark:text-violet-50">{t('adminUsers.title')}</h1>

@@ -10,6 +10,11 @@ return [
             FILTER_VALIDATE_BOOL,
         ),
         'driver' => env('MEDIA_SCAN_DRIVER', 'unavailable'),
+        'demo_allowed_user_ids' => array_values(array_filter(array_map('intval', explode(',', (string) env('MEDIA_DEMO_ALLOWED_USER_IDS', ''))), fn (int $id): bool => $id > 0)),
+        'clamav' => [
+            'endpoint' => env('CLAMAV_ENDPOINT', 'tcp://127.0.0.1:3310'),
+            'timeout_seconds' => (int) env('CLAMAV_TIMEOUT_SECONDS', 20),
+        ],
         'quarantine_disk' => env('MEDIA_QUARANTINE_DISK', 'private'),
         'unique_lock_store' => env('MEDIA_SCAN_UNIQUE_LOCK_STORE', env('CACHE_STORE', 'database')),
         'max_attempts' => (int) env('MEDIA_SCAN_MAX_ATTEMPTS', 3),

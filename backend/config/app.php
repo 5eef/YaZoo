@@ -57,6 +57,7 @@ return [
     'url' => env('APP_URL', 'http://localhost'),
 
     'frontend_url' => env('FRONTEND_URL', 'http://localhost:5173'),
+    'trusted_proxies' => env('TRUSTED_PROXIES', ''),
 
     'force_https' => (bool) env('APP_FORCE_HTTPS', false),
 

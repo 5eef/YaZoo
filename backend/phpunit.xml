@@ -18,21 +18,32 @@
         </include>
     </source>
     <php>
-        <env name="APP_ENV" value="testing"/>
-        <env name="APP_KEY" value="base64:c49vk2fjl1WJZPUaxanThGkmCDU9hHDldPjseMgdaQc="/>
+        <env name="APP_ENV" value="testing" force="true"/>
+        <env name="APP_KEY" value="base64:c49vk2fjl1WJZPUaxanThGkmCDU9hHDldPjseMgdaQc=" force="true"/>
         <env name="APP_LOCALE" value="fr" force="true"/>
         <env name="APP_FALLBACK_LOCALE" value="fr" force="true"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
-        <env name="CACHE_STORE" value="array"/>
-        <env name="DB_CONNECTION" value="sqlite"/>
-        <env name="DB_DATABASE" value=":memory:"/>
-        <env name="MEDIA_STORAGE_DRIVER" value="filesystem"/>
-        <env name="MEDIA_FILESYSTEM_DISK" value="public"/>
-        <env name="MAIL_MAILER" value="array"/>
+        <env name="CACHE_STORE" value="array" force="true"/>
+        <env name="ADMIN_MFA_ENFORCED" value="false" force="true"/>
+        <env name="YAZOO_ACCOUNT_DELETION_UNIQUE_LOCK_STORE" value="array" force="true"/>
+        <env name="DB_CONNECTION" value="sqlite" force="true"/>
+        <env name="DB_DATABASE" value=":memory:" force="true"/>
+        <env name="DB_URL" value="" force="true"/>
+        <env name="MEDIA_STORAGE_DRIVER" value="filesystem" force="true"/>
+        <env name="MEDIA_FILESYSTEM_DISK" value="public" force="true"/>
+        <env name="PROFESSIONAL_VERIFICATIONS_DISK" value="private" force="true"/>
+        <env name="YAZOO_DEPLOYMENT_PROFILE" value="local" force="true"/>
+        <env name="YAZOO_REQUIRE_REVERB_HEALTH" value="false" force="true"/>
+        <env name="YAZOO_SHOWCASE_UPLOADS_ENABLED" value="false" force="true"/>
+        <env name="R2_ACCESS_KEY_ID" value="" force="true"/>
+        <env name="R2_SECRET_ACCESS_KEY" value="" force="true"/>
+        <env name="R2_BUCKET" value="" force="true"/>
+        <env name="R2_ENDPOINT" value="" force="true"/>
+        <env name="MAIL_MAILER" value="array" force="true"/>
         <env name="PULSE_ENABLED" value="false"/>
-        <env name="QUEUE_CONNECTION" value="sync"/>
-        <env name="SESSION_DRIVER" value="array"/>
+        <env name="QUEUE_CONNECTION" value="sync" force="true"/>
+        <env name="SESSION_DRIVER" value="array" force="true"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
     </php>
 </phpunit>

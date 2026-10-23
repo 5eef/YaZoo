@@ -1,3 +1,4 @@
+import BrandLogo from '../components/ui/BrandLogo'
 import { useContext, useMemo, useState } from 'react'
 import { Link, Navigate, useSearchParams } from 'react-router'
 
@@ -13,6 +14,7 @@ import { useDemoBackendStatus } from '../hooks/useDemoBackendStatus'
 import { getGoogleAuthErrorMessage } from '../lib/googleAuthErrors'
 import { translate } from '../lib/i18n'
 import { getErrorMessage } from '../utils/getErrorMessage'
+import { safeAuthDestination } from '../lib/authDestination'
 
 function RegisterPage() {
   const i18n = useContext(I18nContext)
@@ -48,7 +50,7 @@ function RegisterPage() {
   )
 
   if (isAuthenticated) {
-    return <Navigate to="/feed" replace />
+    return <Navigate to={safeAuthDestination(searchParams.get('returnTo'))} replace />
   }
 
   const handleChange = (field) => (value) => {
@@ -99,6 +101,7 @@ function RegisterPage() {
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(168,85,247,0.18),_transparent_24%),radial-gradient(circle_at_bottom_right,_rgba(221,214,254,0.42),_transparent_24%),linear-gradient(180deg,_#fffaff_0%,_#f7f1ff_100%)] px-3 py-6 text-stone-950 sm:px-4 sm:py-8 dark:bg-[radial-gradient(circle_at_top_left,_rgba(124,58,237,0.34),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(88,28,135,0.28),_transparent_28%),linear-gradient(180deg,_#090011_0%,_#13071f_55%,_#08000f_100%)] dark:text-violet-50">
       <div className="mx-auto max-w-6xl">
+        <Link to="/" className="mb-5 flex justify-center"><BrandLogo variant="full" className="h-40 w-40 rounded-2xl" /></Link>
         <div className="grid min-h-[calc(100vh-3rem)] w-full gap-5 sm:min-h-[calc(100vh-4rem)] sm:gap-6 lg:grid-cols-[1.02fr_0.98fr] lg:items-center">
         <section className="order-2 rounded-[30px] border border-white/80 bg-[linear-gradient(135deg,_rgba(124,58,237,0.94),_rgba(168,85,247,0.88),_rgba(237,233,254,0.82))] p-5 text-white shadow-[0_28px_70px_rgba(124,58,237,0.18)] sm:rounded-[34px] sm:p-6 lg:order-2 lg:p-7 dark:border-violet-300/12 dark:bg-[linear-gradient(135deg,_rgba(88,28,135,0.92),_rgba(37,12,61,0.96),_rgba(8,0,15,0.98))]">
           <Link
@@ -232,16 +235,16 @@ function RegisterPage() {
               type="submit"
               className="w-full py-3"
               disabled={isSubmitting || backendStatus !== 'ready'}
-              aria-describedby={backendStatus === 'ready' ? undefined : 'demo-register-backend-status'}
+              aria-describedby={backendStatus === 'ready' ? undefined : 'register-backend-status'}
             >
               {isSubmitting ? t('auth.register.loading') : t('auth.register.submit')}
             </Button>
             {backendStatus !== 'ready' ? (
               <p
-                id="demo-register-backend-status"
+                id="register-backend-status"
                 className="text-center text-xs text-stone-600 dark:text-violet-100/75"
               >
-                Demo server is starting…
+                {t('common.backendStartingDetail')}
               </p>
             ) : null}
           </form>
@@ -266,7 +269,7 @@ function RegisterPage() {
 
           <p className="mt-5 text-sm text-stone-500 dark:text-violet-100/70">
             {t('auth.register.alreadyAccount')}{' '}
-            <Link className="font-medium text-violet-900 dark:text-violet-300" to="/login">
+            <Link className="font-medium text-violet-900 dark:text-violet-300" to={`/login?returnTo=${encodeURIComponent(safeAuthDestination(searchParams.get('returnTo')))}`}>
               {t('auth.register.login')}
             </Link>
           </p>

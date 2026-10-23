@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Report;
 
 use App\Models\Report;
+use App\Support\RequestInput;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -26,8 +27,8 @@ class StoreReportRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->merge([
-            'reportable_type' => trim((string) $this->input('reportable_type')),
-            'details' => $this->filled('details') ? trim((string) $this->input('details')) : null,
+            'reportable_type' => RequestInput::trim($this->input('reportable_type')),
+            'details' => $this->filled('details') ? RequestInput::trim($this->input('details')) : null,
         ]);
     }
 }

@@ -1,3 +1,4 @@
+import { safeMediaSource } from '../utils/media'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import PropTypes from 'prop-types'
@@ -99,7 +100,7 @@ function CommunitiesPage() {
       }
     }
 
-    loadInitialCommunities()
+    void loadInitialCommunities()
 
     return () => {
       cancelled = true
@@ -471,13 +472,13 @@ function CommunitiesPage() {
                   <div className="overflow-hidden rounded-[18px] bg-violet-100/70">
                     {isVideoMedia(form.image_file?.type || communityMediaPreview) ? (
                       <video
-                        src={communityMediaPreview}
+                        src={safeMediaSource(communityMediaPreview)}
                         className="h-44 w-full object-cover"
                         controls
                       />
                     ) : (
                       <img
-                        src={communityMediaPreview}
+                        src={safeMediaSource(communityMediaPreview)}
                         alt={t('communities.previewAlt')}
                         className="h-44 w-full object-cover"
                       />

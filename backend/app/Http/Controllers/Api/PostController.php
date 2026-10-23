@@ -28,8 +28,13 @@ class PostController extends Controller
      */
     public function index(Request $request)
     {
+        $request->validate([
+            'author_id' => ['nullable', 'integer', 'min:1'],
+            'media_kind' => ['nullable', Rule::in(['image', 'video'])],
+        ]);
         $pagination = PaginationData::fromRequest($request, 10, 30);
         $communityId = $request->integer('community_id');
+        $authorId = $request->integer('author_id');
 
         if ($communityId) {
             $community = Community::query()->findOrFail($communityId);
@@ -38,6 +43,8 @@ class PostController extends Controller
 
         $posts = Post::query()
             ->visibleTo($request->user())
+            ->when($request->filled('media_kind'), fn ($query) => $query->where('media_kind', $request->string('media_kind')->toString()))
+            ->when($authorId, fn ($query) => $query->where('user_id', $authorId))
             ->when(
                 $communityId,
                 fn ($query) => $query->where('community_id', $communityId),
@@ -100,10 +107,9 @@ class PostController extends Controller
         try {
             if ($request->hasFile('media_file')) {
                 $mediaKind = MediaStorage::detectMediaKind($request->file('media_file'));
-                $mediaAsset = $this->mediaAssets->registerUpload(
+                $mediaAsset = $this->mediaAssets->registerPostUpload(
                     $request->user(),
                     $request->file('media_file'),
-                    'feed/posts',
                     $mediaKind,
                 );
                 $mediaPath = $mediaAsset->path;

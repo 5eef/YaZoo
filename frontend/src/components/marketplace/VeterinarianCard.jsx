@@ -12,6 +12,7 @@ function VeterinarianCard({ veterinarian }) {
 
   return (
     <article className="min-w-0 overflow-hidden rounded-[28px] border border-white/80 bg-[linear-gradient(180deg,_rgba(255,255,255,0.99),_rgba(246,239,255,0.9))] p-4 shadow-[0_18px_42px_rgba(124,58,237,0.08)] dark:border-violet-300/16 dark:bg-[linear-gradient(135deg,_rgba(5,3,10,0.98),_rgba(30,15,52,0.92))] sm:p-5">
+      {veterinarian.isDemo && <p className="mb-3 rounded-xl bg-amber-100 p-2 text-xs font-semibold text-amber-950">{t('startup.demoData')}</p>}
       <div className="flex min-w-0 gap-4">
         <div className="h-20 w-20 shrink-0 overflow-hidden rounded-[24px] border border-violet-100 bg-violet-50 dark:border-violet-300/18 dark:bg-white/10">
           {veterinarian.imageUrl ? (
@@ -93,6 +94,7 @@ function VeterinarianCard({ veterinarian }) {
         ) : null}
       </div>
       <div className="mt-4">
+        <Link to={`/discover/veterinarians/${veterinarian.id}`} className="mb-3 me-3 inline-flex rounded-full border border-violet-300 px-4 py-2 text-sm font-semibold">{t('landing.marketplaceDetails')}</Link>
         <Link
           to={`/veterinarian-appointments?veterinarian=${veterinarian.id}${veterinarian.isOwner ? '&owner=1' : ''}`}
           className="mb-3 inline-flex rounded-full bg-violet-700 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-800"

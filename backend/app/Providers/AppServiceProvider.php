@@ -5,14 +5,23 @@ namespace App\Providers;
 use App\Contracts\MediaScanner;
 use App\Events\UserNotificationCreated;
 use App\Notifications\NewMessageNotification;
+use App\Services\Media\ClamAvMediaScanner;
 use App\Services\Media\UnavailableMediaScanner;
+use App\Services\Media\VerifiedDemoMediaScanner;
+use App\Services\RedactedLogBroadcaster;
+use App\Services\RedactedLogMailTransport;
+use App\Services\ResendTransportFactory;
+use App\Support\MediaStorage;
 use App\Support\PhoneNumber;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\Events\NotificationSent;
+use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
@@ -24,7 +33,19 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->bind(MediaScanner::class, UnavailableMediaScanner::class);
+        $this->app->bind(MediaScanner::class, fn () => config('media.scanning.driver') === 'verified_demo_manifest'
+            ? new VerifiedDemoMediaScanner(
+                resource_path('demo-media-manifest.json'),
+                (string) config('operations.deployment_profile'),
+                (array) config('media.scanning.demo_allowed_user_ids', []),
+            )
+            : (config('media.scanning.driver') === 'clamav'
+            ? new ClamAvMediaScanner(
+                (string) config('media.scanning.clamav.endpoint'),
+                (int) config('media.scanning.clamav.timeout_seconds', 20),
+                (int) config('media.scanning.max_bytes', 52_428_800),
+            )
+            : new UnavailableMediaScanner));
     }
 
     /**
@@ -32,6 +53,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Broadcast::extend('log', fn () => new RedactedLogBroadcaster(app('log')));
+        Mail::extend('log', fn () => new RedactedLogMailTransport(app('log')));
+        Mail::extend('resend', fn (array $config = []) => app(ResendTransportFactory::class)->make($config));
+        Storage::extend('r2', fn ($app, $config) => MediaStorage::createR2Disk($config));
         if ($this->app->isProduction() || (bool) config('app.force_https')) {
             URL::forceScheme('https');
         }
@@ -39,11 +64,16 @@ class AppServiceProvider extends ServiceProvider
         Model::preventLazyLoading(! $this->app->isProduction());
 
         RateLimiter::for('api', function (Request $request) {
+            // Video playback makes multiple range requests; keep its budget separate from API actions.
+            if (in_array($request->method(), ['GET', 'HEAD'], true) && $request->is('api/media/*')) {
+                return Limit::perMinute(600)->by('media:'.($request->user()?->id ?: $request->ip()));
+            }
+
             return Limit::perMinute(120)->by($request->user()?->id ?: $request->ip());
         });
 
         RateLimiter::for('login', function (Request $request) {
-            $email = Str::lower(trim((string) $request->input('email')));
+            $email = is_string($request->input('email')) ? Str::lower(trim($request->input('email'))) : '';
             $phone = PhoneNumber::normalize($request->input('phone'));
             $identifier = $email !== '' ? 'email:'.$email : 'phone:'.($phone ?? 'invalid');
             $identifierKey = hash_hmac(
@@ -69,7 +99,7 @@ class AppServiceProvider extends ServiceProvider
             $phone = PhoneNumber::normalize($request->input('phone'));
             $phoneKey = hash_hmac(
                 'sha256',
-                ($phone ?? 'invalid').':'.(string) $request->input('intent'),
+                ($phone ?? 'invalid').':'.(is_string($request->input('intent')) ? $request->input('intent') : 'invalid'),
                 (string) config('app.key'),
             );
 

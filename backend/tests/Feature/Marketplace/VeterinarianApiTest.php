@@ -9,12 +9,58 @@ use App\Models\VeterinarianAppointmentReview;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Http\Request as HttpRequest;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class VeterinarianApiTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_partial_update_preserves_omitted_fields_and_inactive_status(): void
+    {
+        $owner = User::factory()->approvedProfessional('veterinarian')->create();
+        $veterinarian = Veterinarian::factory()->create([
+            'user_id' => $owner->id,
+            'name' => 'QA preserved veterinarian',
+            'phone' => '+212600000000',
+            'city' => 'Agadir',
+            'is_active' => false,
+        ]);
+        Sanctum::actingAs($owner, ['*']);
+
+        $this->patchJson("/api/veterinarians/{$veterinarian->id}", ['city' => 'Rabat'])
+            ->assertOk()
+            ->assertJsonPath('data.name', 'QA preserved veterinarian')
+            ->assertJsonPath('data.phone', '+212600000000')
+            ->assertJsonPath('data.city', 'Rabat')
+            ->assertJsonPath('data.isActive', false);
+    }
+
+    public function test_multipart_method_override_updates_image_without_clearing_other_fields(): void
+    {
+        Storage::fake('public');
+        $owner = User::factory()->approvedProfessional('veterinarian')->create();
+        $veterinarian = Veterinarian::factory()->create([
+            'user_id' => $owner->id,
+            'name' => 'QA image veterinarian',
+            'phone' => '+212600000000',
+        ]);
+        Sanctum::actingAs($owner, ['*']);
+
+        $this->post("/api/veterinarians/{$veterinarian->id}", [
+            '_method' => 'PATCH',
+            'image' => UploadedFile::fake()->createWithContent('qa.png', base64_decode(
+                'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII='
+            )),
+        ], ['Accept' => 'application/json'])
+            ->assertOk()
+            ->assertJsonPath('data.name', 'QA image veterinarian')
+            ->assertJsonPath('data.phone', '+212600000000');
+
+        $this->assertNotNull($veterinarian->fresh()->image_path);
+    }
 
     public function test_guest_cannot_access_veterinarian_contact_routes(): void
     {

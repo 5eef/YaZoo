@@ -5,12 +5,15 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
+
+concurrency:
+  group: dockerhub-${{ github.sha }}
+  cancel-in-progress: false
 
 jobs:
   required-ci:
     uses: ./.github/workflows/ci.yml
-    secrets:
-      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
   publish:
     needs: required-ci
@@ -26,51 +29,50 @@ jobs:
             echo "::error::Docker images require the exact 40-character Git SHA."
             exit 1
           fi
-          case "$GITHUB_REF" in
-            refs/heads/*) ;;
-            *)
-              echo "::error::Manual image publication is allowed only from a branch ref."
-              exit 1
-              ;;
-          esac
+          if [ "$GITHUB_REF" != refs/heads/main ]; then
+            echo "::error::Official images must be built from the validated main branch."
+            exit 1
+          fi
 
       - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
-        with:
-          context: .
-          file: backend/Dockerfile
-          push: true
-          build-args: APP_VERSION=${{ github.sha }}
-          tags: 5eef/yazoo-api:${{ github.sha }}
-
-      - uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
-        with:
-          context: .
-          file: frontend/Dockerfile
-          push: true
-          build-args: APP_VERSION=${{ github.sha }}
-          tags: 5eef/yazoo-frontend:${{ github.sha }}
+      - name: Refuse reuse of published SHA tags
+        shell: bash
+        run: |
+          set -euo pipefail
+          for repository in yazoo-api-demo; do
+            status=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+              "https://hub.docker.com/v2/repositories/5eef/${repository}/tags/${GITHUB_SHA}/")
+            if [ "$status" != 404 ]; then
+              echo "::error::Cannot publish ${repository}: SHA tag exists or registry lookup failed (HTTP ${status}). Use a new reviewed commit."
+              exit 1
+            fi
+          done
 
       - uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: .
           file: Dockerfile.api-demo
-          push: true
+          platforms: linux/amd64
+          load: true
+          push: false
           build-args: APP_VERSION=${{ github.sha }}
           tags: 5eef/yazoo-api-demo:${{ github.sha }}
 
-      - name: Publish latest aliases from main only
-        if: github.ref == 'refs/heads/main'
+      - name: Scan the exact showcase image before publication
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy@sha256:cffe3f5161a47a6823fbd23d985795b3ed72a4c806da4c4df16266c02accdd6f \
+            image --severity CRITICAL,HIGH --exit-code 1 "5eef/yazoo-api-demo:${GITHUB_SHA}"
+
+      - name: Publish immutable showcase SHA and record digest
         shell: bash
         run: |
           set -euo pipefail
-          docker pull "5eef/yazoo-api:${GITHUB_SHA}"
-          docker pull "5eef/yazoo-frontend:${GITHUB_SHA}"
-          docker tag "5eef/yazoo-api:${GITHUB_SHA}" "5eef/yazoo-api:latest"
-          docker tag "5eef/yazoo-frontend:${GITHUB_SHA}" "5eef/yazoo-frontend:latest"
-          docker push "5eef/yazoo-api:latest"
-          docker push "5eef/yazoo-frontend:latest"
+          docker push "5eef/yazoo-api-demo:${GITHUB_SHA}" | tee /tmp/showcase-push.txt
+          digest=$(sed -n 's/.*digest: \(sha256:[0-9a-f]*\).*/\1/p' /tmp/showcase-push.txt)
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+          echo "Image: 5eef/yazoo-api-demo:${GITHUB_SHA}@${digest}" >> "$GITHUB_STEP_SUMMARY"

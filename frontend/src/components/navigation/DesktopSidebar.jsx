@@ -1,3 +1,4 @@
+import BrandLogo from '../ui/BrandLogo'
 import PropTypes from 'prop-types'
 import { Link, NavLink } from 'react-router'
 
@@ -27,8 +28,7 @@ function DesktopSidebar({
         title={t('layout.logoLabel')}
       >
         <span className="flex h-12 w-12 shrink-0 items-center justify-center">
-          <img
-            src="/yazoo-logo.webp"
+          <BrandLogo
             alt=""
             className="h-11 w-11 object-contain"
           />

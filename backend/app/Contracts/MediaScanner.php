@@ -10,7 +10,7 @@ interface MediaScanner
 
     /**
      * @param  resource  $stream
-     * @param  array{mime_type: string|null, size: int|null, original_name: string|null}  $metadata
+     * @param  array{mime_type: string|null, size: int|null, original_name: string|null, owner_id?: int}  $metadata
      */
     public function scan($stream, array $metadata): MediaScanResult;
 }

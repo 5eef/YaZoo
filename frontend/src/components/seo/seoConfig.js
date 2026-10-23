@@ -1,10 +1,13 @@
-export const SITE_NAME = 'YaZoo'
+import { features } from '../../lib/features.js'
+import { brand } from '../../lib/brand.js'
+
+export const SITE_NAME = brand.name
 const configuredSiteUrl = (
   import.meta.env?.VITE_SITE_URL ?? globalThis.process?.env?.VITE_SITE_URL ?? ''
 ).trim()
 export const SITE_URL = configuredSiteUrl.replace(/\/$/, '') ||
   (typeof globalThis.location === 'undefined' ? '' : globalThis.location.origin)
-export const SOCIAL_IMAGE_URL = `${SITE_URL}/icon-512.png`
+export const SOCIAL_IMAGE_URL = `${SITE_URL}/icon-512.png?v=2026`
 export const INDEX_ROBOTS =
   'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1'
 export const NOINDEX_ROBOTS = 'noindex, nofollow'
@@ -30,10 +33,6 @@ const PUBLIC_ROUTE_METADATA = {
   '/contact': {
     titleKey: 'contact.title',
     descriptionKey: 'contact.description',
-  },
-  '/demo-mobile': {
-    titleKey: 'proPages.mobile.title',
-    descriptionKey: 'proPages.mobile.intro',
   },
   '/discover/animals': {
     titleKey: 'publicMarketplace.animalsTitle',
@@ -76,6 +75,9 @@ const PUBLIC_ROUTE_METADATA = {
     descriptionKey: 'trustSafety.intro',
   },
 }
+
+if (!features.animalListingsPublic) delete PUBLIC_ROUTE_METADATA['/discover/animals']
+if (!features.productMarketplace) delete PUBLIC_ROUTE_METADATA['/discover/products']
 
 export const INDEXABLE_PATHS = Object.freeze(Object.keys(PUBLIC_ROUTE_METADATA))
 

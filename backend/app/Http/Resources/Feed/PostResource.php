@@ -28,15 +28,18 @@ class PostResource extends JsonResource
         $viewerLike = $viewerId
             ? $likeCollection->firstWhere('user_id', $viewerId)
             : null;
+        $mediaUrl = $resolvedMediaPath && ! preg_match('#^https?://#i', $resolvedMediaPath)
+            ? '/api/media/posts/'.$this->id
+            : MediaStorage::resolveUrl($resolvedMediaPath);
 
         return [
             'id' => $this->id,
             'communityId' => $this->community_id,
             'content' => $this->content,
             'imageUrl' => $resolvedMediaKind === 'image'
-                ? MediaStorage::resolveUrl($resolvedMediaPath)
+                ? $mediaUrl
                 : null,
-            'mediaUrl' => MediaStorage::resolveUrl($resolvedMediaPath),
+            'mediaUrl' => $mediaUrl,
             'mediaKind' => $resolvedMediaKind,
             'location' => $this->location,
             'tags' => $this->tags ?? [],

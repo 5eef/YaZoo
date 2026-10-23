@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Reservation;
 
 use App\Models\Reservation;
+use App\Support\RequestInput;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -48,17 +49,19 @@ class StoreReservationRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
+        $note = RequestInput::trim($this->input('note'));
+
         $this->merge([
-            'note' => trim((string) $this->input('note')),
-            'message' => trim((string) $this->input('message')),
-            'contact_phone' => trim((string) $this->input('contact_phone')),
-            'payment_method' => trim((string) ($this->input('payment_method') ?: 'cash_on_pickup')),
-            'delivery_method' => trim((string) ($this->input('delivery_method') ?: 'pickup')),
-            'delivery_contact_name' => trim((string) $this->input('delivery_contact_name')),
-            'delivery_phone' => trim((string) $this->input('delivery_phone')),
-            'delivery_city' => trim((string) $this->input('delivery_city')),
-            'delivery_address' => trim((string) $this->input('delivery_address')),
-            'delivery_notes' => trim((string) $this->input('delivery_notes')),
+            'note' => $note === '' ? null : $note,
+            'message' => RequestInput::trim($this->input('message')),
+            'contact_phone' => RequestInput::trim($this->input('contact_phone')),
+            'payment_method' => RequestInput::trim($this->input('payment_method') ?: 'cash_on_pickup'),
+            'delivery_method' => RequestInput::trim($this->input('delivery_method') ?: 'pickup'),
+            'delivery_contact_name' => RequestInput::trim($this->input('delivery_contact_name')),
+            'delivery_phone' => RequestInput::trim($this->input('delivery_phone')),
+            'delivery_city' => RequestInput::trim($this->input('delivery_city')),
+            'delivery_address' => RequestInput::trim($this->input('delivery_address')),
+            'delivery_notes' => RequestInput::trim($this->input('delivery_notes')),
         ]);
     }
 }

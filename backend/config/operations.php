@@ -59,7 +59,7 @@ return [
         env('YAZOO_REQUIRE_PERSISTENT_STORAGE', env('YAZOO_DEPLOYMENT_PROFILE', 'local') === 'production'),
         FILTER_VALIDATE_BOOL,
     ),
-    'require_reverb_health' => filter_var(env('YAZOO_REQUIRE_REVERB_HEALTH', false), FILTER_VALIDATE_BOOL),
+    'require_reverb_health' => filter_var(env('YAZOO_REQUIRE_REVERB_HEALTH', env('YAZOO_RUN_REVERB', false)), FILTER_VALIDATE_BOOL),
     'fulltext_search_enabled' => filter_var(env('YAZOO_FULLTEXT_SEARCH_ENABLED', true), FILTER_VALIDATE_BOOL),
     'showcase_bootstrap_enabled' => filter_var(
         env('YAZOO_SHOWCASE_BOOTSTRAP_ENABLED', false),

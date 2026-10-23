@@ -1,0 +1,33 @@
+{
+  "cli": {
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview": {
+      "environment": "preview",
+      "distribution": "internal",
+      "credentialsSource": "remote",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://yazoo-showcase.pages.dev/api",
+        "EXPO_PUBLIC_REALTIME_ENABLED": "true",
+        "EXPO_PUBLIC_REVERB_APP_KEY": "yazoo-demo2-aa40ab49c23129178185732e",
+        "EXPO_PUBLIC_REVERB_HOST": "yazoo-showcase.onrender.com"
+      }
+    },
+    "production": {
+      "credentialsSource": "remote",
+      "environment": "production",
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "autoIncrement": true
+    }
+  }
+}

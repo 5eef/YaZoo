@@ -78,10 +78,12 @@ class MarketplaceTestSeeder extends Seeder
         bool $dryRun = false,
         ?string $failAfter = null,
         ?string $showcaseConfirmation = null,
+        ?string $initialPassword = null,
+        ?string $initialAdminPassword = null,
     ): array {
         $this->assertSafeEnvironment($showcaseConfirmation);
 
-        return $this->seedValidated($imagesPath, $dryRun, $failAfter);
+        return $this->seedValidated($imagesPath, $dryRun, $failAfter, $initialPassword, null, $initialAdminPassword);
     }
 
     /**
@@ -111,7 +113,7 @@ class MarketplaceTestSeeder extends Seeder
 
     /**
      * Seed a guarded showcase target with the same marketplace data
-     * as the local demonstration database, while rotating non-admin passwords.
+     * as the local demonstration database, without changing existing accounts.
      *
      * @return array{dryRun: bool, images: array<int, array<string, mixed>>, stats: array<string, array{created: int, updated: int, unchanged: int}>}
      */
@@ -141,6 +143,7 @@ class MarketplaceTestSeeder extends Seeder
         ?string $failAfter,
         ?string $accountPassword = null,
         ?string $releaseAdminEmail = null,
+        ?string $initialAdminPassword = null,
     ): array {
         $this->stats = [];
         $this->storageBackup = [];
@@ -152,11 +155,11 @@ class MarketplaceTestSeeder extends Seeder
         }
 
         try {
-            DB::transaction(function () use ($failAfter, $accountPassword, $releaseAdminEmail): void {
+            DB::transaction(function () use ($failAfter, $accountPassword, $initialAdminPassword): void {
                 $this->copyDemoFiles();
                 $this->failAfter($failAfter, 'storage');
 
-                $users = $this->seedUsers($accountPassword, $releaseAdminEmail);
+                $users = $this->seedUsers($accountPassword, $initialAdminPassword);
                 $this->failAfter($failAfter, 'users');
 
                 $this->seedProfessionalVerifications($users);
@@ -324,19 +327,24 @@ class MarketplaceTestSeeder extends Seeder
     }
 
     /** @return array<string, User> */
-    private function seedUsers(?string $accountPassword = null, ?string $releaseAdminEmail = null): array
+    private function seedUsers(?string $accountPassword = null, ?string $initialAdminPassword = null): array
     {
         $users = [];
 
         foreach ($this->accounts() as $account) {
             $existing = User::query()->where('email', $account['email'])->first();
-            $password = $accountPassword ?? $this->passwordForCity($account['city']);
-            $preserveReleaseAdminPassword = $existing
-                && $releaseAdminEmail !== null
-                && strtolower((string) $existing->email) === $releaseAdminEmail
-                && (bool) $existing->is_admin;
+            $password = $account['email'] === 'bough.youssef@gmail.com' && $initialAdminPassword !== null
+                ? $initialAdminPassword
+                : ($accountPassword ?? $this->passwordForCity($account['city']));
+            // Existing accounts may belong to real users: never rewrite their profile or credentials.
+            if ($existing !== null) {
+                $users[$account['email']] = $existing;
+                $this->increment('users', 'unchanged');
 
-            $users[$account['email']] = $this->syncModel(User::class, ['email' => $account['email']], [
+                continue;
+            }
+
+            $users[$account['email']] = Model::unguarded(fn () => User::query()->firstOrCreate(['email' => $account['email']], [
                 'name' => $account['name'],
                 'phone' => $account['phone'],
                 'country' => 'Maroc',
@@ -353,12 +361,9 @@ class MarketplaceTestSeeder extends Seeder
                 'banned_reason' => null,
                 'google_id' => null,
                 'google_avatar' => null,
-                'password' => $preserveReleaseAdminPassword
-                    ? $existing->password
-                    : ($existing && Hash::check($password, (string) $existing->password)
-                    ? $existing->password
-                    : Hash::make($password)),
-            ], 'users');
+                'password' => Hash::make($password),
+            ]));
+            $this->increment('users', $users[$account['email']]->wasRecentlyCreated ? 'created' : 'unchanged');
         }
 
         return $users;

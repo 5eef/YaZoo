@@ -84,9 +84,9 @@ Artisan::command('yazoo:doctor', function () {
 
         $manager = new MongoManager($mongoUri);
         $manager->executeCommand('admin', new MongoCommand(['ping' => 1]));
-        $mongoStatus = 'OK | '.$mongoUri;
+        $mongoStatus = 'OK | database='.(string) config('media.mongodb.database', 'yazoo_media');
     } catch (Throwable $exception) {
-        $mongoStatus = 'Echec - '.$exception->getMessage();
+        $mongoStatus = 'Echec | exception='.$exception::class;
     }
 
     $this->components->twoColumnDetail(

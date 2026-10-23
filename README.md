@@ -1,258 +1,152 @@
 # YaZoo
 
-### Social network and marketplace for the animal ecosystem
+The official release source is `main`, with Laravel in `backend/`, React/Vite in
+`frontend/`, and Expo/React Native in `mobile/`. Historical branches, `output/`,
+and local consolidation copies are recovery sources, never application build roots.
+See [canonical architecture](docs/ARCHITECTURE_CANONIQUE.md) and
+[API environments](docs/API_ROUTES_AND_ENVIRONMENTS.md).
 
-YaZoo brings animal owners, communities, breeders, shops, trainers, pet sitters, and veterinarians into one responsive platform. This repository is a full-stack portfolio case study covering product design, frontend engineering, API development, data modeling, security, automated testing, and cloud deployment.
+> **Votre animal. Les bons professionnels.**
+>
+> **MVP Startup — phase pilote**
 
-[![Live Demo](https://img.shields.io/badge/Live_demo-Open_YaZoo-2563EB?style=for-the-badge)](https://yazoo-showcase.pages.dev/)
-[![CI](https://github.com/5eef/YaZoo/actions/workflows/ci.yml/badge.svg)](https://github.com/5eef/YaZoo/actions/workflows/ci.yml)
-[![CodeQL](https://github.com/5eef/YaZoo/actions/workflows/codeql.yml/badge.svg)](https://github.com/5eef/YaZoo/actions/workflows/codeql.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+YaZoo is a Moroccan product MVP for connecting pet owners with animal care professionals. Owners can browse public professional profiles, review services, request veterinary appointments, exchange messages, and leave reviews after eligible completed appointments or reservations.
 
-![YaZoo home page](docs/screenshots/yazoo-home.png)
+This branch is a product prototype for incubation and pilot preparation. It does not establish that a company has been legally incorporated, that a pilot has been approved, that listed professionals are real partners, or that real transactions have taken place.
 
-## Try the live demo
+The startup visual identity supplied in `docs/logo` is integrated into Web SVG assets and Android PNG assets. Mobile opens with a short brand intro followed by Login/Register, using the phone language automatically (Arabic/English, otherwise French), with dark/light, RTL and Reduce Motion support. See [asset mapping](docs/BRAND_ASSETS.md) and [AFWAJ demo guide](docs/AFWAJ_DEMO_GUIDE.md). Physical device review, public deployment and APK distribution remain owner actions.
 
-**Public application:** [https://yazoo-showcase.pages.dev](https://yazoo-showcase.pages.dev/)
+## Product scope
 
-The showcase is a real React application connected to a Laravel API and a TLS-secured TiDB Cloud database. Public marketplace pages can be explored without signing in.
+### For pet owners
 
-### Reviewer account
+- Browse public veterinarian and animal care professional listings at /discover/veterinarians.
+- Review public profiles, services, and available contact details.
+- Request appointments with veterinarians that publish availability.
+- Contact professionals through YaZoo messaging after creating an account.
+- Review eligible completed appointments and reservations.
 
-```text
-Email: client.fes@yazoo.test
-Password: shared privately with reviewers; never stored in this repository
-```
+### For professionals
 
-The same private showcase password is used for the seeded professional test accounts. Administrative features and MFA are demonstrated during a supervised review. Cloud database credentials are never used as application login credentials.
+- Create an account and present an activity profile.
+- Submit activity-related documents for YaZoo profile review in account settings.
+- Publish eligible service, veterinarian, product, or animal listings.
+- Manage veterinarian availability and appointment requests where that workflow applies.
+- Use messaging and receive reviews tied to completed eligible activity.
 
-<details>
-<summary>Role-based demo accounts</summary>
+YaZoo profile review is an internal platform process. A profile badge does not mean a government license, state certification, official partnership, or legal endorsement.
 
-| Demo role | Email |
-| --- | --- |
-| Client / reviewer | `client.fes@yazoo.test` |
-| Breeder | `eleveur.poules.meknes@yazoo.test` |
-| Shop | `chats.casablanca@yazoo.test` |
-| Pet sitter | `garde.tetouan@yazoo.test` |
-| Trainer | `dresseur.chiens.marrakech@yazoo.test` |
-| Veterinarian | `veterinaire.agadir@yazoo.test` |
+### Additional experiences
 
-These are fictional portfolio identities. Additional seeded profiles provide content across Moroccan cities.
+The marketplace, animal listings, social feed, and communities remain available as supporting features. Their presence does not replace professional discovery as the product’s primary purpose.
 
-</details>
+The current architecture includes `frontend/` (React/Vite Web), `backend/` (Laravel API, PHP 8.4.1 minimum for the current lock), and `mobile/` (Expo/React Native Android). Mobile includes professional discovery, services, appointments, messages, Feed, Stories and Reels. Video posts share their identity and interactions between Feed and Reels; Stories remain distinct.
 
-> The free Render backend sleeps after inactivity. The first data request can therefore take about one minute; the interface detects this state and reconnects automatically.
+See [the final readiness report](docs/PRODUCTION_READINESS_AFWAJ_2026.md) for tested gates and remaining blockers. AFWAJ candidate readiness does not constitute approval for public production, CNDP compliance, or Google Play distribution.
 
-### Five-minute portfolio tour
+## Pilot status and limits
 
-1. Open the public home page and browse animals, products, services, and veterinarians.
-2. Sign in as `client.fes@yazoo.test` and scroll through the image-rich social feed.
-3. Try reactions, comments, communities, favorites, reservations, conversations, and notifications.
-4. Visit professional profiles to compare veterinarian, breeder, shop, trainer, and pet-sitting experiences.
-5. Switch the language between French, Arabic, and English, then test mobile view and dark mode.
+- The repository contains no verified company registration details or confirmed professional partners.
+- Seed and test records are not evidence of real professionals, customers, appointments, or transactions.
+- CMI is disabled by default and remains gated on contract, sandbox, homologation, and complete configuration checks.
+- Cash-on-pickup and manual bank-transfer workflows exist in code. They are manual options, not proof that YaZoo processes or has completed real payments; do not use them for a public pilot until the pilot’s terms and safeguards are approved.
+- Legal contact, data-controller, hosting, privacy, and retention details must be reviewed and completed for the actual pilot environment before collecting public users’ data.
+- This branch has no deployment or production approval.
 
-Health checks: [API liveness](https://yazoo-showcase.onrender.com/health/live) · [database readiness](https://yazoo-showcase.onrender.com/health/ready)
-
-## The product
-
-Animal-related services are often scattered across social networks, classified-ad websites, messaging apps, and appointment tools. YaZoo explores a unified experience where people can discover trusted professionals, publish content, join communities, reserve services, communicate, and review completed transactions.
-
-### Core experiences
-
-| Area | What users can do |
-| --- | --- |
-| Social feed | Publish posts and stories, display media, comment, react, follow profiles, and receive notifications |
-| Communities | Discover public groups, request access to private groups, and manage members with role-aware permissions |
-| Marketplace | Browse and manage animals, products, services, and veterinarian listings with search and favorites |
-| Reservations | Reserve animals, products, or services and follow status, delivery, invoice, and review workflows |
-| Veterinary care | Explore professional profiles, availability slots, appointments, and appointment reviews |
-| Messaging | Start direct conversations, track unread state, and contact professionals from contextual entry points |
-| Trust and safety | Report content, moderate listings, verify professional profiles, suspend accounts, and audit sensitive actions |
-| Internationalization | Use French, Arabic, or English with RTL-aware responsive layouts |
-
-## What this project demonstrates
-
-I built YaZoo as an end-to-end engineering project, not only as a collection of screens. The repository demonstrates:
-
-- component-driven React architecture and responsive, accessible user journeys;
-- Laravel REST APIs with validation, authorization policies, and transactional business workflows;
-- a relational domain model for social, marketplace, reservation, veterinary, and moderation features;
-- secure cookie-based Sanctum authentication, CSRF protection, rate limits, and administrator MFA;
-- reusable configuration for email, SMS, payments, queues, realtime events, and media storage;
-- automated unit, feature, browser, accessibility, security, and deployment checks;
-- containerized delivery with Docker, Nginx, PHP-FPM, GitHub Actions, Cloudflare Pages, Render, and TiDB Cloud.
+The pilot evidence, live-code routes, and readiness conditions are summarized in [the Startup 2026 pilot brief](docs/STARTUP_2026_PILOT.md).
 
 ## Architecture
 
-```mermaid
-flowchart LR
-    U[Browser] -->|HTTPS| C[Cloudflare Pages]
-    C --> SPA[React SPA]
-    SPA -->|Same-origin API requests| P[Pages Functions proxy]
-    P -->|Fixed backend origin| R[Render container]
-    R --> N[Nginx]
-    N --> L[Laravel / PHP-FPM]
-    L -->|MySQL protocol + TLS| T[(TiDB Cloud)]
-    M[Versioned demo media] --> L
-```
+    Browser
+      └── React 19 + Vite + React Router + Tailwind
+            └── Laravel 12 JSON API
+                  ├── MySQL-compatible database
+                  ├── optional Redis queue/cache
+                  └── optional Reverb realtime delivery
 
-Cloudflare delivers the static interface immediately. Pages Functions proxy only dynamic routes to the Laravel origin, keeping authentication cookies and CSRF flows same-origin. Render runs the containerized API, while TiDB provides persistent relational data. Versioned showcase media is restored safely when the ephemeral container is replaced.
-
-The full local Docker Compose topology additionally supports MySQL, Redis, a queue worker, a scheduler, and optional Laravel Reverb realtime delivery.
-
-## Technology stack
-
-| Layer | Technologies |
-| --- | --- |
-| Frontend | React 19, Vite 8, React Router 8, Axios, Tailwind CSS, i18n |
-| Backend | PHP 8.4 runtime, Laravel 12, Sanctum, Socialite, REST API |
-| Data | MySQL-compatible relational model, TiDB Cloud for the showcase, SQLite for fast tests |
-| Infrastructure | Docker, Docker Compose, Nginx, PHP-FPM, Cloudflare Pages, Render, Docker Hub |
-| Quality | PHPUnit, Vitest, Playwright, Axe, ESLint, TypeScript, Pint, CodeQL, dependency audits |
-
-## Screenshots
-
-| Home and discovery | Marketplace |
-| --- | --- |
-| ![YaZoo home and discovery page](docs/screenshots/yazoo-home.png) | ![YaZoo marketplace page](docs/screenshots/yazoo-marketplace.png) |
-
-The screenshots are versioned in [`docs/screenshots`](docs/screenshots). The live application contains additional authenticated views for the feed, communities, profiles, messaging, reservations, notifications, and administration.
-
-## Quality and verification
-
-The latest recorded showcase verification covered the following layers:
-
-| Check | Result |
-| --- | --- |
-| Laravel feature and unit tests | 394 tests passed |
-| React unit and integration tests | 143 tests passed |
-| Playwright browser scenarios | 98 scenarios passed, including accessibility checks |
-| Responsive behavior | Mobile, tablet, desktop, LTR/RTL, and light/dark scenarios passed |
-| Static quality | ESLint, TypeScript, i18n, Tailwind, legal-placeholder, and Pint checks passed |
-| Supply-chain checks | Composer/npm audits, CodeQL, secret scanning, SBOM, and container scanning configured |
-| Public deployment | Static pages, deep links, API, CSRF, authentication, database readiness, and 21 demo media files verified |
-
-Run the main checks locally:
-
-```powershell
-cd backend
-composer install
-php artisan optimize:clear
-php artisan test
-vendor\bin\pint --test
-composer audit
-
-cd ..\frontend
-npm ci
-npm run lint
-npm run typecheck
-npm run audit:i18n
-npm run test -- --run
-npm run build
-npm run test:e2e
-npm audit
-```
+The application uses French, Arabic, and English. Arabic pages set RTL direction through the existing i18n provider. The interface keeps the YaZoo violet and lavender palette in light and dark modes.
 
 ## Run locally
 
-### Prerequisites
-
-- Git
-- Docker Desktop with Docker Compose, or PHP 8.2+, Composer, Node.js 22.22+, npm, and MySQL
+Prerequisites: Git and Docker Desktop with Compose, or PHP 8.2+, Composer, Node.js 22.22+, npm, and a local MySQL-compatible service.
 
 ### Docker Compose
 
-```powershell
-git clone https://github.com/5eef/YaZoo.git
-cd YaZoo
-Copy-Item .env.example .env
-docker compose up -d --build
-docker compose exec app php artisan migrate --seed --force
-```
+    Copy-Item .env.example .env
+    docker compose up -d --build
+    docker compose exec app php artisan migrate --seed
 
-Open the frontend on `http://localhost:4173` and the API on `http://localhost:8000`.
-
-The Docker database maps to port `3308`, intentionally keeping it separate from workstation MySQL on `3306` and XAMPP MariaDB on `3307`.
+Open the app at http://localhost:4173 and the API at http://localhost:8000.
+Docker Compose publishes its MySQL-compatible database on port 3308, keeping it separate from workstation MySQL (3306) and XAMPP MariaDB (3307).
 
 ### Without Docker
 
-```powershell
-Copy-Item .env.example .env
-Copy-Item backend\.env.example backend\.env
-Copy-Item frontend\.env.example frontend\.env
+    Copy-Item .env.example .env
+    Copy-Item backend\.env.example backend\.env
+    Copy-Item frontend\.env.example frontend\.env
 
-cd backend
-composer install
-php artisan key:generate
-php artisan migrate --seed
-php artisan serve
-```
+In one terminal:
+
+    cd backend
+    composer install
+    php artisan key:generate
+    php artisan migrate --seed
+    php artisan serve
 
 In a second terminal:
 
-```powershell
-cd frontend
-npm ci
-npm run dev
-```
+    cd frontend
+    npm ci
+    npm run dev
 
-Use only local credentials in `.env` files. Never copy cloud secrets into the repository.
+Use local credentials only. Never copy hosted credentials into the repository or commit real `.env` files.
 
-## Demo scope and production readiness
+## Quality commands
 
-The public showcase runs entirely on free hosting and is designed for safe portfolio review. The codebase includes integration points whose external providers are intentionally not active in the public demo.
+    cd backend
+    composer validate --strict
+    php artisan optimize:clear
+    php artisan test
+    vendor\bin\pint --test
+    composer audit
 
-| Available in the showcase | Present in the codebase, disabled publicly |
-| --- | --- |
-| Public catalogs and listing details | CMI payment processing |
-| Authentication and seeded role-based accounts | SMS and production email delivery |
-| Feed with versioned local images | Persistent visitor file uploads |
-| Communities, favorites, reservations, and messaging | Reverb realtime server |
-| Reviews, reports, moderation, admin workflows | Dedicated queue workers and scheduler |
-| TiDB-backed persistent application data | Production SLA and autoscaling |
+    cd ..\frontend
+    npm ci
+    npm run lint
+    npm run typecheck
+    npm run audit:i18n
+    npm run audit:tailwind
+    npm run test -- --run
+    npm run build
+    npm run test:e2e
+    npm audit
 
-Render's free filesystem is ephemeral, so new visitor uploads are disabled instead of pretending they are persistent. A production deployment would connect the existing media abstraction to private and public object storage, enable the required workers, and configure approved payment and communication providers.
+## Technical references
 
-See the reproducible zero-cost deployment guide in [`docs/DEMO_DEPLOYMENT_FREE.md`](docs/DEMO_DEPLOYMENT_FREE.md).
-
-## Repository map
-
-```text
-YaZoo/
-|-- backend/              Laravel API, domain models, migrations, seeders, tests
-|-- frontend/             React application, Pages Functions, unit and browser tests
-|-- deploy/               Deployment and operational helpers
-|-- infra/nginx/          Reverse-proxy configuration
-|-- scripts/              CI, auditing, smoke-test, and maintenance scripts
-|-- docs/                 Architecture, security, compliance, and operations
-|-- .github/workflows/    CI, CodeQL, container publication, and release workflows
-|-- docker-compose.yml    Full local multi-service topology
-|-- Dockerfile.api-demo   Active portfolio API image
-`-- Dockerfile.demo       Single-container fallback showcase
-```
-
-## Selected technical documentation
-
-- [Free showcase deployment](docs/DEMO_DEPLOYMENT_FREE.md)
 - [Accessibility approach](docs/ACCESSIBILITY.md)
 - [End-to-end test plan](docs/E2E_TEST_PLAN.md)
 - [Security review](docs/SONAR_SECURITY_REVIEW.md)
 - [Payment architecture](docs/PAYMENTS_ARCHITECTURE.md)
-- [TiDB compatibility](docs/TIDB_SHOWCASE_COMPATIBILITY.md)
 - [Production scaling plan](docs/production-scaling-plan.md)
 
-## Roadmap
+## Repository map
 
-- Add durable object storage before enabling public uploads.
-- Publish selected API domains as an OpenAPI specification.
-- Add privacy-safe production observability and performance dashboards.
-- Enable provider-backed email, SMS, and payment integrations in an approved production environment.
+- `frontend/` — React, Vite, Tailwind, unit tests, and browser smoke tests.
+- `backend/` — Laravel API, configuration, migrations, and backend tests.
+- `deploy/` and `infra/` — deployment and reverse-proxy helpers.
+- `scripts/` — CI, audit, smoke-test, and maintenance scripts.
+- `docs/` — technical reviews, operating notes, and historical audit records.
+- `.github/workflows/` — repository CI, CodeQL, and image publishing workflows.
 
-## Author
+Older audit, demo deployment, and database compatibility documents are retained as historical technical records. Their branch, test, hosting, and readiness statements must be checked against the current code before being reused.
 
-**Youssef Boughioul** — Junior Full-Stack Developer, Morocco
+## Startup / pilote 2026
 
-[GitHub @5eef](https://github.com/5eef) · [Email](mailto:bough.youssef@gmail.com)
+Le parcours prioritaire est propriétaire → professionnel → demande → communication → expérience terminée → avis. `startup-2026` porte les évolutions ; `main` et `portfolio-showcase-2026-10` conservent le showcase historique. Les annonces animales publiques sont désactivées par défaut dans le profil pilote. Le showcase nécessite des flags explicites lors de reconstruction.
 
-YaZoo is available under the [MIT License](LICENSE).
+- [Brief AFWAJ](docs/AFWAJ_2026_STARTUP_BRIEF.md) et [plan 90 jours](docs/PILOT_90_DAY_PLAN.md).
+- [Métriques](docs/PILOT_METRICS.md), [préparation juridique](docs/LEGAL_READINESS_MOROCCO.md), [décision de marque](docs/BRAND_DECISION.md).
+- [Mobile Android réel](mobile/README.md), [déploiement](docs/DEPLOYMENT_STARTUP_2026.md), [sécurité](docs/SECURITY_REVIEW.md).
+- [Audit final et résultats des commandes](docs/STARTUP_2026_FINAL_AUDIT.md).
+
+Aucun partenaire, revenu ou statut CNDP n’est revendiqué à partir de seeds. Les informations administratives réelles et les credentials de publication restent des actions du propriétaire.

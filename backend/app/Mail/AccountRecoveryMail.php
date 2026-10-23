@@ -20,7 +20,7 @@ class AccountRecoveryMail extends Mailable
     public function build(): self
     {
         return $this
-            ->subject('Réinitialisation de votre mot de passe YaZoo')
+            ->subject('Réinitialisation de votre mot de passe '.config('app.name'))
             ->text('emails.account-recovery');
     }
 }

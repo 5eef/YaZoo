@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Feed;
 
 use App\Rules\SafeMediaUpload;
+use App\Support\RequestInput;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -36,8 +37,8 @@ class StoreStoryRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->merge([
-            'content' => trim((string) $this->input('content')),
-            'location' => trim((string) $this->input('location')),
+            'content' => RequestInput::trim($this->input('content')),
+            'location' => RequestInput::trim($this->input('location')),
         ]);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Privacy;
 
+use App\Support\RequestInput;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreDataDeletionRequestRequest extends FormRequest
@@ -21,7 +22,7 @@ class StoreDataDeletionRequestRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->merge([
-            'reason' => $this->filled('reason') ? trim((string) $this->input('reason')) : null,
+            'reason' => $this->filled('reason') ? RequestInput::trim($this->input('reason')) : null,
         ]);
     }
 }

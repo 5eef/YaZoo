@@ -15,6 +15,7 @@ import {
 } from '../api/reservations'
 import { I18nProvider } from '../contexts/I18nContext'
 import ReservationsPage from './ReservationsPage'
+vi.mock('../hooks/useAuth', () => ({ useAuth: () => ({ user: { id: 1, isAdmin: false } }) }))
 
 vi.mock('../api/reservations', () => ({
   approveReservationRequest: vi.fn(),
@@ -95,6 +96,15 @@ describe('ReservationsPage', () => {
     completeReservationRequest.mockResolvedValue({ data: {} })
     createReservationPaymentRequest.mockResolvedValue({ data: {} })
     updateReservationDeliveryStatusRequest.mockResolvedValue({ data: {} })
+  })
+
+  it.each([
+    ['pet_sitting', "Gardien/Gardienne d'animaux"],
+    ['training', "Dresseur/Dresseuse d'animaux"],
+  ])('affiche le type de service %s dans les reservations', async (kind, label) => {
+    getReservationsRequest.mockResolvedValue({ data: { buyerReservations: [{ ...sellerReservation, kind, isBuyer: true }], sellerReservations: [] } })
+    render(<I18nProvider><MemoryRouter><ReservationsPage /></MemoryRouter></I18nProvider>)
+    expect(await screen.findByText(label)).toBeInTheDocument()
   })
 
   it('permet au vendeur d approuver une reservation', async () => {

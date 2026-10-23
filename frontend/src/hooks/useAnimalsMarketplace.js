@@ -1,3 +1,4 @@
+import { galleryError } from '../utils/uploadValidation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router'
 
@@ -36,6 +37,7 @@ export function useAnimalsMarketplace() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isFiltersOpen, setIsFiltersOpen] = useState(false)
+  const mutationLock = useRef(false)
   const latestRequestId = useRef(0)
 
   const loadAnimals = useCallback(async (activeFilters = filters) => {
@@ -131,6 +133,9 @@ export function useAnimalsMarketplace() {
 
   const handleSubmit = async (event) => {
     event.preventDefault()
+    if (mutationLock.current) return
+    const uploadIssue = galleryError(photoFile, galleryFiles)
+    if (uploadIssue) { setErrorMessage(t(uploadIssue)); return }
     setErrorMessage('')
     setSuccessMessage('')
     if (!form.accepts_animal_rules) {
@@ -138,6 +143,7 @@ export function useAnimalsMarketplace() {
       return
     }
 
+    mutationLock.current = true
     setIsSubmitting(true)
 
     try {
@@ -158,6 +164,7 @@ export function useAnimalsMarketplace() {
         getErrorMessage(error, t('animals.saveError')),
       )
     } finally {
+      mutationLock.current = false
       setIsSubmitting(false)
     }
   }

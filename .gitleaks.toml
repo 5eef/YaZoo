@@ -1,0 +1,320 @@
+title = "YaZoo reviewed non-secret identifiers"
+[extend]
+useDefault = true
+
+[[rules]]
+id = "generic-api-key"
+
+[[rules.allowlists]]
+description = "Reviewed public reference or Sonar issue identifier: README.md"
+condition = "AND"
+regexTarget = "secret"
+paths = ["(^|/)README\\.md$"]
+regexes = [
+  "^5eef/yazoo-api-demo:829f44fb697dc7bc01104dd5aa8c8520b56aebb6$",
+  "^829f44fb697dc7bc01104dd5aa8c8520b56aebb6$",
+]
+
+[[rules.allowlists]]
+description = "Reviewed public reference or Sonar issue identifier: docs/DEMO_DEPLOYMENT_FREE.md"
+condition = "AND"
+regexTarget = "secret"
+paths = ["(^|/)docs/DEMO_DEPLOYMENT_FREE\\.md$"]
+regexes = [
+  "^5eef/yazoo-api-demo:829f44fb697dc7bc01104dd5aa8c8520b56aebb6$",
+  "^829f44fb697dc7bc01104dd5aa8c8520b56aebb6$",
+]
+
+[[rules.allowlists]]
+description = "Reviewed public reference or Sonar issue identifier: DEPLOYMENT_YAZOO_FINAL.md"
+condition = "AND"
+regexTarget = "secret"
+paths = ["(^|/)DEPLOYMENT_YAZOO_FINAL\\.md$"]
+regexes = [
+  "^5eef/yazoo-api:f9357660bb3e8d17ad09474d318000c0d7758e04$",
+  "^f9357660bb3e8d17ad09474d318000c0d7758e04$",
+]
+
+[[rules.allowlists]]
+description = "Reviewed public reference or Sonar issue identifier: docs/POST_DEPLOYMENT_VERIFICATION.md"
+condition = "AND"
+regexTarget = "secret"
+paths = ["(^|/)docs/POST_DEPLOYMENT_VERIFICATION\\.md$"]
+regexes = [
+  "^5eef/yazoo-api:62db185701679ef7c22e8e79599ad270b6a18fec$",
+  "^62db185701679ef7c22e8e79599ad270b6a18fec$",
+]
+
+[[rules.allowlists]]
+description = "Reviewed public reference or Sonar issue identifier: sonar-hotspots.json"
+condition = "AND"
+regexTarget = "secret"
+paths = ["(^|/)sonar-hotspots\\.json$"]
+regexes = [
+  "^AZ8eVUvI0Ldm6EmbH6kr$",
+  "^AZ8eVUvJ0Ldm6EmbH6ks$",
+  "^AZ8eVUvJ0Ldm6EmbH6kt$",
+  "^AZ8eVUvJ0Ldm6EmbH6ku$",
+  "^AZ8eVUvJ0Ldm6EmbH6kv$",
+  "^AZ8eVUvJ0Ldm6EmbH6kw$",
+  "^AZ8eVUvJ0Ldm6EmbH6kx$",
+  "^AZ8eVUvJ0Ldm6EmbH6ky$",
+  "^AZ8eVUvJ0Ldm6EmbH6kz$",
+  "^AZ8eVUvJ0Ldm6EmbH6k0$",
+  "^AZ8eVUvJ0Ldm6EmbH6k1$",
+  "^AZ8eVUvJ0Ldm6EmbH6k2$",
+  "^AZ8eVUvR0Ldm6EmbH6k3$",
+  "^AZ8eVUk50Ldm6EmbH6hk$",
+  "^AZ8eVUls0Ldm6EmbH6hn$",
+  "^AZ8eVUly0Ldm6EmbH6ho$",
+  "^AZ8eVUl50Ldm6EmbH6hp$",
+  "^AZ8eVUl50Ldm6EmbH6hq$",
+  "^AZ8eVUuX0Ldm6EmbH6kp$",
+  "^AZ8eVUql0Ldm6EmbH6jP$",
+]
+
+[[rules.allowlists]]
+description = "Reviewed public reference or Sonar issue identifier: sonar-issues.json"
+condition = "AND"
+regexTarget = "secret"
+paths = ["(^|/)sonar-issues\\.json$"]
+regexes = [
+  "^AZ8eVUsk0Ldm6EmbH6jz$",
+  "^AZ8eVUtQ0Ldm6EmbH6kJ$",
+  "^AZ8eVUtQ0Ldm6EmbH6kK$",
+  "^AZ8eVUmU0Ldm6EmbH6hy$",
+  "^AZ8eVUml0Ldm6EmbH6h4$",
+  "^AZ8eVUml0Ldm6EmbH6h0$",
+  "^AZ8eVUml0Ldm6EmbH6h1$",
+  "^AZ8eVUml0Ldm6EmbH6h2$",
+  "^AZ8eVUml0Ldm6EmbH6h5$",
+  "^AZ8eVUml0Ldm6EmbH6h6$",
+  "^AZ8eVUml0Ldm6EmbH6h7$",
+  "^AZ8eVUml0Ldm6EmbH6h3$",
+  "^AZ8eVUoU0Ldm6EmbH6iS$",
+  "^AZ8eVUoU0Ldm6EmbH6iT$",
+  "^AZ8eVUoU0Ldm6EmbH6iU$",
+  "^AZ8eVUoU0Ldm6EmbH6iV$",
+  "^AZ8eVUoU0Ldm6EmbH6iW$",
+  "^AZ8eVUn70Ldm6EmbH6iP$",
+  "^AZ8eVUn60Ldm6EmbH6iN$",
+  "^AZ8eVUoa0Ldm6EmbH6iY$",
+  "^AZ8eVUrc0Ldm6EmbH6jb$",
+  "^AZ8eVUt50Ldm6EmbH6kV$",
+  "^AZ8eVUt50Ldm6EmbH6kW$",
+  "^AZ8eVUmU0Ldm6EmbH6hx$",
+  "^AZ8eVUoa0Ldm6EmbH6iZ$",
+  "^AZ8eVUoa0Ldm6EmbH6ia$",
+  "^AZ8eVUoa0Ldm6EmbH6iX$",
+  "^AZ8eVUkW0Ldm6EmbH6hi$",
+  "^AZ8eVUkV0Ldm6EmbH6hg$",
+  "^AZ8eVUkP0Ldm6EmbH6hc$",
+  "^AZ8eVUkP0Ldm6EmbH6hd$",
+  "^AZ8eVUkP0Ldm6EmbH6he$",
+  "^AZ8eVUkP0Ldm6EmbH6hf$",
+  "^AZ8eVUrc0Ldm6EmbH6jd$",
+  "^AZ8eVUvj0Ldm6EmbH6k8$",
+  "^AZ8eVUsy0Ldm6EmbH6kA$",
+  "^AZ8eVUoP0Ldm6EmbH6iR$",
+  "^AZ8eVUmN0Ldm6EmbH6ht$",
+  "^AZ8eVUmN0Ldm6EmbH6hu$",
+  "^AZ8eVUmN0Ldm6EmbH6hv$",
+  "^AZ8eVUmN0Ldm6EmbH6hw$",
+  "^AZ8eVUjT0Ldm6EmbH6hP$",
+  "^AZ8eVUjT0Ldm6EmbH6hQ$",
+  "^AZ8eVUrc0Ldm6EmbH6jc$",
+  "^AZ8eVUs80Ldm6EmbH6kF$",
+  "^AZ8eVUng0Ldm6EmbH6iE$",
+  "^AZ8eVUng0Ldm6EmbH6iF$",
+  "^AZ8eVUnx0Ldm6EmbH6iM$",
+  "^AZ8eVUmE0Ldm6EmbH6hs$",
+  "^AZ8eVUsT0Ldm6EmbH6jv$",
+  "^AZ8eVUr70Ldm6EmbH6jp$",
+  "^AZ8eVUsF0Ldm6EmbH6jr$",
+  "^AZ8eVUvo0Ldm6EmbH6k_$",
+  "^AZ8eVUtI0Ldm6EmbH6kH$",
+  "^AZ8eVUtI0Ldm6EmbH6kI$",
+  "^AZ8eVUtW0Ldm6EmbH6kL$",
+  "^AZ8eVUtW0Ldm6EmbH6kM$",
+  "^AZ8eVUtW0Ldm6EmbH6kN$",
+  "^AZ8eVUtk0Ldm6EmbH6kP$",
+  "^AZ8eVUtk0Ldm6EmbH6kQ$",
+  "^AZ8eVUtk0Ldm6EmbH6kR$",
+  "^AZ8eVUvo0Ldm6EmbH6k9$",
+  "^AZ8eVUvo0Ldm6EmbH6k-$",
+  "^AZ8eVUt10Ldm6EmbH6kS$",
+  "^AZ8eVUt10Ldm6EmbH6kT$",
+  "^AZ8eVUuF0Ldm6EmbH6kh$",
+  "^AZ8eVUvo0Ldm6EmbH6lA$",
+  "^AZ8eVUsp0Ldm6EmbH6j3$",
+  "^AZ8eVUom0Ldm6EmbH6ie$",
+  "^AZ8eVUrc0Ldm6EmbH6jg$",
+  "^AZ8eVUnx0Ldm6EmbH6iI$",
+  "^AZ8eVUnx0Ldm6EmbH6iJ$",
+  "^AZ8eVUnx0Ldm6EmbH6iK$",
+  "^AZ8eVUnx0Ldm6EmbH6iL$",
+  "^AZ8eVUsT0Ldm6EmbH6jx$",
+  "^AZ8eVUtd0Ldm6EmbH6kO$",
+  "^AZ8eVUsp0Ldm6EmbH6j8$",
+  "^AZ8eVUrc0Ldm6EmbH6jf$",
+  "^AZ8eVUmx0Ldm6EmbH6h8$",
+  "^AZ8eVUky0Ldm6EmbH6hj$",
+  "^AZ8eVUsA0Ldm6EmbH6jq$",
+  "^AZ8eVUsT0Ldm6EmbH6jw$",
+  "^AZ8eVUsM0Ldm6EmbH6js$",
+  "^AZ8eVUsP0Ldm6EmbH6ju$",
+  "^AZ8eVUt-0Ldm6EmbH6ke$",
+  "^AZ8eVUt-0Ldm6EmbH6kf$",
+  "^AZ8eVUt-0Ldm6EmbH6kg$",
+  "^AZ8eVUkH0Ldm6EmbH6hb$",
+  "^AZ8eVUsp0Ldm6EmbH6j4$",
+  "^AZ8eVUsp0Ldm6EmbH6j9$",
+  "^AZ8eVUsp0Ldm6EmbH6j-$",
+  "^AZ8eVUsp0Ldm6EmbH6j_$",
+  "^AZ8eVUrk0Ldm6EmbH6jo$",
+  "^AZ8eVUmc0Ldm6EmbH6hz$",
+  "^AZ8eVUnm0Ldm6EmbH6iG$",
+  "^AZ8eVUl-0Ldm6EmbH6hr$",
+  "^AZ8eVUjn0Ldm6EmbH6ha$",
+  "^AZ8eVUjn0Ldm6EmbH6hX$",
+  "^AZ8eVUjn0Ldm6EmbH6hW$",
+  "^AZ8eVUjn0Ldm6EmbH6hY$",
+  "^AZ8eVUjn0Ldm6EmbH6hZ$",
+  "^AZ8eVUp70Ldm6EmbH6io$",
+  "^AZ8eVUp70Ldm6EmbH6iq$",
+  "^AZ8eVUp70Ldm6EmbH6is$",
+  "^AZ8eVUp70Ldm6EmbH6it$",
+  "^AZ8eVUp70Ldm6EmbH6iy$",
+  "^AZ8eVUp70Ldm6EmbH6i0$",
+  "^AZ8eVUrc0Ldm6EmbH6jh$",
+  "^AZ8eVUt10Ldm6EmbH6kU$",
+  "^AZ8eVUlY0Ldm6EmbH6hl$",
+  "^AZ8eVUsy0Ldm6EmbH6kB$",
+  "^AZ8eVUt-0Ldm6EmbH6kX$",
+  "^AZ8eVUt-0Ldm6EmbH6kb$",
+  "^AZ8eVUsy0Ldm6EmbH6kC$",
+  "^AZ8eVUnq0Ldm6EmbH6iH$",
+  "^AZ8eVUJJ0Ldm6EmbH6hM$",
+  "^AZ8eVUJK0Ldm6EmbH6hN$",
+  "^AZ8eVUrc0Ldm6EmbH6jk$",
+  "^AZ8eVUuT0Ldm6EmbH6km$",
+  "^AZ8eVUuT0Ldm6EmbH6kn$",
+  "^AZ8eVUuT0Ldm6EmbH6ko$",
+  "^AZ8eVUuF0Ldm6EmbH6ki$",
+  "^AZ8eVUuF0Ldm6EmbH6kj$",
+  "^AZ8eVUsT0Ldm6EmbH6jy$",
+  "^AZ8eVUt-0Ldm6EmbH6kc$",
+  "^AZ8eVUsy0Ldm6EmbH6kD$",
+  "^AZ8eVUvi0Ldm6EmbH6k7$",
+  "^AZ8eVUvc0Ldm6EmbH6k6$",
+  "^AZ8eVUt-0Ldm6EmbH6ka$",
+  "^AZ8eVUnB0Ldm6EmbH6h_$",
+  "^AZ8eVUrc0Ldm6EmbH6ji$",
+  "^AZ8eVUrc0Ldm6EmbH6jj$",
+  "^AZ8eVUn60Ldm6EmbH6iO$",
+  "^AZ8eVUn70Ldm6EmbH6iQ$",
+  "^AZ8eVUnM0Ldm6EmbH6iC$",
+  "^AZ8eVUnM0Ldm6EmbH6iA$",
+  "^AZ8eVUnM0Ldm6EmbH6iB$",
+  "^AZ8eVUod0Ldm6EmbH6ib$",
+  "^AZ8eVUod0Ldm6EmbH6ic$",
+  "^AZ8eVUom0Ldm6EmbH6id$",
+  "^AZ8eVUor0Ldm6EmbH6ig$",
+  "^AZ8eVUor0Ldm6EmbH6if$",
+  "^AZ8eVUna0Ldm6EmbH6iD$",
+  "^AZ8eVUm40Ldm6EmbH6h9$",
+  "^AZ8eVUm40Ldm6EmbH6h-$",
+  "^AZ8eVUo60Ldm6EmbH6ih$",
+  "^AZ8eVUkW0Ldm6EmbH6hh$",
+  "^AZ8eVUlZ0Ldm6EmbH6hm$",
+  "^AZ8eVUJK0Ldm6EmbH6hO$",
+  "^AZ8eVUjn0Ldm6EmbH6hR$",
+  "^AZ8eVUjn0Ldm6EmbH6hS$",
+  "^AZ8eVUjn0Ldm6EmbH6hT$",
+  "^AZ8eVUjn0Ldm6EmbH6hU$",
+  "^AZ8eVUjn0Ldm6EmbH6hV$",
+  "^AZ8eVUpU0Ldm6EmbH6ii$",
+  "^AZ8eVUph0Ldm6EmbH6ik$",
+  "^AZ8eVUph0Ldm6EmbH6ij$",
+  "^AZ8eVUp00Ldm6EmbH6in$",
+  "^AZ8eVUpv0Ldm6EmbH6im$",
+  "^AZ8eVUpo0Ldm6EmbH6il$",
+  "^AZ8eVUq40Ldm6EmbH6jU$",
+  "^AZ8eVUqD0Ldm6EmbH6i3$",
+  "^AZ8eVUqD0Ldm6EmbH6i4$",
+  "^AZ8eVUqD0Ldm6EmbH6i5$",
+  "^AZ8eVUqD0Ldm6EmbH6i6$",
+  "^AZ8eVUqD0Ldm6EmbH6i7$",
+  "^AZ8eVUqH0Ldm6EmbH6i8$",
+  "^AZ8eVUqH0Ldm6EmbH6i9$",
+  "^AZ8eVUqH0Ldm6EmbH6i-$",
+  "^AZ8eVUp70Ldm6EmbH6i1$",
+  "^AZ8eVUp70Ldm6EmbH6ip$",
+  "^AZ8eVUp70Ldm6EmbH6ir$",
+  "^AZ8eVUp70Ldm6EmbH6iu$",
+  "^AZ8eVUp70Ldm6EmbH6iv$",
+  "^AZ8eVUp70Ldm6EmbH6iw$",
+  "^AZ8eVUp70Ldm6EmbH6ix$",
+  "^AZ8eVUp70Ldm6EmbH6iz$",
+  "^AZ8eVUp70Ldm6EmbH6i2$",
+  "^AZ8eVUqP0Ldm6EmbH6i_$",
+  "^AZ8eVUqP0Ldm6EmbH6jC$",
+  "^AZ8eVUqP0Ldm6EmbH6jD$",
+  "^AZ8eVUqP0Ldm6EmbH6jA$",
+  "^AZ8eVUqP0Ldm6EmbH6jB$",
+  "^AZ8eVUqp0Ldm6EmbH6jT$",
+  "^AZ8eVUqp0Ldm6EmbH6jQ$",
+  "^AZ8eVUqp0Ldm6EmbH6jR$",
+  "^AZ8eVUqp0Ldm6EmbH6jS$",
+  "^AZ8eVUqZ0Ldm6EmbH6jG$",
+  "^AZ8eVUqZ0Ldm6EmbH6jF$",
+  "^AZ8eVUqZ0Ldm6EmbH6jH$",
+  "^AZ8eVUqa0Ldm6EmbH6jO$",
+  "^AZ8eVUqa0Ldm6EmbH6jN$",
+  "^AZ8eVUqZ0Ldm6EmbH6jI$",
+  "^AZ8eVUqZ0Ldm6EmbH6jJ$",
+  "^AZ8eVUqZ0Ldm6EmbH6jK$",
+  "^AZ8eVUqZ0Ldm6EmbH6jL$",
+  "^AZ8eVUqa0Ldm6EmbH6jM$",
+  "^AZ8eVUqT0Ldm6EmbH6jE$",
+  "^AZ8eVUrc0Ldm6EmbH6jn$",
+  "^AZ8eVUrc0Ldm6EmbH6je$",
+  "^AZ8eVUrc0Ldm6EmbH6jl$",
+  "^AZ8eVUrc0Ldm6EmbH6jm$",
+  "^AZ8eVUrc0Ldm6EmbH6jY$",
+  "^AZ8eVUrc0Ldm6EmbH6jZ$",
+  "^AZ8eVUrc0Ldm6EmbH6ja$",
+  "^AZ8eVUrX0Ldm6EmbH6jX$",
+  "^AZ8eVUrX0Ldm6EmbH6jW$",
+  "^AZ8eVUrX0Ldm6EmbH6jV$",
+  "^AZ8eVUsP0Ldm6EmbH6jt$",
+  "^AZ8eVUub0Ldm6EmbH6kq$",
+  "^AZ8eVUuP0Ldm6EmbH6kk$",
+  "^AZ8eVUuP0Ldm6EmbH6kl$",
+  "^AZ8eVUvY0Ldm6EmbH6k4$",
+  "^AZ8eVUvY0Ldm6EmbH6k5$",
+  "^AZ8eVUsk0Ldm6EmbH6j0$",
+  "^AZ8eVUsk0Ldm6EmbH6j1$",
+  "^AZ8eVUsk0Ldm6EmbH6j2$",
+  "^AZ8eVUs40Ldm6EmbH6kE$",
+  "^AZ8eVUt-0Ldm6EmbH6kY$",
+  "^AZ8eVUt-0Ldm6EmbH6kZ$",
+  "^AZ8eVUt-0Ldm6EmbH6kd$",
+  "^AZ8eVUsp0Ldm6EmbH6j5$",
+  "^AZ8eVUsp0Ldm6EmbH6j6$",
+  "^AZ8eVUsp0Ldm6EmbH6j7$",
+  "^AZ8eVUs-0Ldm6EmbH6kG$",
+]
+
+
+[[rules.allowlists]]
+description = "Reviewed public immutable Docker Hub references in the published release report; not credentials"
+condition = "AND"
+regexTarget = "secret"
+paths = ["(^|/)docs/YAZOO_PUBLIC_DEPLOYMENT_REPORT_2026-10-18\\.md$"]
+regexes = [
+  "^5eef/yazoo-api-demo:9ef598e4ee79cd8384ef71c485c5c76fd7275d01$",
+  "^9ef598e4ee79cd8384ef71c485c5c76fd7275d01$",
+  "^5eef/yazoo-api-demo:8d4381072c4f1e3d5981283ae44db1fc09c655af$",
+  "^8d4381072c4f1e3d5981283ae44db1fc09c655af$",
+]

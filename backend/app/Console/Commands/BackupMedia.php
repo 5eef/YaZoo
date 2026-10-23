@@ -31,11 +31,16 @@ class BackupMedia extends Command
         if ((string) config('media.driver', 'filesystem') !== 'filesystem') {
             $this->warn('Le backup media automatique est prevu pour le driver filesystem.');
 
-            return self::SUCCESS;
+            return self::FAILURE;
         }
 
         $sourceDiskName = (string) config('media.filesystem_disk', 'public');
         $backupDiskName = (string) ($this->option('disk') ?: env('MEDIA_BACKUP_DISK', 'backups'));
+        if ($sourceDiskName === $backupDiskName) {
+            $this->error('Source and backup disks must be different.');
+
+            return self::FAILURE;
+        }
         $sourceDisk = Storage::disk($sourceDiskName);
         $backupDisk = Storage::disk($backupDiskName);
         $backupDirectory = 'media/'.now()->format('Ymd_His');
@@ -45,13 +50,17 @@ class BackupMedia extends Command
             $stream = $sourceDisk->readStream($file);
 
             if (! is_resource($stream)) {
-                $this->warn("Fichier ignore: {$file}");
+                $this->error('Media backup read failed; previous backups have been preserved.');
 
-                continue;
+                return self::FAILURE;
             }
 
             try {
-                $backupDisk->writeStream($backupDirectory.'/'.$file, $stream);
+                if (! $backupDisk->writeStream($backupDirectory.'/'.$file, $stream)) {
+                    $this->error('Media backup write failed; previous backups have been preserved.');
+
+                    return self::FAILURE;
+                }
             } finally {
                 fclose($stream);
             }

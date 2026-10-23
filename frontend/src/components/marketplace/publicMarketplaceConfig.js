@@ -1,4 +1,18 @@
+import { features } from '../../lib/features'
+
 export const PUBLIC_MARKETPLACE_SECTIONS = Object.freeze([
+  {
+    key: 'veterinarians',
+    titleKey: 'landing.marketplaceVeterinarians',
+    pageTitleKey: 'publicMarketplace.veterinariansTitle',
+    descriptionKey: 'publicMarketplace.veterinariansDescription',
+  },
+  {
+    key: 'services',
+    titleKey: 'landing.marketplaceServices',
+    pageTitleKey: 'publicMarketplace.servicesTitle',
+    descriptionKey: 'publicMarketplace.servicesDescription',
+  },
   {
     key: 'animals',
     titleKey: 'landing.marketplaceAnimals',
@@ -11,19 +25,7 @@ export const PUBLIC_MARKETPLACE_SECTIONS = Object.freeze([
     pageTitleKey: 'publicMarketplace.productsTitle',
     descriptionKey: 'publicMarketplace.productsDescription',
   },
-  {
-    key: 'services',
-    titleKey: 'landing.marketplaceServices',
-    pageTitleKey: 'publicMarketplace.servicesTitle',
-    descriptionKey: 'publicMarketplace.servicesDescription',
-  },
-  {
-    key: 'veterinarians',
-    titleKey: 'landing.marketplaceVeterinarians',
-    pageTitleKey: 'publicMarketplace.veterinariansTitle',
-    descriptionKey: 'publicMarketplace.veterinariansDescription',
-  },
-])
+].filter((section) => (section.key !== 'animals' || features.animalListingsPublic) && (section.key !== 'products' || features.productMarketplace)))
 
 const SECTION_KEYS = new Set(
   PUBLIC_MARKETPLACE_SECTIONS.map((section) => section.key),

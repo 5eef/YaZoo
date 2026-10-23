@@ -69,12 +69,17 @@ function createAuthorizer(channel) {
       )
 
       try {
+        const csrfCookie = globalThis.document?.cookie
+          ?.split('; ')
+          .find((cookie) => cookie.startsWith('XSRF-TOKEN='))
+        const csrfToken = csrfCookie ? decodeURIComponent(csrfCookie.slice(11)) : ''
         const response = await fetch(getBroadcastAuthUrl(), {
           method: 'POST',
           credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
             Accept: 'application/json',
+            ...(csrfToken ? { 'X-XSRF-TOKEN': csrfToken } : {}),
           },
           body: JSON.stringify({
             socket_id: socketId,
@@ -155,7 +160,7 @@ async function createEcho(config) {
   setRealtimeStatus('connecting')
 
   const echo = new Echo({
-    broadcaster: 'pusher',
+    broadcaster: 'reverb',
     key: config.key,
     wsHost: config.host,
     wsPort: config.port,

@@ -4,19 +4,20 @@ namespace App\Console\Commands;
 
 use App\Models\User;
 use App\Support\ShowcaseBootstrapGuard;
+use App\Support\ShowcaseBootstrapState;
+use Database\Seeders\AfwajShowcaseSeeder;
 use Database\Seeders\DemoContentSeeder;
 use Database\Seeders\MarketplaceTestSeeder;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use RuntimeException;
 use Throwable;
 
 class BootstrapShowcase extends Command
 {
-    private const MARKER_KEY = 'yazoo_showcase_bootstrap_v1';
-
     protected $signature = 'yazoo:bootstrap-showcase
         {--images= : Dossier en lecture seule contenant exactement les 21 images PNG}
         {--confirmation= : Confirmation exacte de la cible showcase autorisee}
@@ -28,6 +29,7 @@ class BootstrapShowcase extends Command
         ShowcaseBootstrapGuard $guard,
         MarketplaceTestSeeder $marketplaceSeeder,
         DemoContentSeeder $socialSeeder,
+        ShowcaseBootstrapState $state,
     ): int {
         $imagesPath = trim((string) $this->option('images'));
         $confirmation = trim((string) $this->option('confirmation'));
@@ -86,21 +88,30 @@ class BootstrapShowcase extends Command
                 return self::SUCCESS;
             }
 
-            if (Cache::store('database')->get(self::MARKER_KEY) === 'complete') {
-                $this->info('Le bootstrap showcase est deja termine; aucune ecriture supplementaire.');
+            if ($state->preserveCompleted()) {
+                $this->info('Le bootstrap showcase est deja termine; aucune ecriture supplementaire sur les comptes ou le contenu.');
 
                 return self::SUCCESS;
             }
 
-            $unexpectedEmails = User::query()
-                ->pluck('email')
-                ->diff($marketplaceSeeder->demoEmails())
-                ->values();
+            if (Cache::store('database')->get('yazoo_showcase_bootstrap_v1') === 'complete') {
+                DB::transaction(function () use ($state): void {
+                    foreach (['users' => 20, 'posts' => 3, 'stories' => 0, 'follows' => 0] as $table => $count) {
+                        if (DB::table($table)->count() !== $count) {
+                            throw new RuntimeException('Showcase v1 modifie: mise a niveau automatique refusee pour '.$table);
+                        }
+                    }
+                    app(AfwajShowcaseSeeder::class)->run();
+                    $this->assertDatasetCounts();
+                    $state->recordCompletion();
+                }, 1);
+                $this->info('Showcase AFWAJ v2 ajoute au jeu fictif v1.');
 
-            if ($unexpectedEmails->isNotEmpty()) {
-                throw new RuntimeException(
-                    'La base contient deja des comptes hors du jeu marketplace autorise; bootstrap refuse.',
-                );
+                return self::SUCCESS;
+            }
+
+            if (User::query()->exists()) {
+                throw new RuntimeException('La base contient deja des comptes; bootstrap initial refuse.');
             }
 
             $marketplaceSeeder->seedFrom(
@@ -108,25 +119,21 @@ class BootstrapShowcase extends Command
                 false,
                 null,
                 $isTestExecution ? null : $confirmation,
+                $password,
+                Str::random(64),
             );
 
-            DB::transaction(function () use ($socialSeeder, $password, $mfaSecret, $mfaRecoveryCodes): void {
+            DB::transaction(function () use ($socialSeeder, $password, $mfaSecret, $mfaRecoveryCodes, $state): void {
                 if (User::query()->where('email', 'admin@yazoo.ma')->exists()) {
                     throw new RuntimeException('Un contenu social showcase partiel existe sans marqueur de fin.');
                 }
 
+                $socialSeeder->initialPassword = $password;
+                $socialSeeder->initialAdminPassword = Str::random(64);
                 $socialSeeder->run();
+                app(AfwajShowcaseSeeder::class)->run();
 
-                foreach (['users' => 20, 'posts' => 3, 'comments' => 2, 'likes' => 4] as $table => $expectedCount) {
-                    $actualCount = DB::table($table)->count();
-
-                    if ($actualCount !== $expectedCount) {
-                        throw new RuntimeException("Jeu showcase incomplet pour {$table}: {$actualCount}/{$expectedCount}.");
-                    }
-                }
-
-                $passwordHash = Hash::make($password);
-                User::query()->update(['password' => $passwordHash]);
+                $this->assertDatasetCounts();
 
                 $admin = User::query()
                     ->where('email', 'bough.youssef@gmail.com')
@@ -141,7 +148,7 @@ class BootstrapShowcase extends Command
                     'admin_mfa_confirmed_at' => now(),
                 ])->save();
 
-                Cache::store('database')->forever(self::MARKER_KEY, 'complete');
+                $state->recordCompletion();
             }, 1);
 
             $this->info('Bootstrap showcase termine: comptes, marketplace et contenu social sont prets.');
@@ -151,6 +158,16 @@ class BootstrapShowcase extends Command
             $this->error('Bootstrap showcase refuse ou annule: '.$exception->getMessage());
 
             return self::FAILURE;
+        }
+    }
+
+    private function assertDatasetCounts(): void
+    {
+        foreach (['users' => 20, 'posts' => 5, 'comments' => 4, 'likes' => 6, 'stories' => 2, 'follows' => 3, 'veterinarians' => 3, 'service_listings' => 10, 'veterinarian_availability_slots' => 12, 'veterinarian_appointments' => 3, 'conversations' => 5, 'messages' => 10] as $table => $expectedCount) {
+            $actualCount = DB::table($table)->count();
+            if ($actualCount !== $expectedCount) {
+                throw new RuntimeException("Jeu showcase incomplet pour {$table}: {$actualCount}/{$expectedCount}.");
+            }
         }
     }
 }

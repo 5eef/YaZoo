@@ -2,8 +2,8 @@
     "$schema": "https://getcomposer.org/schema.json",
     "name": "youssef-bough/yazoo",
     "type": "project",
-    "description": "YaZoo social platform and animal marketplace.",
-    "keywords": ["yazoo", "marketplace", "social", "animals", "laravel"],
+    "description": "YaZoo connects pet owners with animal care professionals in Morocco.",
+    "keywords": ["yazoo", "animal care", "professionals", "marketplace", "laravel"],
     "license": "MIT",
     "authors": [
         {
@@ -19,9 +19,11 @@
         "laravel/sanctum": "^4.0",
         "laravel/socialite": "^5.27",
         "laravel/tinker": "^2.10.1",
-        "mongodb/mongodb": "^2.2",
+        "league/flysystem-aws-s3-v3": "^3.0",
+        "mongodb/mongodb": "~2.4.2",
         "predis/predis": "^3.5",
-        "pusher/pusher-php-server": "^7.2"
+        "pusher/pusher-php-server": "^7.2",
+        "resend/resend-php": "^1.17"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

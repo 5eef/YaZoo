@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\ShowcaseAvailability;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Http\Request;
 
@@ -30,6 +31,16 @@ if (! is_file($startFile)) {
 }
 
 try {
+    if ($method === 'SHOWCASE_REFRESH') {
+        $application->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+        if (! $application->environment('testing') || config('database.default') !== 'mysql'
+            || ! in_array(config('database.connections.mysql.database'), ['yazoo_vet_test', 'yazoo_concurrency'], true)) {
+            throw new RuntimeException('Generation concurrency requires an allowlisted disposable test database.');
+        }
+        config(['operations.showcase_bootstrap_enabled' => true, 'operations.deployment_profile' => 'showcase']);
+        fwrite(STDOUT, (string) app(ShowcaseAvailability::class)->refresh());
+        exit(0);
+    }
     $payload = json_decode(base64_decode((string) $encodedPayload, true), true, flags: JSON_THROW_ON_ERROR);
     $request = Request::create(
         (string) $uri,

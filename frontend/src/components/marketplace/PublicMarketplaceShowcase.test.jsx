@@ -7,6 +7,8 @@ import { I18nProvider } from '../../contexts/I18nContext'
 import { messages, translate } from '../../lib/i18n'
 import PublicMarketplaceShowcase from './PublicMarketplaceShowcase'
 
+vi.mock('../../lib/features', () => ({ features: { animalListingsPublic: true, productMarketplace: true } }))
+
 vi.mock('../../api/publicMarketplace', () => ({
   getPublicMarketplacePreviewRequest: vi.fn(),
 }))

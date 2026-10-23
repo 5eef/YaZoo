@@ -28,7 +28,7 @@ export function appendUniqueMessage(messages, nextMessage) {
     return safeMessages
   }
 
-  return [...safeMessages, nextMessage]
+  return [...safeMessages, nextMessage].sort((first, second) => Number(first.id) - Number(second.id))
 }
 
 export function filterMessageConversations(conversations, searchTerm) {

@@ -20,7 +20,7 @@ class CmiGateway implements PaymentGateway
 
     public function initiate(Payment $payment): PaymentInitiationResult
     {
-        if (! (bool) config('payments.providers.cmi.enabled', false)) {
+        if (! config('features.payments') || ! (bool) config('payments.providers.cmi.enabled', false)) {
             throw ValidationException::withMessages([
                 'provider' => ['Le paiement CMI est desactive.'],
             ]);

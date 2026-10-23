@@ -31,6 +31,10 @@ function trimTrailingSlash(value) {
 function normalizeApiBaseUrl(value) {
   const normalizedUrl = trimTrailingSlash(value.trim())
 
+  if (/\/api\/api(?:\/|$)/i.test(normalizedUrl)) {
+    throw new Error('API base URL must contain a single /api prefix')
+  }
+
   if (normalizedUrl.toLowerCase().endsWith('/api')) {
     return normalizedUrl
   }

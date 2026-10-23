@@ -48,6 +48,13 @@ class ShowcaseBootstrapGuardTest extends TestCase
         app(ShowcaseBootstrapGuard::class)->assertAllowed('wrong-target');
     }
 
+    public function test_it_rejects_the_real_production_profile(): void
+    {
+        config(['operations.deployment_profile' => 'production']);
+        $this->expectException(RuntimeException::class);
+        app(ShowcaseBootstrapGuard::class)->assertAllowed('demo-db.example/yazoo_showcase@demo.example');
+    }
+
     public function test_it_rejects_a_different_application_host(): void
     {
         config(['app.url' => 'https://another.example']);
@@ -86,5 +93,27 @@ class ShowcaseBootstrapGuardTest extends TestCase
         $this->expectExceptionMessage('MFA');
 
         app(ShowcaseBootstrapGuard::class)->assertAllowed('demo-db.example/yazoo_showcase@demo.example');
+    }
+
+    public function test_it_accepts_the_exact_afwaj_database_without_connecting(): void
+    {
+        config([
+            'database.connections.showcase.database' => 'yazoo_showcase_afwaj',
+            'operations.showcase_database_name' => 'yazoo_showcase_afwaj',
+            'operations.showcase_bootstrap_confirmation' => 'test-only-afwaj-confirmation',
+        ]);
+        app(ShowcaseBootstrapGuard::class)->assertAllowed('test-only-afwaj-confirmation');
+        $this->addToAssertionCount(1);
+    }
+
+    public function test_afwaj_guard_rejects_the_old_database_name_without_connecting(): void
+    {
+        config([
+            'operations.showcase_database_name' => 'yazoo_showcase_afwaj',
+            'operations.showcase_bootstrap_confirmation' => 'test-only-afwaj-confirmation',
+        ]);
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('cible MySQL');
+        app(ShowcaseBootstrapGuard::class)->assertAllowed('test-only-afwaj-confirmation');
     }
 }

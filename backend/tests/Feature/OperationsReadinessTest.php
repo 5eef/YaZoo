@@ -17,6 +17,21 @@ class OperationsReadinessTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config([
+            'app.env' => 'production',
+            'app.debug' => false,
+            'app.url' => 'https://api.unit-fixture.dev',
+            'app.frontend_url' => 'https://app.unit-fixture.dev',
+            'session.secure' => true,
+            'session.http_only' => true,
+            'cors.allowed_origins' => ['https://app.unit-fixture.dev'],
+            'cors.allowed_origins_patterns' => [],
+        ]);
+    }
+
     public function test_retention_and_heartbeats_are_scheduled_with_distributed_guards(): void
     {
         config(['queue.default' => 'redis']);
@@ -216,7 +231,7 @@ class OperationsReadinessTest extends TestCase
     {
         config([
             'operations.deployment_profile' => 'production',
-            'app.key' => 'base64:test-key',
+            'app.key' => 'base64:c49vk2fjl1WJZPUaxanThGkmCDU9hHDldPjseMgdaQc=',
             'legal.legal_status' => '',
             'legal.address' => '',
             'legal.ice' => '',
@@ -254,7 +269,7 @@ class OperationsReadinessTest extends TestCase
         ]);
         config([
             'operations.deployment_profile' => 'production',
-            'app.key' => 'base64:test-key',
+            'app.key' => 'base64:c49vk2fjl1WJZPUaxanThGkmCDU9hHDldPjseMgdaQc=',
             'legal.legal_status' => 'Configuration de test',
             'legal.address' => 'Adresse de test',
             'legal.ice' => 'ICE-TEST',
@@ -287,7 +302,7 @@ class OperationsReadinessTest extends TestCase
     {
         config([
             'operations.deployment_profile' => 'production',
-            'app.key' => 'base64:test-key',
+            'app.key' => 'base64:c49vk2fjl1WJZPUaxanThGkmCDU9hHDldPjseMgdaQc=',
             'legal.legal_status' => 'Configuration de test',
             'legal.address' => 'Adresse de test',
             'legal.ice' => 'ICE-TEST',
@@ -322,7 +337,7 @@ class OperationsReadinessTest extends TestCase
     {
         config([
             'operations.deployment_profile' => 'production',
-            'app.key' => 'base64:test-key',
+            'app.key' => 'base64:c49vk2fjl1WJZPUaxanThGkmCDU9hHDldPjseMgdaQc=',
             'legal.legal_status' => 'Configuration de test',
             'legal.address' => 'Adresse de test',
             'legal.ice' => 'ICE-TEST',
@@ -356,7 +371,7 @@ class OperationsReadinessTest extends TestCase
         ]);
         config([
             'operations.deployment_profile' => 'showcase',
-            'app.key' => 'base64:test-key',
+            'app.key' => 'base64:c49vk2fjl1WJZPUaxanThGkmCDU9hHDldPjseMgdaQc=',
             'legal.legal_status' => 'Projet de demonstration',
             'legal.address' => 'Maroc',
             'legal.ice' => 'DEMO-NON-VALABLE',

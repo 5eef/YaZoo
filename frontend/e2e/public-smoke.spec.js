@@ -9,7 +9,7 @@ test.beforeEach(async ({ context, page }) => {
 })
 
 async function mockGuestApi(page) {
-  await page.route('**/demo-backend-status', async (route) => {
+  await page.route('**/health/ready', async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -93,6 +93,22 @@ async function mockGuestApi(page) {
     })
   })
 
+  await page.route('**/api/marketplace/public/veterinarians?**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        data: [],
+        meta: {
+          currentPage: 1,
+          lastPage: 1,
+          perPage: 12,
+          total: 0,
+        },
+      }),
+    })
+  })
+
   await page.route('**/api/marketplace/public/animals/1', async (route) => {
     await route.fulfill({
       status: 200,
@@ -134,8 +150,16 @@ test('landing page locale charge sans compte reel', async ({ page }) => {
 
   await page.goto('/')
 
-  await expect(page.getByRole('heading', { name: /Moroccan animal community/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Your pet. The right professionals.' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Log in' }).first()).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Find a veterinarian' })).toHaveAttribute(
+    'href',
+    '/discover/veterinarians',
+  )
+  await expect(page.getByRole('link', { name: 'I am a professional' })).toHaveAttribute(
+    'href',
+    '/pros',
+  )
   await expect(page.getByRole('heading', { name: /Latest YaZoo Marketplace listings/i })).toBeVisible()
   await expect(page.getByText('Chat à adopter')).toBeVisible()
 
@@ -143,6 +167,18 @@ test('landing page locale charge sans compte reel', async ({ page }) => {
   await expect(page).toHaveURL(/\/discover\/animals\/1$/)
   await expect(page.getByRole('heading', { name: 'Chat public a adopter' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Sign in to contact' })).toBeVisible()
+
+  await page.goto('/')
+  await page.getByRole('link', { name: 'Find a veterinarian' }).click()
+  await expect(page).toHaveURL(/\/discover\/veterinarians$/)
+  await expect(page.getByRole('heading', { name: /Veterinarians/i })).toBeVisible()
+
+  await page.goto('/')
+  await page.getByRole('link', { name: 'I am a professional' }).click()
+  await expect(page).toHaveURL(/\/pros$/)
+  await expect(page.getByRole('heading', { name: 'Your professional activity on YaZoo' })).toBeVisible()
+  await page.getByRole('link', { name: 'Create my professional account' }).click()
+  await expect(page).toHaveURL(/\/register$/)
 })
 
 test('aperçu public reste responsive sans débordement et supporte sombre et RTL', async ({
@@ -275,7 +311,7 @@ test('marketplace protege redirige vers login si invite', async ({ page }) => {
 
   await page.goto('/marketplace')
 
-  await expect(page).toHaveURL(/\/login$/)
+  await expect(page).toHaveURL(/\/login\?returnTo=%2Fmarketplace$/)
   await expect(page.getByRole('heading', { name: /Welcome back/i })).toBeVisible()
 })
 

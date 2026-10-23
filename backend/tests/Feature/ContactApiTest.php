@@ -40,13 +40,14 @@ class ContactApiTest extends TestCase
     public function test_contact_endpoint_fails_closed_without_a_recipient(): void
     {
         Mail::fake();
-        config(['services.contact.recipient' => '']);
+        config(['services.contact.recipient' => '', 'app.debug' => false]);
 
         $this->postJson('/api/contact', [
             'email' => 'visitor@example.test',
             'message' => 'Bonjour YaZoo',
         ])
             ->assertStatus(503)
+            ->assertHeader('Retry-After', '300')
             ->assertJsonPath('message', 'Le service de contact est temporairement indisponible.');
 
         Mail::assertNothingSent();

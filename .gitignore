@@ -88,3 +88,19 @@ frontend/test-results/
 *.key
 backups/
 dumps/
+
+# Native build outputs and credentials
+mobile/.expo/
+mobile/android/
+mobile/ios/
+*.apk
+*.aab
+*.jks
+*.keystore
+*.p12
+credentials.json
+mobile/*.cdx.json
+*service-account*.json
+!mobile/.env.example
+build/
+!backend/.env.showcase.example

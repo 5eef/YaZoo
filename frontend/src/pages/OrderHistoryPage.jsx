@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router'
 
 import { getOrdersHistoryRequest } from '../api/reservations'
 import Avatar from '../components/ui/Avatar'
+import ReservationFollowUp from '../components/commerce/ReservationFollowUp'
 import { useI18n } from '../hooks/useI18n'
 import { asArray } from '../utils/apiData'
 import { formatCurrency, formatDate } from '../utils/formatDate'
@@ -44,7 +45,7 @@ function OrderHistoryPage() {
       }
     }
 
-    loadHistory()
+    void loadHistory()
 
     return () => {
       cancelled = true
@@ -228,6 +229,7 @@ function OrderHistoryCard({ order }) {
       ) : null}
 
       <div className="space-y-4 p-5">
+        <ReservationFollowUp reservation={order} />
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap gap-2">

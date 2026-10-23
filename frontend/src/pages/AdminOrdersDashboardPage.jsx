@@ -3,6 +3,7 @@ import { Link, Navigate } from 'react-router'
 
 import { getAdminOrdersDashboardRequest } from '../api/admin'
 import Avatar from '../components/ui/Avatar'
+import ReservationFollowUp from '../components/commerce/ReservationFollowUp'
 import Button from '../components/ui/Button'
 import { useAuth } from '../hooks/useAuth'
 import { useI18n } from '../hooks/useI18n'
@@ -49,7 +50,7 @@ function AdminOrdersDashboardPage() {
       }
     }
 
-    bootstrap()
+    void bootstrap()
 
     return () => {
       cancelled = true
@@ -331,6 +332,7 @@ function OrderCard({ order, showInvoice = false }) {
 
   return (
     <article className="w-full max-w-full overflow-hidden rounded-[28px] border border-white/80 bg-[linear-gradient(180deg,_rgba(255,255,255,0.99),_rgba(246,239,255,0.9))] shadow-[0_18px_42px_rgba(124,58,237,0.08)] dark:border-violet-300/14 dark:bg-white/8">
+      <ReservationFollowUp reservation={order} />
       {order.listing?.imageUrl ? (
         <div className="h-48 bg-stone-200">
           <img

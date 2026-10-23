@@ -156,6 +156,20 @@ class PaymentService
 
         return DB::transaction(function () use ($payment, $result, $request, $eventKey): PaymentCallbackResult {
             $lockedPayment = Payment::query()->lockForUpdate()->findOrFail($payment->id);
+            // A valid signature authenticates a callback, not its settlement
+            // amount. Fail closed before any state change or replay handling.
+            if ($result->status === Payment::STATUS_PAID) {
+                $amount = $result->payload['amount'] ?? null;
+                $currency = $result->payload['currency'] ?? null;
+                $expectedAmount = number_format((float) $lockedPayment->amount, 2, '.', '');
+                if (! is_scalar($amount) || ! preg_match('/^\d{1,12}(?:\.\d{1,2})?$/D', (string) $amount)
+                    || number_format((float) $amount, 2, '.', '') !== $expectedAmount
+                    || ! is_string($currency) || $currency !== $lockedPayment->currency) {
+                    throw ValidationException::withMessages([
+                        'payment' => ['Montant ou devise du callback incompatible avec le paiement.'],
+                    ]);
+                }
+            }
             $existingEvent = PaymentTransaction::query()->where('event_key', $eventKey)->exists();
 
             if ($existingEvent) {
@@ -460,6 +474,7 @@ class PaymentService
 
     protected function validateProvider(string $provider, bool $requireInitiationReady = true): void
     {
+        abort_if($provider === Payment::PROVIDER_CMI && ! config('features.payments'), 422, 'Automated payments disabled.');
         abort_unless(in_array($provider, Payment::PROVIDERS, true), 422, 'Provider paiement invalide.');
         abort_unless((bool) config("payments.providers.{$provider}.enabled", false), 422, 'Provider paiement desactive.');
 

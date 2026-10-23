@@ -33,6 +33,7 @@ import FollowButton from '../components/ui/FollowButton'
 import SkeletonBlock from '../components/ui/SkeletonBlock'
 import { useAuth } from '../hooks/useAuth'
 import { useI18n } from '../hooks/useI18n'
+import { useVisiblePolling } from '../hooks/useVisiblePolling'
 import { asArray, extractDataArray, extractDataObject } from '../utils/apiData'
 import { getErrorMessage } from '../utils/getErrorMessage'
 import { normalizeProfileMediaPayload } from '../utils/media'
@@ -64,6 +65,9 @@ function FeedPage() {
   const { user } = useAuth()
   const { t } = useI18n()
   const [posts, setPosts] = useState([])
+  const [feedPage, setFeedPage] = useState(1)
+  const [lastFeedPage, setLastFeedPage] = useState(1)
+  const [isPageLoading, setIsPageLoading] = useState(false)
   const [storyGroups, setStoryGroups] = useState([])
   const [errorMessage, setErrorMessage] = useState('')
   const [profileSummary, setProfileSummary] = useState(null)
@@ -88,17 +92,22 @@ function FeedPage() {
   const [storyPendingDelete, setStoryPendingDelete] = useState(null)
   const [profileShareMessage, setProfileShareMessage] = useState('')
   const viewingStoryIdsRef = useRef(new Set())
+  const feedRequestRef = useRef(0)
 
-  const loadPosts = useCallback(async () => {
+  const loadPosts = useCallback(async (page = 1) => {
+    const requestId = ++feedRequestRef.current
     try {
-      const response = await getPostsRequest()
+      const response = await getPostsRequest({ page })
+      if (requestId !== feedRequestRef.current) return
 
       setPosts(extractDataArray(response))
+      setFeedPage(response.data?.meta?.current_page ?? page)
+      setLastFeedPage(response.data?.meta?.last_page ?? 1)
       setErrorMessage('')
     } catch (error) {
-      setErrorMessage(getErrorMessage(error, t('errors.generic')))
+      if (requestId === feedRequestRef.current) setErrorMessage(getErrorMessage(error, t('errors.generic')))
     } finally {
-      setIsLoading(false)
+      if (requestId === feedRequestRef.current) setIsLoading(false)
     }
   }, [t])
 
@@ -198,6 +207,12 @@ function FeedPage() {
     void loadSidebarData()
   }, [loadPosts, loadSidebarData, loadStories])
 
+  useVisiblePolling(async () => {
+    // Keep an open viewer and pending mutations stable; refresh at the next cycle.
+    if (activeStoryIndex !== null || isStorySubmitting || isPageLoading || likePendingIds.length) return
+    await Promise.all([loadPosts(feedPage), loadStories({ silent: true })])
+  }, { enabled: Boolean(user?.id) })
+
   useEffect(() => {
     if (!location.state?.openStoryComposer) {
       return
@@ -221,8 +236,15 @@ function FeedPage() {
     const nextPost = extractDataObject(response, null)
 
     if (nextPost) {
-      setPosts((current) => [nextPost, ...asArray(current)])
+      if (feedPage !== 1) await loadPosts(1)
+      else setPosts((current) => [nextPost, ...asArray(current)])
     }
+  }
+
+  const changeFeedPage = async (nextPage) => {
+    if (isPageLoading) return
+    setIsPageLoading(true)
+    try { await loadPosts(nextPage) } finally { setIsPageLoading(false) }
   }
 
   const handleToggleLike = async (postId, reaction = 'like') => {
@@ -661,6 +683,11 @@ function FeedPage() {
               )}
             </div>
           ) : null}
+          {lastFeedPage > 1 && <nav aria-label={t('common.feed')} className="flex flex-wrap items-center justify-center gap-3">
+            <Button variant="secondary" disabled={isPageLoading || feedPage <= 1} onClick={() => changeFeedPage(feedPage - 1)}>{t('integration.previous')}</Button>
+            <span>{feedPage} / {lastFeedPage}</span>
+            <Button variant="secondary" disabled={isPageLoading || feedPage >= lastFeedPage} onClick={() => changeFeedPage(feedPage + 1)}>{t('integration.next')}</Button>
+          </nav>}
         </div>
 
         <aside className="hidden space-y-4 xl:block">
@@ -857,7 +884,7 @@ function FeedPage() {
         onConfirm={() => {
           const story = storyPendingDelete
           setStoryPendingDelete(null)
-          handleDeleteStory(story)
+          void handleDeleteStory(story)
         }}
       />
 
@@ -981,7 +1008,7 @@ function StoryCard({ storyGroup, onOpen, onAddStory, t }) {
   const avatarSrc = storyGroup.user?.avatar ?? ''
 
   return (
-    <article className="min-w-[118px] snap-start sm:min-w-[132px]">
+    <article data-testid={`story-group-${storyGroup.user?.id}`} className="min-w-[118px] snap-start sm:min-w-[132px]">
       <button
         type="button"
         onClick={onOpen}

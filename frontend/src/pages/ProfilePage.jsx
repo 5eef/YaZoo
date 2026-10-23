@@ -1,3 +1,4 @@
+import { uploadError } from '../utils/uploadValidation'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 
@@ -27,7 +28,7 @@ import { useI18n } from '../hooks/useI18n'
 import { openMessageDock } from '../lib/messageDock'
 import { asArray, extractDataArray, extractDataObject } from '../utils/apiData'
 import { getErrorMessage } from '../utils/getErrorMessage'
-import { normalizeAuthUserMedia, normalizeProfileMediaPayload } from '../utils/media'
+import { normalizeAuthUserMedia, normalizeProfileMediaPayload, safeMediaSource } from '../utils/media'
 import {
   addCommentToPost,
   filterSocialPosts as filterPublications,
@@ -68,6 +69,7 @@ function ProfilePage() {
   const [relationshipError, setRelationshipError] = useState('')
   const [isRelationshipLoading, setIsRelationshipLoading] = useState(false)
   const publicationsSectionRef = useRef(null)
+  const profileMutationLock = useRef(false)
   const editSectionRef = useRef(null)
   const nameInputRef = useRef(null)
   const requestedProfileId =
@@ -93,7 +95,7 @@ function ProfilePage() {
       try {
         const response = await getProfileRequest(requestedProfileId)
         const data = normalizeProfileMediaPayload(extractDataObject(response, null))
-        const postsResponse = await getPostsRequest()
+        const postsResponse = await getPostsRequest({ author_id: requestedProfileId })
         const userPosts = extractDataArray(postsResponse).filter(
           (post) => String(post.author?.id) === String(requestedProfileId),
         )
@@ -128,7 +130,7 @@ function ProfilePage() {
       }
     }
 
-    fetchProfile()
+    void fetchProfile()
 
     return () => {
       cancelled = true
@@ -181,6 +183,8 @@ function ProfilePage() {
       return
     }
 
+    const uploadIssue = uploadError(file)
+    if (uploadIssue) { setErrorMessage(t(uploadIssue)); return }
     const nextPreview = URL.createObjectURL(file)
 
     if (type === 'avatar') {
@@ -225,9 +229,10 @@ function ProfilePage() {
 
   const handleSubmit = async (event) => {
     event.preventDefault()
-    if (!isOwnProfile) {
+    if (!isOwnProfile || profileMutationLock.current) {
       return
     }
+    profileMutationLock.current = true
 
     setSuccessMessage('')
     setErrorMessage('')
@@ -275,6 +280,7 @@ function ProfilePage() {
         getErrorMessage(error, t('profile.updateError')),
       )
     } finally {
+      profileMutationLock.current = false
       setIsSubmitting(false)
     }
   }
@@ -530,7 +536,7 @@ function ProfilePage() {
         >
           {coverImage ? (
             <img
-              src={coverImage}
+              src={safeMediaSource(coverImage)}
               alt={t('profile.coverAlt')}
               className="absolute inset-0 h-full w-full object-cover"
             />
@@ -560,8 +566,9 @@ function ProfilePage() {
                   <h2 className="text-2xl font-semibold text-stone-950 sm:text-3xl dark:text-violet-50">
                     {profile?.name ?? user?.name}
                   </h2>
-                  {profile?.isPhoneVerified || (isOwnProfile && user?.isPhoneVerified) ? <VerifiedPhoneBadge /> : null}
+                  {!profile?.isDemo && (profile?.isPhoneVerified || (isOwnProfile && user?.isPhoneVerified)) ? <VerifiedPhoneBadge /> : null}
                   {profile?.isProfessionalVerified ? <ComplianceBadge type="professionalApproved" /> : null}
+                  {profile?.isDemo ? <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-950">{t('startup.demoData')}</span> : null}
                 </div>
                 <p className="mt-1 text-sm text-stone-500 dark:text-violet-100/62">
                   @{(profile?.name ?? user?.name ?? 'username').toLowerCase().replace(/\s+/g, '')}
@@ -572,6 +579,7 @@ function ProfilePage() {
                   {profile?.bio ||
                     t('profile.defaultBio')}
                 </p>
+                {profile?.publicVeterinarians?.map((vet) => <Link key={vet.id} to={`/discover/veterinarians/${vet.id}`} className="mt-3 me-3 inline-flex rounded-full border border-violet-300 px-4 py-2 text-sm font-semibold text-violet-800 dark:text-violet-100">{t('landing.marketplaceDetails')} : {vet.name}</Link>)}
               </div>
             </div>
 
@@ -758,7 +766,7 @@ function ProfilePage() {
                       {t('profile.changePhoto')}
                       <input
                         type="file"
-                        accept="image/*"
+                        accept="image/jpeg,image/png,image/webp"
                         onChange={handleFilePreview('avatar')}
                         className="hidden"
                       />
@@ -787,7 +795,7 @@ function ProfilePage() {
                   <div className="relative mt-4 h-40 overflow-hidden rounded-[24px] bg-[linear-gradient(135deg,#5b21b6_0%,#8b5cf6_45%,#ddd6fe_100%)]">
                     {coverPreview ? (
                       <img
-                        src={coverPreview}
+                        src={safeMediaSource(coverPreview)}
                         alt={t('profile.coverPreview')}
                         className="absolute inset-0 h-full w-full object-cover"
                       />
@@ -799,7 +807,7 @@ function ProfilePage() {
                       {t('profile.changeCover')}
                       <input
                         type="file"
-                        accept="image/*"
+                        accept="image/jpeg,image/png,image/webp"
                         onChange={handleFilePreview('cover')}
                         className="hidden"
                       />
@@ -825,14 +833,14 @@ function ProfilePage() {
               <div className="grid gap-4 md:grid-cols-2">
                 <Field
                   label={t('common.name')}
-                  value={form.name}
+                  required maxLength={120} value={form.name}
                   onChange={handleChange('name')}
                   inputRef={nameInputRef}
                 />
                 <Field label="Email" value={profile?.email ?? user?.email ?? ''} readOnly />
-                <Field label={t('common.phone')} value={form.phone} onChange={handleChange('phone')} />
-                <Field label={t('common.country')} value={form.country} onChange={handleChange('country')} />
-                <Field label={t('common.city')} value={form.city} onChange={handleChange('city')} />
+                <Field label={t('common.phone')} maxLength={30} value={form.phone} onChange={handleChange('phone')} />
+                <Field label={t('common.country')} maxLength={100} value={form.country} onChange={handleChange('country')} />
+                <Field label={t('common.city')} maxLength={100} value={form.city} onChange={handleChange('city')} />
               </div>
 
               <label className="block">
@@ -841,7 +849,7 @@ function ProfilePage() {
                 </span>
                 <textarea
                   rows={5}
-                  value={form.bio}
+                  maxLength={2000} value={form.bio}
                   onChange={handleChange('bio')}
                   className="w-full rounded-2xl border border-violet-100 bg-violet-50/50 px-4 py-3 text-sm text-stone-700 outline-none transition focus:border-violet-400 focus:bg-white"
                   placeholder={t('profile.bioPlaceholder')}

@@ -1,3 +1,4 @@
+import { safeMediaSource } from '../../utils/media'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import PropTypes from 'prop-types'
@@ -5,6 +6,7 @@ import PropTypes from 'prop-types'
 import { useI18n } from '../../hooks/useI18n'
 import { useAccessibleDialog } from '../../hooks/useAccessibleDialog'
 import Button from '../ui/Button'
+import { uploadError } from '../../utils/uploadValidation'
 
 function StoryComposerModal({
   isOpen,
@@ -20,6 +22,7 @@ function StoryComposerModal({
   const [mediaPreviewKind, setMediaPreviewKind] = useState('')
   const [localErrorMessage, setLocalErrorMessage] = useState('')
   const closeButtonRef = useRef(null)
+  const mutationLock = useRef(false)
 
   const resetForm = useCallback(() => {
     if (mediaPreviewUrl.startsWith('blob:')) {
@@ -74,6 +77,11 @@ function StoryComposerModal({
     if (!file) {
       return
     }
+    const error = uploadError(file, 'media')
+    if (error) {
+      setLocalErrorMessage(t(error))
+      return
+    }
 
     if (mediaPreviewUrl.startsWith('blob:')) {
       URL.revokeObjectURL(mediaPreviewUrl)
@@ -87,6 +95,7 @@ function StoryComposerModal({
 
   async function handleSubmit(event) {
     event.preventDefault()
+    if (mutationLock.current || isSubmitting) return
 
     if (!mediaFile) {
       setLocalErrorMessage(t('story.composerNeedsMedia'))
@@ -94,6 +103,7 @@ function StoryComposerModal({
     }
 
     setLocalErrorMessage('')
+    mutationLock.current = true
     try {
       await onSubmit({
         content: content.trim(),
@@ -102,6 +112,8 @@ function StoryComposerModal({
       })
     } catch {
       // Le parent gere deja le message d erreur.
+    } finally {
+      mutationLock.current = false
     }
   }
 
@@ -175,7 +187,7 @@ function StoryComposerModal({
                   {t('feed.chooseFile')}
                   <input
                     type="file"
-                    accept="image/*,video/mp4,video/webm,video/quicktime"
+                    accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
                     onChange={handleMediaChange}
                     className="hidden"
                   />
@@ -192,7 +204,7 @@ function StoryComposerModal({
                 <span className="mb-2 block text-sm font-medium text-stone-700">
                   {t('story.caption')}
                 </span>
-                <textarea
+                <textarea maxLength={1200}
                   rows={3}
                   value={content}
                   onChange={(event) => setContent(event.target.value)}
@@ -206,7 +218,7 @@ function StoryComposerModal({
                   {t('feed.location')}
                 </span>
                 <input
-                  value={location}
+                  maxLength={255} value={location}
                   onChange={(event) => setLocation(event.target.value)}
                   className="w-full rounded-[22px] border border-violet-100 bg-violet-50/55 px-4 py-3 text-sm text-stone-700 outline-none transition focus:border-violet-400 focus:bg-white"
                   placeholder={t('feed.locationPlaceholder')}
@@ -249,7 +261,7 @@ function renderMediaPreview(mediaPreviewUrl, mediaPreviewKind, t) {
   if (mediaPreviewKind === 'video') {
     return (
       <video
-        src={mediaPreviewUrl}
+        src={safeMediaSource(mediaPreviewUrl)}
         controls
         className="h-64 w-full object-cover sm:h-80 md:h-96 lg:h-[28rem]"
       />
@@ -258,7 +270,7 @@ function renderMediaPreview(mediaPreviewUrl, mediaPreviewKind, t) {
 
   return (
     <img
-      src={mediaPreviewUrl}
+      src={safeMediaSource(mediaPreviewUrl)}
       alt={t('story.previewAlt')}
       className="h-64 w-full object-cover sm:h-80 md:h-96 lg:h-[28rem]"
     />

@@ -1,4 +1,6 @@
 import axios from 'axios'
+import { getSessionEpoch } from './sessionEpoch'
+import { classifyApiError } from './classifyError'
 
 import { getErrorMessage } from '../utils/getErrorMessage'
 import { getApiBaseUrl, getBackendBaseUrl } from '../lib/appConfig'
@@ -32,6 +34,10 @@ export const ensureCsrfCookie = () =>
   })
 
 api.interceptors.request.use((config) => {
+  config.sessionEpoch = getSessionEpoch()
+  // A demo mutation may still be processing behind the proxy at 30 seconds.
+  // Wait for its response; never automatically replay a write.
+  if (!['get', 'head', 'options'].includes(String(config.method ?? 'get').toLowerCase()) && config.timeout === API_TIMEOUT_MS) config.timeout = 75000
   if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
     if (typeof config.headers?.delete === 'function') {
       config.headers.delete('Content-Type')
@@ -67,15 +73,20 @@ api.interceptors.request.use((config) => {
 })
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => response.config.sessionEpoch === getSessionEpoch()
+    ? response
+    : Promise.reject(new axios.CanceledError('Obsolete account response')),
   (error) => {
+    if (error?.config && error.config.sessionEpoch !== getSessionEpoch()) {
+      return Promise.reject(new axios.CanceledError('Obsolete account response'))
+    }
     if (shouldEmitAuthSessionExpired(error)) {
       globalThis.dispatchEvent?.(new CustomEvent(AUTH_SESSION_EXPIRED_EVENT))
     }
 
     if (shouldShowGlobalErrorToast(error)) {
       emitErrorToast(
-        getErrorMessage(error, getGlobalFallbackMessage(error?.response?.status)),
+        getErrorMessage(error, getGlobalFallbackMessage(error)),
       )
     }
 
@@ -124,22 +135,9 @@ function shouldShowGlobalErrorToast(error) {
   return status === 429 || status >= 500
 }
 
-function getGlobalFallbackMessage(status) {
+function getGlobalFallbackMessage(error) {
   const locale = getCurrentLocale()
-
-  if (status === 401) {
-    return translate(locale, 'errors.sessionExpired')
-  }
-
-  if (status === 429) {
-    return translate(locale, 'errors.tooManyRequests')
-  }
-
-  if (status && status >= 500) {
-    return translate(locale, 'errors.serverTemporary')
-  }
-
-  return translate(locale, 'errors.network')
+  return translate(locale, `errors.${classifyApiError(error)}`)
 }
 
 export default api

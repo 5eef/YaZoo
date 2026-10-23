@@ -2,7 +2,7 @@
 set -eu
 
 app_environment="${APP_ENV:-local}"
-preflight_enabled="${YAZOO_RUN_PRODUCTION_PREFLIGHT:-false}"
+preflight_enabled="${YAZOO_RUN_PRODUCTION_PREFLIGHT:-true}"
 preflight_mode="${1:-full}"
 
 run_as_app_user() {
@@ -20,6 +20,10 @@ if [ "$app_environment" != "production" ]; then
 fi
 
 if [ "$preflight_enabled" != "true" ]; then
+    if [ "${YAZOO_DEPLOYMENT_PROFILE:-production}" != "showcase" ]; then
+        echo "Public production requires YAZOO_RUN_PRODUCTION_PREFLIGHT=true; bypass is forbidden." >&2
+        exit 78
+    fi
     echo "WARNING: production preflight is explicitly disabled; startup will continue."
     exit 0
 fi

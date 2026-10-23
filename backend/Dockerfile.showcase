@@ -1,6 +1,16 @@
 ARG BASE_IMAGE=yazoo-api:local
 FROM ${BASE_IMAGE}
 
+COPY backend/composer.json backend/composer.lock /var/www/html/
+COPY backend/config/services.php /var/www/html/config/services.php
+COPY backend/app/Providers/AppServiceProvider.php /var/www/html/app/Providers/AppServiceProvider.php
+COPY backend/app/Services/AccountSecurityService.php /var/www/html/app/Services/AccountSecurityService.php
+COPY backend/app/Services/ResendTransportFactory.php /var/www/html/app/Services/ResendTransportFactory.php
+COPY backend/app/Services/SafeResendTransport.php /var/www/html/app/Services/SafeResendTransport.php
+COPY backend/app/Mail/VerifyEmailMail.php /var/www/html/app/Mail/VerifyEmailMail.php
+COPY backend/app/Console/Commands/ProductionPreflight.php /var/www/html/app/Console/Commands/ProductionPreflight.php
+RUN cd /var/www/html && composer install --no-dev --prefer-dist --no-interaction --no-progress --no-scripts
+
 COPY backend/app/Console/Commands/BootstrapShowcase.php /var/www/html/app/Console/Commands/BootstrapShowcase.php
 COPY backend/app/Console/Commands/EnsureShowcaseMedia.php /var/www/html/app/Console/Commands/EnsureShowcaseMedia.php
 COPY backend/app/Support/ShowcaseBootstrapGuard.php /var/www/html/app/Support/ShowcaseBootstrapGuard.php

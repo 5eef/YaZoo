@@ -103,11 +103,12 @@ class ReleaseAdminBootstrapTest extends TestCase
             'admin_mfa_confirmed_at' => null,
         ]);
 
+        $originalHash = $admin->password;
         $this->artisan('yazoo:bootstrap-release-admin', ['--confirmation' => self::CONFIRMATION])
             ->assertExitCode(0);
 
         $admin->refresh();
-        $this->assertTrue(Hash::check('Release-Password-2026!', $admin->password));
+        $this->assertSame($originalHash, $admin->password);
         $this->assertNotNull($admin->admin_mfa_confirmed_at);
         $this->assertCount(8, $admin->admin_mfa_recovery_codes);
     }

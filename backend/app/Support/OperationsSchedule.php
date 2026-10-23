@@ -10,6 +10,16 @@ class OperationsSchedule
 {
     public static function register(Schedule $schedule): void
     {
+        if (config('operations.deployment_profile') === 'showcase'
+            && config('operations.showcase_bootstrap_enabled')) {
+            $schedule->command('yazoo:refresh-showcase-availability')
+                ->dailyAt('04:45')
+                ->timezone('Africa/Casablanca')
+                ->name('showcase:refresh-availability')
+                ->withoutOverlapping(30)
+                ->onOneServer();
+        }
+
         $schedule
             ->call(fn () => Cache::put(
                 'operations:scheduler-heartbeat',
@@ -40,6 +50,13 @@ class OperationsSchedule
             ->command('yazoo:purge-professional-documents')
             ->dailyAt('04:15')
             ->name('retention:purge-professional-documents')
+            ->withoutOverlapping()
+            ->onOneServer();
+
+        $schedule
+            ->command('yazoo:purge-expired-stories --limit=200')
+            ->hourly()
+            ->name('retention:purge-expired-stories')
             ->withoutOverlapping()
             ->onOneServer();
 

@@ -39,6 +39,7 @@ class StoreConversationRequest extends FormRequest
             'recipient_contact' => [
                 'nullable',
                 'required_without:recipient_id',
+                'bail',
                 'string',
                 'max:255',
                 function (string $attribute, mixed $value, Closure $fail): void {

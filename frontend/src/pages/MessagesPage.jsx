@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 
 import {
@@ -15,6 +15,7 @@ import SkeletonBlock from '../components/ui/SkeletonBlock'
 import { useAuth } from '../hooks/useAuth'
 import { useI18n } from '../hooks/useI18n'
 import { useNotifications } from '../hooks/useNotifications'
+import { useVisiblePolling } from '../hooks/useVisiblePolling'
 import { subscribeToPrivateChannel } from '../lib/realtime'
 import { asArray, extractDataArray, extractDataObject } from '../utils/apiData'
 import { formatDate } from '../utils/formatDate'
@@ -39,6 +40,7 @@ function MessagesPage() {
   const [search, setSearch] = useState(queryFromUrl)
   const [selectedConversationId, setSelectedConversationId] = useState(null)
   const [selectedConversation, setSelectedConversation] = useState(null)
+  const receivedMessageIds = useRef(new Set())
   const [conversationForm, setConversationForm] = useState(defaultConversationForm)
   const [recipientQuery, setRecipientQuery] = useState('')
   const [recipientSuggestions, setRecipientSuggestions] = useState([])
@@ -53,7 +55,8 @@ function MessagesPage() {
   const [isConversationLoading, setIsConversationLoading] = useState(false)
   const [isConversationSubmitting, setIsConversationSubmitting] = useState(false)
   const [isMessageSubmitting, setIsMessageSubmitting] = useState(false)
-  const { refreshUnreadCount, latestNotification } = useNotifications()
+  const directConversationTarget = useRef(null)
+  const { refreshUnreadCount, latestNotification, realtimeStatus } = useNotifications()
 
   const safeConversations = asArray(conversations)
   const unreadMessages = safeConversations.reduce(
@@ -94,7 +97,7 @@ function MessagesPage() {
   const openConversation = useCallback(
     async (conversationId, { updateQuery = true, silent = false } = {}) => {
       setSelectedConversationId(conversationId)
-      setIsConversationLoading(true)
+      if (!silent) setIsConversationLoading(true)
 
       if (!silent) {
         setErrorMessage('')
@@ -111,7 +114,7 @@ function MessagesPage() {
 
         setSelectedConversation(conversation)
         setConversations((current) => upsertConversation(current, conversation))
-        await markConversationReadRequest(conversationId)
+        if (!silent) await markConversationReadRequest(conversationId)
         await refreshUnreadCount()
 
         if (updateQuery) {
@@ -126,7 +129,7 @@ function MessagesPage() {
           getErrorMessage(error, t('messages.loadConversationError')),
         )
       } finally {
-        setIsConversationLoading(false)
+        if (!silent) setIsConversationLoading(false)
       }
     },
     [refreshUnreadCount, searchParams, setSearchParams, t],
@@ -160,6 +163,8 @@ function MessagesPage() {
     }
 
     if (requestedUserId > 0) {
+      if (directConversationTarget.current === requestedUserId) return
+      directConversationTarget.current = requestedUserId
       const openDirectConversation = async () => {
         setIsConversationLoading(true)
         setErrorMessage('')
@@ -190,6 +195,7 @@ function MessagesPage() {
           }
           setSearchParams(nextSearchParams, { replace: true })
         } catch (error) {
+          directConversationTarget.current = null
           setErrorMessage(
             getErrorMessage(error, t('messages.startError')),
           )
@@ -201,6 +207,8 @@ function MessagesPage() {
       void openDirectConversation()
       return
     }
+
+    directConversationTarget.current = null
 
     if (!requestedConversationId && requestedEmail) {
       return
@@ -243,6 +251,11 @@ function MessagesPage() {
 
       if (!incomingConversationId || !incomingMessage) {
         return
+      }
+      if (receivedMessageIds.current.has(incomingMessage.id)) return
+      receivedMessageIds.current.add(incomingMessage.id)
+      if (receivedMessageIds.current.size > 1000) {
+        receivedMessageIds.current.delete(receivedMessageIds.current.values().next().value)
       }
 
       const normalizedMessage = {
@@ -290,13 +303,10 @@ function MessagesPage() {
       })
 
       if (selectedConversationId === incomingConversationId) {
-        void openConversation(incomingConversationId, {
-          updateQuery: false,
-          silent: true,
-        })
+        void markConversationReadRequest(incomingConversationId).catch(() => {})
       }
     },
-    [openConversation, selectedConversationId, user?.id],
+    [selectedConversationId, user?.id],
   )
 
   useEffect(() => {
@@ -333,6 +343,19 @@ function MessagesPage() {
       })
     }
   }, [latestNotification, loadConversations, openConversation, selectedConversationId])
+
+  useVisiblePolling(async () => {
+    await loadConversations({ silent: true })
+    if (selectedConversationId) await openConversation(selectedConversationId, { updateQuery: false, silent: true })
+  }, { enabled: Boolean(user?.id) && realtimeStatus !== 'connected', intervalMs: selectedConversationId ? 15000 : 30000 })
+
+  const reconcileAfterReconnect = useEffectEvent(() => {
+    void loadConversations({ silent: true })
+    if (selectedConversationId) void openConversation(selectedConversationId, { updateQuery: false, silent: true })
+  })
+  useEffect(() => {
+    if (realtimeStatus === 'connected') reconcileAfterReconnect()
+  }, [realtimeStatus])
 
   useEffect(() => {
     const trimmedQuery = recipientQuery.trim()

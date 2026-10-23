@@ -2,16 +2,14 @@
 
 namespace App\Http\Requests\Marketplace;
 
+use App\Http\Requests\Concerns\PreservesPartialInput;
+
 class UpdateVeterinarianRequest extends StoreVeterinarianRequest
 {
+    use PreservesPartialInput;
+
     public function rules(): array
     {
-        return collect(parent::rules())
-            ->map(function (array|string $rules): array {
-                $rules = is_array($rules) ? $rules : [$rules];
-
-                return array_values(array_filter($rules, fn ($rule) => $rule !== 'required'));
-            })
-            ->all();
+        return $this->partialRules(parent::rules());
     }
 }

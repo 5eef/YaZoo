@@ -1,0 +1,25 @@
+# Dependency security — release candidate, 2026-10-08
+
+## Canonical integration check, 2026-10-23
+
+Fresh lockfile installs report **0 frontend vulnerabilities** and **5 HIGH mobile
+findings** propagated from the documented Node certificate tooling. Mobile's
+runtime graph policy passes after an Android export; raw mobile `npm audit`
+still fails and must not be described as clean. Expo Doctor passes 21 checks.
+Composer audit reports no advisories. These results apply to the canonical
+integration candidate; the older counts below describe their dated audit.
+
+Les commandes npm ci/audit/outdated/ls ont été réexécutées. Aucune modification incompatible de React, RN, Expo57, Metro, Router, Video ou Tailwind ; aucune UI refaite. Les registres consultés proposent toujours braces3.0.3 et node-forge1.4.0 sans fix compatible ; mise à jour upstream requise. npm audit brut reste **FAIL**, pas « NPM PASS ».
+
+| Advisory | Package/version | Direct/transitive ; parent | Exposition | Fixed version / breaking | Décision |
+|---|---|---|---|---|---|
+| GHSA-vfj7-8cjw-p6xm | braces3.0.3 | Transitive Web : Tailwind3.4.19→chokidar/micromatch/fast-glob ; mobile : Metro→micromatch | DEV/BUILD ONLY ; non livré dans le navigateur ou le bundle Android inspecté | Aucun fix compatible au registre ; migration Tailwind4/Expo incompatible non appliquée | NOT RUNTIME EXPLOITABLE dans le packaging vérifié ; UPSTREAM FIX REQUIRED |
+| GHSA-86w9-cpqp-85rv | node-forge1.4.0 | Transitive Expo CLI / @expo/code-signing-certificates ; propagation expo-updates | Outils Node de certificats ; absent du graphe Metro Android ; pas d'OTA signé configuré | Aucun patch disponible vérifié ; pas de downgrade Expo | BUILD TOOLING RESIDUAL ; revoir avant traitement de certificats non fiables / activation OTA |
+| GHSA-vcc3-ghjq-m6fr | decode-uri-component0.4.2→0.5.0 | Transitive query-string7.1.3→Router57 ; root adapter ajouté | RUNTIME navigation : DoS sur URI malformée | 0.5.0 corrigée, ESM ; adapter CommonJS sans modification de l'algorithme upstream | Corrigé ; trois alertes propagées retirées ; test Unicode et worker borné + export Metro |
+| GHSA-w5hq-g745-h8pq | uuid7→11.1.1 | Transitive xcode3 ; override limité préexistant | Prebuild Node | CommonJS compatible, v4 testé | Correctif conservé, tests identifiants/prebuild |
+
+Frontend : **5 HIGH totales,0 runtime**, audit --omit=dev exit0. Mobile : **19 HIGH totales,0 MODERATE,0 CRITICAL** après fix URI. Ces nombres incluent les parents propagés ; ils ne sont pas 24 vulnérabilités distinctes. Les parents et versions installés figurent dans les rapports locaux output/closure/*-tree.json et les locks versionnés ; les chaînes vulnérables finales sont précisément autorisées par nom et advisory dans le script de politique.
+
+La CI exécute un audit complet et affiche chaque finding ; elle échoue si l'audit est indisponible, si un nouveau package/advisory apparaît, sur toute CRITICAL et sur toute exposition runtime. Pour mobile, elle exige l'export Android frais avec sourcemaps, la présence du décodeur corrigé et l'absence de braces/node-forge/certificate tooling dans les sources livrées. Les bibliothèques React Native marquées HIGH par propagation npm ne sont pas assimilées à la livraison du code Node vulnérable. Aucun seuil d'audit abaissé, CVE cachée, règle globale désactivée ou `|| true` ajouté.
+
+Sources : [braces](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm), [forge](https://github.com/advisories/GHSA-86w9-cpqp-85rv), [decoder](https://github.com/advisories/GHSA-vcc3-ghjq-m6fr), [upstream decoder](https://github.com/SamVerschueren/decode-uri-component). Revoir cette classification à chaque changement de lock, de bundler ou d'OTA. Builds uniquement depuis sources de confiance, Metro non exposé publiquement. Les résiduels tooling restent visibles et suivis ; ils ne bloquent pas le runtime validé selon la politique explicite de cette mission.

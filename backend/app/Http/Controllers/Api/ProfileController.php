@@ -193,6 +193,8 @@ class ProfileController extends Controller
 
     private function loadProfileAggregates(User $user): void
     {
+        $user->load(['veterinarians' => fn ($query) => $query->where('is_active', true)
+            ->where('moderation_status', 'active')->select('id', 'user_id', 'name', 'city')]);
         $relations = ['posts', 'animals', 'products', 'serviceListings', 'veterinarians', 'followers', 'following'];
 
         if (Schema::hasTable('reservation_reviews')) {

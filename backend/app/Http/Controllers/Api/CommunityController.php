@@ -10,11 +10,13 @@ use App\Http\Resources\Community\CommunityMembershipRequestResource;
 use App\Http\Resources\Community\CommunityResource;
 use App\Models\Community;
 use App\Models\CommunityMember;
+use App\Models\MediaAsset;
 use App\Models\User;
 use App\Notifications\CommunityJoinedNotification;
 use App\Notifications\CommunityJoinRequestNotification;
 use App\Notifications\CommunityRequestApprovedNotification;
 use App\Notifications\CommunityRequestRejectedNotification;
+use App\Services\MediaAssetService;
 use App\Support\MediaStorage;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -73,6 +75,10 @@ class CommunityController extends Controller
             $data = $this->validatedCommunityData($request, $uploadedPaths);
             $community = DB::transaction(function () use ($request, $data): Community {
                 $community = $request->user()->createdCommunities()->create($data);
+                $asset = MediaAsset::query()->where('owner_id', $request->user()->id)->where('path', $community->image_url)->first();
+                if ($asset) {
+                    app(MediaAssetService::class)->attach($asset, $community, 'image_url');
+                }
                 $community->memberships()->create([
                     'user_id' => $request->user()->id,
                     'role' => 'admin',
@@ -82,6 +88,7 @@ class CommunityController extends Controller
                 return $community;
             });
         } catch (Throwable $exception) {
+            $this->discardUploads($request, $uploadedPaths);
             MediaStorage::deleteStoredFiles($uploadedPaths);
 
             throw $exception;
@@ -107,11 +114,16 @@ class CommunityController extends Controller
             $data = $this->validatedCommunityData($request, $uploadedPaths);
             DB::transaction(fn () => $community->update($data));
         } catch (Throwable $exception) {
+            $this->discardUploads($request, $uploadedPaths);
             MediaStorage::deleteStoredFiles($uploadedPaths);
 
             throw $exception;
         }
 
+        if (array_key_exists('image_url', $data)) {
+            $asset = MediaAsset::query()->where('owner_id', $community->user_id)->where('path', $community->image_url)->first();
+            app(MediaAssetService::class)->replaceRole($community, $community->user, 'image_url', $asset);
+        }
         MediaStorage::deleteStoredFiles(
             collect([$oldImageUrl])->filter()->diff([$community->image_url])->values()->all(),
         );
@@ -184,6 +196,7 @@ class CommunityController extends Controller
 
         $imageUrl = $community->image_url;
         DB::transaction(fn () => $community->delete());
+        app(MediaAssetService::class)->deleteAttached($community, $community->user);
         MediaStorage::deleteStoredFiles([$imageUrl]);
 
         return response()->json([
@@ -322,14 +335,19 @@ class CommunityController extends Controller
         unset($data['image_file']);
 
         if ($request->hasFile('image_file')) {
-            $data['image_url'] = MediaStorage::storeUploadedFile(
-                $request->file('image_file'),
-                'communities'
-            );
+            $data['image_url'] = app(MediaAssetService::class)->registerUpload(
+                $request->user(), $request->file('image_file'), 'communities', 'image'
+            )->path;
             $uploadedPaths[] = $data['image_url'];
         }
 
         return $data;
+    }
+
+    private function discardUploads(Request $request, array $paths): void
+    {
+        MediaAsset::query()->where('owner_id', $request->user()->id)->whereIn('path', $paths)
+            ->whereNull('attachable_id')->get()->each(fn ($asset) => app(MediaAssetService::class)->discardUnattached($asset, $request->user()));
     }
 
     /**

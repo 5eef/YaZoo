@@ -42,7 +42,13 @@ class ActivityLogger
      */
     protected function sanitizeMetadata(array $metadata): array
     {
-        unset($metadata['password'], $metadata['token'], $metadata['secret']);
+        foreach ($metadata as $key => $value) {
+            if (in_array(strtolower((string) $key), ['password', 'password_confirmation', 'token', 'access_token', 'refresh_token', 'authorization', 'cookie', 'secret', 'otp_code', 'client_secret', 'store_key', 'mongodb_uri'], true)) {
+                unset($metadata[$key]);
+            } elseif (is_array($value)) {
+                $metadata[$key] = $this->sanitizeMetadata($value);
+            }
+        }
 
         return $metadata;
     }

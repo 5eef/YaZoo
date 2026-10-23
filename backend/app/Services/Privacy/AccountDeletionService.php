@@ -152,9 +152,9 @@ class AccountDeletionService
     private function purgePhysicalFiles(array $manifest): void
     {
         try {
-            $disk = Storage::disk((string) config('professional_verifications.disk', 'private'));
-
             foreach ($manifest['private'] as $path) {
+                $configuredDisk = (string) config('professional_verifications.disk', 'private');
+                $disk = Storage::disk(str_starts_with($path, 'private/') ? 'r2' : ($configuredDisk === 'r2' ? 'private' : $configuredDisk));
                 if ($disk->exists($path) && ! $disk->delete($path)) {
                     throw new RuntimeException('Private document cleanup failed.');
                 }
@@ -473,7 +473,8 @@ class AccountDeletionService
         return $normalized !== ''
             && ! str_contains($normalized, "\0")
             && ! str_contains($normalized, '../')
-            && str_starts_with($normalized, 'professional-verifications/');
+            && (str_starts_with($normalized, 'professional-verifications/')
+                || str_starts_with($normalized, 'private/professional-verifications/'));
     }
 
     private function failureCode(Throwable $exception): string

@@ -4,12 +4,13 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import DemoServerStatus from '../components/ui/DemoServerStatus'
-import { I18nContext } from './i18n-context'
+import { I18nProvider } from './I18nContext'
 import { DemoBackendContext } from './demo-backend-context'
 import {
   DemoBackendProvider,
 } from './DemoBackendContext'
 import { pollDemoBackend } from '../lib/demoBackendPolling'
+import { LOCALE_STORAGE_KEY } from '../lib/i18n'
 
 const readyResponse = () => jsonResponse({ status: 'ready' })
 const wakingResponse = () => jsonResponse({ status: 'waking' }, false)
@@ -86,13 +87,14 @@ describe('demo backend wake flow', () => {
   it('le bouton de retry relance le provider sans voler le focus', async () => {
     const user = userEvent.setup()
     const retry = vi.fn()
+    localStorage.setItem(LOCALE_STORAGE_KEY, 'en')
 
     render(
-      <I18nContext.Provider value={{ locale: 'en' }}>
+      <I18nProvider>
         <DemoBackendContext.Provider value={{ retry, status: 'unavailable' }}>
           <DemoServerStatus />
         </DemoBackendContext.Provider>
-      </I18nContext.Provider>,
+      </I18nProvider>,
     )
 
     const button = screen.getByRole('button', { name: 'Retry' })

@@ -1,3 +1,4 @@
+import BrandLogo from './BrandLogo'
 import PropTypes from 'prop-types'
 import { Link } from 'react-router'
 
@@ -5,7 +6,14 @@ import Footer from './Footer'
 import LegalConfigurationSummary from '../legal/LegalConfigurationSummary'
 import { useI18n } from '../../hooks/useI18n'
 
-function PublicPageShell({ titleKey, eyebrowKey, introKey, sections = [], ctaKey = 'publicPages.contactCta' }) {
+function PublicPageShell({
+  titleKey,
+  eyebrowKey,
+  introKey,
+  sections = [],
+  ctaKey = 'publicPages.contactCta',
+  ctaTo = '/contact',
+}) {
   const { t } = useI18n()
 
   return (
@@ -16,12 +24,12 @@ function PublicPageShell({ titleKey, eyebrowKey, introKey, sections = [], ctaKey
       <div className="mx-auto flex min-h-[calc(100vh-2rem)] max-w-5xl flex-col">
         <header className="flex flex-wrap items-center justify-between gap-3 rounded-[26px] border border-white/70 bg-white/82 px-4 py-3 shadow-[0_18px_42px_rgba(124,58,237,0.08)] backdrop-blur-xl dark:border-violet-300/14 dark:bg-white/8 lg:px-5 lg:py-4">
           <Link to="/" className="flex items-center gap-3">
-            <img src="/yazoo-logo.webp" alt="" className="h-11 w-11 object-contain" />
+            <BrandLogo  alt="" className="h-11 w-11 object-contain" />
             <span className="yz-wordmark text-base">YaZoo</span>
           </Link>
           <Link
             to="/contact"
-            className="inline-flex rounded-full bg-[linear-gradient(135deg,#7c3aed,#a855f7,#c4b5fd)] px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(124,58,237,0.18)] lg:px-5 lg:py-2.5 lg:text-base"
+            className="inline-flex rounded-full bg-[linear-gradient(135deg,#6d28d9,#7c3aed)] px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(124,58,237,0.18)] lg:px-5 lg:py-2.5 lg:text-base"
           >
             {t('footer.contactUs')}
           </Link>
@@ -70,8 +78,8 @@ function PublicPageShell({ titleKey, eyebrowKey, introKey, sections = [], ctaKey
               {t('footer.rules')}
             </Link>
             <Link
-              to="/contact"
-              className="inline-flex rounded-full bg-[linear-gradient(135deg,#7c3aed,#a855f7,#c4b5fd)] px-4 py-2 text-sm font-semibold text-white lg:px-5 lg:py-2.5 lg:text-base"
+              to={ctaTo}
+              className="inline-flex rounded-full bg-[linear-gradient(135deg,#6d28d9,#7c3aed)] px-4 py-2 text-sm font-semibold text-white lg:px-5 lg:py-2.5 lg:text-base"
             >
               {t(ctaKey)}
             </Link>
@@ -90,6 +98,7 @@ PublicPageShell.propTypes = {
   introKey: PropTypes.string.isRequired,
   sections: PropTypes.array,
   ctaKey: PropTypes.string,
+  ctaTo: PropTypes.string,
 }
 
 export default PublicPageShell

@@ -23,7 +23,7 @@ class ContactMessage extends Mailable
     {
         return new Envelope(
             replyTo: [new Address($this->senderEmail)],
-            subject: '[YaZoo Contact] '.$this->contactSubject,
+            subject: '['.config('app.name').' Contact] '.$this->contactSubject,
         );
     }
 

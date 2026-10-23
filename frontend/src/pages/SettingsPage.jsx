@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import PropTypes from 'prop-types'
 
 import Avatar from '../components/ui/Avatar'
+import ResendVerification from '../components/auth/ResendVerification'
 import Button from '../components/ui/Button'
 import LanguageSwitcher from '../components/ui/LanguageSwitcher'
 import { updateProfileRequest } from '../api/profile'
@@ -62,6 +63,7 @@ function SettingsPage() {
 
   return (
     <section className="min-w-0 space-y-6">
+      <ResendVerification />
       <section className="min-w-0 overflow-hidden rounded-[26px] border border-white/80 bg-[radial-gradient(circle_at_top_left,_rgba(168,85,247,0.18),_transparent_30%),linear-gradient(135deg,_rgba(255,255,255,0.98),_rgba(246,239,255,0.9))] p-4 shadow-[0_24px_60px_rgba(124,58,237,0.1)] dark:border-violet-300/16 dark:bg-[radial-gradient(circle_at_top_left,_rgba(168,85,247,0.28),_transparent_30%),linear-gradient(135deg,_rgba(5,3,10,0.98),_rgba(30,15,52,0.92))] sm:rounded-[30px] sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-4">

@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Reservation;
 
 use App\Models\Reservation;
+use App\Support\RequestInput;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -35,7 +36,7 @@ class UpdateDeliveryStatusRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->merge([
-            'delivery_status' => trim((string) $this->input('delivery_status')),
+            'delivery_status' => RequestInput::trim($this->input('delivery_status')),
         ]);
     }
 }

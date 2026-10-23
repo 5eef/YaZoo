@@ -5,6 +5,7 @@ namespace Tests\Feature\Profile;
 use App\Models\Animal;
 use App\Models\Post;
 use App\Models\User;
+use App\Models\Veterinarian;
 use App\Notifications\UserFollowedNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -16,6 +17,18 @@ use Tests\TestCase;
 class ProfileApiTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_social_profile_links_only_active_public_professional_listings(): void
+    {
+        $owner = User::factory()->create(['email' => 'vet.demo@yazoo.test']);
+        $vet = Veterinarian::factory()->create(['user_id' => $owner->id, 'is_active' => true, 'moderation_status' => 'active']);
+        Veterinarian::factory()->create(['user_id' => $owner->id, 'is_active' => false, 'moderation_status' => 'active']);
+        Veterinarian::factory()->create(['user_id' => $owner->id, 'is_active' => true, 'moderation_status' => 'pending_review']);
+        Sanctum::actingAs(User::factory()->create());
+        $this->getJson('/api/users/'.$owner->id)->assertOk()->assertJsonPath('data.isDemo', true)
+            ->assertJsonPath('data.isProfessionalVerified', false)->assertJsonCount(1, 'data.publicVeterinarians')
+            ->assertJsonPath('data.publicVeterinarians.0.id', $vet->id)->assertJsonPath('data.email', null);
+    }
 
     protected function fakeImageUpload(string $name): UploadedFile
     {

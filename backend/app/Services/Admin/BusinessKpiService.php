@@ -17,6 +17,8 @@ use App\Models\VeterinarianAppointment;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class BusinessKpiService
 {
@@ -29,6 +31,7 @@ class BusinessKpiService
             $durations = $this->moderationDurations($since);
 
             return [
+                ...(Schema::hasTable('pilot_daily_counters') ? DB::table('pilot_daily_counters')->where('day', '>=', $since->toDateString())->selectRaw('event, SUM(count) AS total')->groupBy('event')->pluck('total', 'event')->mapWithKeys(fn ($count, $event) => ['pilot_'.$event => (int) $count])->all() : []),
                 'period_days' => $days,
                 'users_registered' => User::query()->where('created_at', '>=', $since)->count(),
                 'active_users_7_days' => $this->activeUsers(now()->subDays(7)),
@@ -142,6 +145,9 @@ class BusinessKpiService
             'appointments_confirmed' => (clone $base)->where('status', 'confirmed')->count(),
             'appointments_completed' => (clone $base)->where('status', 'completed')->count(),
             'appointments_cancelled' => (clone $base)->where('status', 'cancelled')->count(),
+            'appointments_rejected' => (clone $base)->where('status', 'rejected')->count(),
+            'appointment_reviews_eligible' => (clone $base)->where('status', 'completed')->doesntHave('review')->count(),
+            'appointment_reviews_published' => (clone $base)->has('review')->count(),
         ];
     }
 }

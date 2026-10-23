@@ -5,14 +5,17 @@ backend_image="${1:?backend image is required}"
 frontend_image="${2:?frontend image is required}"
 backend_container=""
 frontend_container=""
+smoke_network="yazoo-smoke-$(date +%s)-$$"
+backend_name="${smoke_network}-api"
 
 cleanup() {
     if [ -n "$backend_container" ]; then
-        docker stop "$backend_container" >/dev/null 2>&1 || true
+        docker rm --force "$backend_container" >/dev/null 2>&1 || true
     fi
     if [ -n "$frontend_container" ]; then
-        docker stop "$frontend_container" >/dev/null 2>&1 || true
+        docker rm --force "$frontend_container" >/dev/null 2>&1 || true
     fi
+    docker network rm "$smoke_network" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT INT TERM
 
@@ -47,21 +50,30 @@ assert_no_root_processes() {
     label="$1"
     container="$2"
 
-    if docker top "$container" -eo user | tail -n +2 | grep -Eq '^[[:space:]]*root[[:space:]]*$'; then
+    process_list="$(docker top "$container" -eo user,pid,comm)" || {
+        echo "${label} process inspection failed." >&2
+        fail_with_logs "$label" "$container"
+    }
+    if printf '%s\n' "$process_list" | tail -n +2 | grep -Eq '^[[:space:]]*root[[:space:]]'; then
         echo "${label} runtime unexpectedly contains a root process." >&2
         docker top "$container" -eo user,pid,comm >&2 || true
-        exit 1
+        fail_with_logs "$label" "$container"
     fi
 }
 
-backend_container="$(docker run --detach --rm \
+docker network create "$smoke_network" >/dev/null
+backend_container="$(docker run --detach \
+    --network "$smoke_network" --name "$backend_name" \
     --env APP_ENV=local \
     --env YAZOO_RUNTIME_OPTIMIZE=false \
     "$backend_image")"
-frontend_container="$(docker run --detach --rm "$frontend_image")"
+frontend_container="$(docker run --detach \
+    --network "$smoke_network" \
+    --env BACKEND_UPSTREAM="http://${backend_name}:8080" "$frontend_image")"
 
 wait_for_endpoint backend "$backend_container" http://127.0.0.1:8080/health/live
 wait_for_endpoint frontend "$frontend_container" http://127.0.0.1:8080/version.json
+wait_for_endpoint frontend-upstream "$frontend_container" "http://${backend_name}:8080/health/live"
 assert_no_root_processes backend "$backend_container"
 assert_no_root_processes frontend "$frontend_container"
 

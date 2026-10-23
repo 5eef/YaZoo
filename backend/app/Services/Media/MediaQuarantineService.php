@@ -6,6 +6,7 @@ use App\Contracts\MediaScanner;
 use App\Jobs\ScanQuarantinedMedia;
 use App\Models\MediaAsset;
 use App\Models\User;
+use App\Support\MediaStorage;
 use App\ValueObjects\MediaScanResult;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
@@ -30,8 +31,11 @@ final class MediaQuarantineService
         bool $dispatchScan = true,
     ): MediaAsset {
         $this->validateUpload($file);
-        $diskName = (string) config('media.scanning.quarantine_disk', 'private');
-        $safeDirectory = trim(str_replace(['..', '\\'], ['', '/'], $directory), '/');
+        $diskName = config('media.driver') === 'r2' ? 'r2' : (string) config('media.scanning.quarantine_disk', 'private');
+        if (preg_match('~^[a-zA-Z0-9_-]+(?:/[a-zA-Z0-9_-]+)*$~D', $directory) !== 1) {
+            throw new RuntimeException('Invalid quarantine directory.');
+        }
+        $safeDirectory = $directory;
         $extension = strtolower($file->getClientOriginalExtension());
         $filename = (string) Str::uuid().($extension !== '' ? '.'.$extension : '');
         $path = $file->storeAs('quarantine/'.$safeDirectory, $filename, $diskName);
@@ -84,7 +88,11 @@ final class MediaQuarantineService
         }
 
         $quarantineDisk = Storage::disk($asset->disk);
-        $stream = $quarantineDisk->readStream($asset->path);
+        try {
+            $stream = $quarantineDisk->readStream($asset->path);
+        } catch (Throwable) {
+            return $this->recordResult($asset, MediaScanResult::failed('quarantine_read_failed'));
+        }
 
         if (! is_resource($stream)) {
             return $this->recordResult($asset, MediaScanResult::failed('quarantine_read_failed'));
@@ -96,6 +104,7 @@ final class MediaQuarantineService
                     'mime_type' => $asset->mime_type,
                     'size' => $asset->size !== null ? (int) $asset->size : null,
                     'original_name' => $asset->original_name,
+                    'owner_id' => (int) $asset->owner_id,
                 ])
                 : MediaScanResult::failed();
         } catch (Throwable $exception) {
@@ -112,20 +121,29 @@ final class MediaQuarantineService
             return $this->recordResult($asset, $result);
         }
 
-        return $this->publishCleanAsset($asset);
+        try {
+            return $this->publishCleanAsset($asset);
+        } catch (Throwable) {
+            return $this->recordResult($asset, MediaScanResult::failed('publication_failed'));
+        }
     }
 
     private function publishCleanAsset(MediaAsset $asset): MediaAsset
     {
         $sourceDisk = Storage::disk($asset->disk);
         $sourcePath = $asset->path;
-        $targetDiskName = (string) config('media.filesystem_disk', 'public');
+        $targetDiskName = config('media.driver') === 'r2' ? 'r2' : ($asset->visibility === MediaAsset::VISIBILITY_PRIVATE
+            ? (string) config('media.scanning.quarantine_disk', 'private')
+            : (string) config('media.filesystem_disk', 'public'));
         $targetDisk = Storage::disk($targetDiskName);
         if (! Str::startsWith($sourcePath, 'quarantine/')) {
             return $this->recordResult($asset, MediaScanResult::failed('invalid_quarantine_path'));
         }
 
         $targetPath = Str::after($sourcePath, 'quarantine/');
+        if ($targetDiskName === 'r2') {
+            $targetPath = MediaStorage::mediaDirectory($targetPath);
+        }
         $stream = $sourceDisk->readStream($asset->path);
 
         if (! is_resource($stream)) {
@@ -194,6 +212,12 @@ final class MediaQuarantineService
         $allowedMimeTypes = (array) config('media.scanning.allowed_mime_types', []);
         $allowedExtensions = (array) config('media.scanning.allowed_extensions', []);
         $maxBytes = max(1, (int) config('media.scanning.max_bytes', 52_428_800));
+        $mimeExtensions = [
+            'image/jpeg' => ['jpg', 'jpeg'], 'image/png' => ['png'],
+            'image/webp' => ['webp'], 'image/gif' => ['gif'],
+            'video/mp4' => ['mp4', 'mov'], 'video/webm' => ['webm'],
+            'video/quicktime' => ['mov'], 'application/pdf' => ['pdf'],
+        ];
 
         if (
             ! $file->isValid()
@@ -201,6 +225,7 @@ final class MediaQuarantineService
             || $size > $maxBytes
             || ! in_array($mimeType, $allowedMimeTypes, true)
             || ! in_array($extension, $allowedExtensions, true)
+            || ! in_array($extension, $mimeExtensions[$mimeType] ?? [], true)
         ) {
             throw ValidationException::withMessages([
                 'media_file' => 'The media file is not eligible for quarantine scanning.',

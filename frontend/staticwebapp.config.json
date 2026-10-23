@@ -1,7 +1,7 @@
 {
   "navigationFallback": {
     "rewrite": "/index.html",
-    "exclude": ["/assets/*", "/icons.svg", "/yazoo-logo.webp", "/icon-*.png", "/apple-touch-icon.png"]
+    "exclude": ["/assets/*", "/icons.svg", "/brand/*", "/icon-*.png", "/apple-touch-icon.png"]
   },
   "globalHeaders": {
     "X-Content-Type-Options": "nosniff",

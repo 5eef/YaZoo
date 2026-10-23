@@ -1,0 +1,15 @@
+name: IdeaWave operations candidate
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+  security-events: write
+
+jobs:
+  validation:
+    uses: ./.github/workflows/ci.yml
+    with:
+      build_containers: true

@@ -6,6 +6,7 @@ ARG VITE_APP_NAME=YaZoo
 ARG VITE_API_URL=/api
 ARG VITE_STORAGE_URL=/storage
 ARG VITE_REALTIME_ENABLED=false
+ARG VITE_REVERB_APP_KEY=
 ARG VITE_REVERB_HOST=
 ARG VITE_REVERB_PORT=443
 ARG VITE_REVERB_SCHEME=https
@@ -20,6 +21,7 @@ ENV VITE_APP_NAME=$VITE_APP_NAME \
     VITE_API_URL=$VITE_API_URL \
     VITE_STORAGE_URL=$VITE_STORAGE_URL \
     VITE_REALTIME_ENABLED=$VITE_REALTIME_ENABLED \
+    VITE_REVERB_APP_KEY=$VITE_REVERB_APP_KEY \
     VITE_REVERB_HOST=$VITE_REVERB_HOST \
     VITE_REVERB_PORT=$VITE_REVERB_PORT \
     VITE_REVERB_SCHEME=$VITE_REVERB_SCHEME \
@@ -30,12 +32,12 @@ ENV VITE_APP_NAME=$VITE_APP_NAME \
     VITE_SITE_URL=$VITE_SITE_URL
 
 COPY frontend/package.json frontend/package-lock.json ./
-RUN npm ci
+RUN npm ci --ignore-scripts
 
 COPY frontend/ ./
 RUN npm run build
 
-FROM nginx:1.30.4-alpine3.24@sha256:97d490c12ba55b4946b01546d1c3ed324e8d41ab1c9fcb2a616aa470620e5b46
+FROM nginx:1.30.6-alpine3.24@sha256:47928bf67eb62a1863cb08d9ecb52d3e704304ba614eaee17884204677702951
 
 ARG APP_VERSION=local
 ENV BACKEND_UPSTREAM=http://host.docker.internal:8000
@@ -50,6 +52,7 @@ COPY infra/nginx/frontend.conf /etc/nginx/templates/default.conf.template
 COPY --from=build /app/frontend/dist /usr/share/nginx/html
 COPY LICENSE /usr/share/nginx/html/LICENSE.txt
 RUN set -eux; \
+    apk upgrade --no-cache libcrypto3 libssl3 libexpat libuuid pcre2 tiff libx11; \
     printf '{"version":"%s"}\n' "$APP_VERSION" > /usr/share/nginx/html/version.json; \
     sed -i 's/listen  *80;/listen 8080;/' /etc/nginx/templates/default.conf.template; \
     sed -i 's!^[[:space:]]*pid[[:space:]].*;!pid /tmp/nginx.pid;!' /etc/nginx/nginx.conf; \

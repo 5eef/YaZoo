@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\MediaAsset;
 use App\Models\User;
+use App\Services\Media\MediaQuarantineService;
 use App\Support\MediaStorage;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\UploadedFile;
@@ -15,6 +16,28 @@ use Throwable;
 
 class MediaAssetService
 {
+    public function registerPostUpload(User $owner, UploadedFile $file, string $kind): MediaAsset
+    {
+        if ($this->requiresScan()) {
+            return $this->scannedUpload($owner, $file, 'feed/posts', $kind, MediaAsset::VISIBILITY_PRIVATE);
+        }
+        if (in_array(config('media.driver'), ['mongodb', 'r2'], true)) {
+            return $this->registerUpload($owner, $file, 'feed/posts', $kind, MediaAsset::VISIBILITY_PRIVATE);
+        }
+
+        $path = $file->store('feed/posts', 'private');
+        if (! is_string($path) || $path === '') {
+            throw new \RuntimeException('Post media storage failed.');
+        }
+        try {
+            return $this->registerStoredPath($owner, $path, $kind, MediaAsset::VISIBILITY_PRIVATE, (string) $file->getMimeType(), $file->getSize() ?: null, $file->getClientOriginalName(), 'private');
+        } catch (Throwable $exception) {
+            Storage::disk('private')->delete($path);
+
+            throw $exception;
+        }
+    }
+
     public function registerUpload(
         User $owner,
         UploadedFile $file,
@@ -22,6 +45,9 @@ class MediaAssetService
         string $kind,
         string $visibility = MediaAsset::VISIBILITY_PUBLIC,
     ): MediaAsset {
+        if ($this->requiresScan()) {
+            return $this->scannedUpload($owner, $file, $directory, $kind, $visibility);
+        }
         $path = MediaStorage::storeUploadedFile($file, $directory);
 
         try {
@@ -41,6 +67,28 @@ class MediaAssetService
         }
     }
 
+    public function requiresScan(): bool
+    {
+        return (bool) config('media.scanning.enabled')
+            || config('media.scanning.driver') === 'verified_demo_manifest'
+            || config('operations.deployment_profile') === 'production';
+    }
+
+    private function scannedUpload(User $owner, UploadedFile $file, string $directory, string $kind, string $visibility): MediaAsset
+    {
+        if (config('media.scanning.driver') === 'verified_demo_manifest') {
+            abort_unless(in_array((int) $owner->id, (array) config('media.scanning.demo_allowed_user_ids', []), true), 403, 'This account is not authorized for pre-scanned demo uploads.');
+        }
+        $service = app(MediaQuarantineService::class);
+        $asset = $service->quarantine($owner, $file, $directory, $kind, $visibility, dispatchScan: false);
+        $asset = $service->scan($asset);
+        if ($asset->state !== MediaAsset::STATE_CLEAN) {
+            abort(503, 'Media scanning did not authorize publication.');
+        }
+
+        return $asset;
+    }
+
     public function registerStoredPath(
         User $owner,
         string $path,
@@ -53,7 +101,7 @@ class MediaAssetService
     ): MediaAsset {
         $disk = $diskName ?? (MediaStorage::isMongoReference($path)
             ? 'mongodb'
-            : (string) config('media.filesystem_disk', 'public'));
+            : (str_starts_with($path, 'media/') && config('media.driver') === 'r2' ? 'r2' : (string) config('media.filesystem_disk', 'public')));
 
         return $owner->ownedMediaAssets()->firstOrCreate(
             ['disk' => $disk, 'path_hash' => hash('sha256', $path)],
@@ -78,7 +126,7 @@ class MediaAssetService
         $asset = MediaAsset::query()
             ->whereKey($assetId)
             ->where('owner_id', $owner->id)
-            ->where('state', MediaAsset::STATE_ACTIVE)
+            ->whereIn('state', [MediaAsset::STATE_ACTIVE, MediaAsset::STATE_CLEAN])
             ->first();
 
         if (! $asset || ($asset->attachable_id !== null && ! $this->isAttachedTo($asset, $current))) {
@@ -203,6 +251,11 @@ class MediaAssetService
 
     private function deletePhysicalFileAfterCommit(string $disk, string $path): void
     {
-        DB::afterCommit(fn () => $this->deletePhysicalFile($disk, $path));
+        DB::afterCommit(function () use ($disk, $path): void {
+            // A shared object must survive removal of one relational reference.
+            if (! MediaAsset::query()->where('disk', $disk)->where('path', $path)->exists()) {
+                $this->deletePhysicalFile($disk, $path);
+            }
+        });
     }
 }

@@ -1,3 +1,4 @@
+import { galleryError } from '../utils/uploadValidation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router'
 
@@ -36,6 +37,7 @@ export function useProductsMarketplace() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isFiltersOpen, setIsFiltersOpen] = useState(false)
+  const mutationLock = useRef(false)
   const latestRequestId = useRef(0)
 
   const loadProducts = useCallback(async (activeFilters = filters) => {
@@ -128,8 +130,12 @@ export function useProductsMarketplace() {
 
   const handleSubmit = async (event) => {
     event.preventDefault()
+    if (mutationLock.current) return
+    const uploadIssue = galleryError(imageFile, galleryFiles)
+    if (uploadIssue) { setErrorMessage(t(uploadIssue)); return }
     setErrorMessage('')
     setSuccessMessage('')
+    mutationLock.current = true
     setIsSubmitting(true)
 
     try {
@@ -150,6 +156,7 @@ export function useProductsMarketplace() {
         getErrorMessage(error, "Impossible d'enregistrer le produit."),
       )
     } finally {
+      mutationLock.current = false
       setIsSubmitting(false)
     }
   }

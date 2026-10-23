@@ -7,6 +7,11 @@
 **/node_modules
 **/.vite-cache
 **/vendor
+**/bootstrap/cache/*.php
+**/.aws
+**/.codex
+**/.agents
+output
 **/coverage
 **/dist
 backend/.composer
@@ -44,3 +49,15 @@ infra/backups
 *.7z
 *.pem
 *.key
+
+mobile/android
+mobile/ios
+mobile/.expo
+**/*.apk
+**/*.aab
+**/*.jks
+**/*.keystore
+**/*.p12
+**/service-account*.json
+**/credentials.json
+**/google-services.json

@@ -8,6 +8,7 @@ use App\Http\Requests\Veterinarian\StoreAppointmentRequest;
 use App\Http\Requests\Veterinarian\StoreAvailabilitySlotRequest;
 use App\Http\Requests\Veterinarian\UpdateAppointmentStatusRequest;
 use App\Http\Resources\VeterinarianAppointmentResource;
+use App\Models\User;
 use App\Models\Veterinarian;
 use App\Models\VeterinarianAppointment;
 use App\Models\VeterinarianAvailabilitySlot;
@@ -128,6 +129,10 @@ class VeterinarianAppointmentController extends Controller
         $data = $request->validated();
 
         $appointment = DB::transaction(function () use ($data, $request, $veterinarian): VeterinarianAppointment {
+            // Serialize even overlapping distinct slots and simultaneous requests
+            // by the same client. A slot lock alone only protects identical IDs.
+            Veterinarian::query()->whereKey($veterinarian->id)->lockForUpdate()->firstOrFail();
+            User::query()->whereKey($request->user()->id)->lockForUpdate()->firstOrFail();
             $slot = VeterinarianAvailabilitySlot::query()
                 ->whereKey($data['availability_slot_id'])
                 ->where('veterinarian_id', $veterinarian->id)
@@ -162,7 +167,7 @@ class VeterinarianAppointmentController extends Controller
                 'ends_at' => $slot->ends_at,
                 'status' => 'pending',
             ]);
-        });
+        }, 3);
 
         $veterinarian->user->notify(new VeterinarianAppointmentNotification($appointment, 'requested'));
 

@@ -18,6 +18,7 @@ vi.mock('../api/veterinarianAppointments', () => ({
 
 describe('VeterinarianAppointmentsPage', () => {
   beforeEach(() => {
+    vi.clearAllMocks()
     localStorage.setItem('yazoo-locale', 'fr')
     appointmentsApi.listVeterinarianAppointmentsRequest.mockResolvedValue({
       data: {
@@ -35,6 +36,24 @@ describe('VeterinarianAppointmentsPage', () => {
       },
     })
     appointmentsApi.reviewVeterinarianAppointmentRequest.mockResolvedValue({ data: {} })
+  })
+
+  it('expose le refus existant au vétérinaire et recharge le statut persistant', async () => {
+    const pending = { id: 21, veterinarianName: 'Clinique isolée', animalType: 'Chat', reason: 'Demande isolée', status: 'pending', canManage: true, canCancel: true }
+    appointmentsApi.listVeterinarianAppointmentsRequest.mockResolvedValueOnce({ data: { data: [pending] } }).mockResolvedValue({ data: { data: [{ ...pending, status: 'rejected', canCancel: false }] } })
+    appointmentsApi.updateVeterinarianAppointmentStatusRequest.mockResolvedValue({ data: {} })
+    render(<MemoryRouter><I18nProvider><VeterinarianAppointmentsPage /></I18nProvider></MemoryRouter>)
+    await userEvent.click(await screen.findByRole('button', { name: 'Refuser', exact: true }))
+    await screen.findByText('Refusé', { exact: true })
+    expect(appointmentsApi.updateVeterinarianAppointmentStatusRequest).toHaveBeenCalledExactlyOnceWith(21, { status: 'rejected' })
+    expect(screen.queryByRole('button', { name: 'Refuser', exact: true })).not.toBeInTheDocument()
+  })
+
+  it('ne propose pas le refus au client', async () => {
+    appointmentsApi.listVeterinarianAppointmentsRequest.mockResolvedValue({ data: { data: [{ id: 22, reason: 'Demande client', status: 'pending', canManage: false, canCancel: true }] } })
+    render(<MemoryRouter><I18nProvider><VeterinarianAppointmentsPage /></I18nProvider></MemoryRouter>)
+    await screen.findByText('Demande client')
+    expect(screen.queryByRole('button', { name: 'Refuser', exact: true })).not.toBeInTheDocument()
   })
 
   it('permet de choisir une note de 1 a 5 avant de publier l avis', async () => {
@@ -57,5 +76,22 @@ describe('VeterinarianAppointmentsPage', () => {
     await waitFor(() => {
       expect(appointmentsApi.reviewVeterinarianAppointmentRequest).toHaveBeenCalledWith(17, { rating: 2 })
     })
+  })
+
+  it('verrouille une mutation en cours et conserve la note après une erreur 422', async () => {
+    const user = userEvent.setup()
+    let rejectRequest
+    appointmentsApi.reviewVeterinarianAppointmentRequest.mockReturnValueOnce(new Promise((resolve, reject) => { rejectRequest = reject }))
+    render(<MemoryRouter><I18nProvider><VeterinarianAppointmentsPage /></I18nProvider></MemoryRouter>)
+    const rating = await screen.findByRole('combobox', { name: 'Note' })
+    await user.selectOptions(rating, '3')
+    const submit = screen.getByRole('button', { name: 'Publier la note' })
+    await user.dblClick(submit)
+    expect(appointmentsApi.reviewVeterinarianAppointmentRequest).toHaveBeenCalledTimes(1)
+    expect(submit).toBeDisabled()
+    rejectRequest({ response: { status: 422, data: { errors: { rating: ['Note refusée par le serveur.'] } } } })
+    expect(await screen.findByRole('alert')).toHaveTextContent('Note refusée par le serveur.')
+    await waitFor(() => expect(submit).not.toBeDisabled())
+    expect(rating).toHaveValue('3')
   })
 })

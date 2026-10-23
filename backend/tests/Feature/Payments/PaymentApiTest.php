@@ -20,6 +20,23 @@ class PaymentApiTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config(['features.payments' => true]);
+    }
+
+    public function test_pilot_payment_switch_rejects_automated_payment_even_with_provider_enabled(): void
+    {
+        config(['features.payments' => false, 'payments.providers.cmi.enabled' => true]);
+        $reservation = $this->reservation();
+        Sanctum::actingAs($reservation->buyer, ['*']);
+        $this->postJson("/api/reservations/{$reservation->id}/payments", ['provider' => Payment::PROVIDER_CMI])->assertUnprocessable();
+        $this->assertDatabaseCount('payments', 0);
+        $this->postJson('/api/payments/cmi/callback', ['oid' => 'test-only-reference'])->assertUnprocessable();
+        $this->getJson('/api/payments/config')->assertOk()->assertJsonPath('providers.cmi.enabled', false);
+    }
+
     public function test_buyer_can_create_manual_bank_transfer_awaiting_verification_payment(): void
     {
         $reservation = $this->reservation();
@@ -294,6 +311,8 @@ class PaymentApiTest extends TestCase
             'internal_reference' => $payment->internal_reference,
             'status' => 'paid',
         ];
+        $payload['amount'] = (string) $payment->amount;
+        $payload['currency'] = $payment->currency;
         $payload['signature'] = app(CmiGateway::class)->generateSignature($payload);
 
         $this->postJson('/api/payments/cmi/callback', $payload)
@@ -425,6 +444,22 @@ class PaymentApiTest extends TestCase
         ]);
     }
 
+    public function test_signed_callback_cannot_settle_a_different_amount_or_currency(): void
+    {
+        config(['payments.providers.cmi.enabled' => true, 'payments.providers.cmi.store_key' => 'test-store-key']);
+        $payment = $this->paymentForCallback();
+        foreach ([['amount' => '0.01', 'currency' => 'MAD'], ['amount' => '315.00', 'currency' => 'EUR'],
+            ['currency' => 'MAD'], ['amount' => '315.001', 'currency' => 'MAD'],
+            ['amount' => '3.15e2', 'currency' => 'MAD']] as $settlement) {
+            $payload = ['internal_reference' => $payment->internal_reference, 'status' => 'paid', ...$settlement];
+            $payload['signature'] = app(CmiGateway::class)->generateSignature($payload);
+            $this->postJson('/api/payments/cmi/callback', $payload)->assertUnprocessable();
+            $this->assertSame(Payment::STATUS_PENDING, $payment->refresh()->status);
+            $this->assertSame('pending', $payment->reservation->refresh()->payment_status);
+        }
+        $this->assertDatabaseCount('payment_transactions', 0);
+    }
+
     public function test_valid_cmi_callback_can_mark_payment_and_reservation_paid(): void
     {
         config([
@@ -438,6 +473,8 @@ class PaymentApiTest extends TestCase
             'provider_reference' => 'CMI-TEST-123',
             'status' => 'paid',
         ];
+        $payload['amount'] = (string) $payment->amount;
+        $payload['currency'] = $payment->currency;
         $payload['signature'] = app(CmiGateway::class)->generateSignature($payload);
 
         $this->postJson('/api/payments/cmi/callback', $payload)
@@ -464,6 +501,8 @@ class PaymentApiTest extends TestCase
             'provider_reference' => 'CMI-DUPLICATE-1',
             'status' => 'paid',
         ];
+        $payload['amount'] = (string) $payment->amount;
+        $payload['currency'] = $payment->currency;
         $payload['signature'] = app(CmiGateway::class)->generateSignature($payload);
 
         $this->postJson('/api/payments/cmi/callback', $payload)->assertOk();
@@ -493,6 +532,8 @@ class PaymentApiTest extends TestCase
             'provider_reference' => 'CMI-LATE-FAILURE',
             'status' => 'failed',
         ];
+        $payload['amount'] = (string) $payment->amount;
+        $payload['currency'] = $payment->currency;
         $payload['signature'] = app(CmiGateway::class)->generateSignature($payload);
 
         $this->postJson('/api/payments/cmi/callback', $payload)
@@ -529,6 +570,8 @@ class PaymentApiTest extends TestCase
             'internal_reference' => $payment->internal_reference,
             'status' => 'paid',
         ];
+        $payload['amount'] = (string) $payment->amount;
+        $payload['currency'] = $payment->currency;
         $payload['signature'] = app(CmiGateway::class)->generateSignature($payload);
 
         $this->postJson('/api/payments/cmi/callback', $payload)->assertOk();
@@ -567,6 +610,8 @@ class PaymentApiTest extends TestCase
                 'signature' => 'nested_signature',
             ],
         ];
+        $payload['amount'] = (string) $payment->amount;
+        $payload['currency'] = $payment->currency;
         $payload['signature'] = app(CmiGateway::class)->generateSignature($payload);
         $payload['hash'] = 'hash_value';
 
