@@ -6,6 +6,7 @@ use App\Models\ProfessionalVerification;
 use App\Models\User;
 use App\Services\MarketplacePublishingResolver;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -78,6 +79,44 @@ class MarketplacePublishingResolverTest extends TestCase
         $this->assertNull(
             app(MarketplacePublishingResolver::class)->badgeFor($user, 'products'),
         );
+    }
+
+    #[DataProvider('approvedBusinessTypes')]
+    public function test_demo_listings_never_claim_real_professional_verification(
+        string $businessType,
+        string $destination,
+        ?string $serviceType,
+        string $expectedBadge,
+    ): void {
+        $user = User::factory()->create();
+        $admin = User::factory()->admin()->create();
+        ProfessionalVerification::query()->create([
+            'user_id' => $user->id,
+            'business_type' => $businessType,
+            'status' => 'approved',
+            'document_path' => 'professional-verifications/private.pdf',
+            'document_type' => $businessType === 'veterinarian' ? 'veterinarian_license' : 'professional_card',
+            'professional_license_number' => $businessType === 'veterinarian' ? 'VET-100' : null,
+            'document_expires_at' => $businessType === 'veterinarian' ? now()->addYear() : null,
+            'reviewed_by' => $admin->id,
+            'reviewed_at' => now(),
+        ]);
+        $resolver = app(MarketplacePublishingResolver::class);
+        $this->assertSame($expectedBadge, $resolver->badgeFor($user, $destination, $serviceType));
+
+        config(['operations.deployment_profile' => 'showcase']);
+        $this->assertTrue($resolver->canPublishTo($user, $destination, $serviceType));
+        $this->assertNull($resolver->badgeFor($user, $destination, $serviceType));
+        Sanctum::actingAs($user);
+        $this->getJson("/api/users/{$user->id}")
+            ->assertOk()
+            ->assertJsonPath('data.isDemo', true)
+            ->assertJsonPath('data.isProfessionalVerified', false);
+
+        config(['operations.deployment_profile' => 'public']);
+        $user->forceFill(['email' => 'professional@yazoo.test'])->save();
+        $this->assertTrue($resolver->canPublishTo($user, $destination, $serviceType));
+        $this->assertNull($resolver->badgeFor($user, $destination, $serviceType));
     }
 
     public function test_veterinarian_badge_is_refused_without_number_or_future_expiration(): void

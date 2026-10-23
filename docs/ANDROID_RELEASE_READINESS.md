@@ -1,4 +1,6 @@
-﻿# Android release readiness — YaZoo, 8 octobre 2026
+> Note de release unifiee du 23 octobre 2026 : ce document conserve des etats historiques. Les statuts actuels, preuves de livraison et limites DEMO/commercial figurent dans [docs/reports/RELEASE_REPORT.md](reports/RELEASE_REPORT.md). Les anciennes mentions « production ready » ne certifient pas une mise en service commerciale.
+
+# Android release readiness — YaZoo, 8 octobre 2026
 
 La configuration de signature production est préparée. Les vrais credentials restent **OWNER ACTION REQUIRED**. Aucun test téléphone, upload Play, build cloud, commit ou push dans cette mission.
 

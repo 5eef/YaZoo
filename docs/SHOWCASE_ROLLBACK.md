@@ -1,3 +1,5 @@
+> Note de release unifiee du 23 octobre 2026 : ce document conserve des etats historiques. Les statuts actuels, preuves de livraison et limites DEMO/commercial figurent dans [docs/reports/RELEASE_REPORT.md](reports/RELEASE_REPORT.md). Les anciennes mentions « production ready » ne certifient pas une mise en service commerciale.
+
 # Retour arrière showcase
 
 À remplir avant chaque cutover : service Render/deploy ID, référence complète de l'image précédente **et digest obtenus dans le compte**, Pages production deployment ID précédent, SHA frontend, noms des variables changées, sauvegarde DB et preuve de restauration isolée. Ne jamais copier leurs valeurs secrètes.
