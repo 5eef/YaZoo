@@ -21,7 +21,8 @@ class UserProfileResource extends JsonResource
     {
         $canViewPrivateDetails = $request->user()?->is($this->resource)
             || (bool) $request->user()?->is_admin;
-        $isDemo = str_ends_with((string) $this->email, '@yazoo.test') || (config('operations.deployment_profile') === 'showcase' && str_contains($this->name, 'DEMO'));
+        $isDemo = str_ends_with(strtolower((string) $this->email), '@yazoo.test')
+            || config('operations.deployment_profile') === 'showcase';
 
         return [
             'id' => $this->id,

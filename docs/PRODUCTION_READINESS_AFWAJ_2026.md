@@ -1,4 +1,6 @@
-﻿# YaZoo Production Readiness — AFWAJ 2026
+> Note de release unifiee du 23 octobre 2026 : ce document conserve des etats historiques. Les statuts actuels, preuves de livraison et limites DEMO/commercial figurent dans [docs/reports/RELEASE_REPORT.md](reports/RELEASE_REPORT.md). Les anciennes mentions « production ready » ne certifient pas une mise en service commerciale.
+
+# YaZoo Production Readiness — AFWAJ 2026
 
 Clôture locale du 8 octobre 2026, C:\project\YaZoo, branche startup-2026. Le worktree est la source de vérité. Aucun commit, push, déploiement public ni test téléphone.
 

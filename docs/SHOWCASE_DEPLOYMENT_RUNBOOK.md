@@ -1,3 +1,5 @@
+> Note de release unifiee du 23 octobre 2026 : ce document conserve des etats historiques. Les statuts actuels, preuves de livraison et limites DEMO/commercial figurent dans [docs/reports/RELEASE_REPORT.md](reports/RELEASE_REPORT.md). Les anciennes mentions « production ready » ne certifient pas une mise en service commerciale.
+
 # Publication showcase — 14 octobre 2026
 
 Statut : préparation locale ; aucune publication autorisée ou effectuée. Complète [DEMO_DEPLOYMENT_FREE.md](DEMO_DEPLOYMENT_FREE.md), sans remplacer ses paramètres par des suppositions. Les anciennes références d'image de ce document sont historiques.

@@ -105,6 +105,11 @@ class MarketplacePublishingResolver
 
     public function badgeFor(User $user, string $destination, ?string $serviceType = null): ?string
     {
+        if (config('operations.deployment_profile') === 'showcase'
+            || str_ends_with(strtolower((string) $user->email), '@yazoo.test')) {
+            return null;
+        }
+
         $capability = $this->resolve($user);
 
         if (

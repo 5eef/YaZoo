@@ -1,3 +1,5 @@
+> Note de release unifiee du 23 octobre 2026 : ce document conserve des etats historiques. Les statuts actuels, preuves de livraison et limites DEMO/commercial figurent dans [docs/reports/RELEASE_REPORT.md](reports/RELEASE_REPORT.md). Les anciennes mentions « production ready » ne certifient pas une mise en service commerciale.
+
 # Private R2 media storage
 
 Implementation only. No credentials, bucket provisioning or deployment is performed by this change.
