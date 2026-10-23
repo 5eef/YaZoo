@@ -3,7 +3,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main, startup-2026]
+    branches: [main]
   workflow_call:
     inputs:
       build_containers:
@@ -71,7 +71,6 @@ jobs:
       - name: Audit frontend dependencies
         working-directory: frontend
         run: |
-          npm audit --omit=dev
           node ../scripts/audit-dependency-policy.mjs frontend
 
       - name: Validate active release guards and fail-closed audit policy
@@ -149,7 +148,9 @@ jobs:
           SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
 
   mysql-concurrency:
-    runs-on: ubuntu-latest
+    # MongoDB 8 cannot start on the newer runner kernel (SERVER-121912).
+    # Keep the pinned database image and every integration test on a compatible VM.
+    runs-on: ubuntu-22.04
     env:
       APP_ENV: testing
       APP_KEY: base64:c49vk2fjl1WJZPUaxanThGkmCDU9hHDldPjseMgdaQc=

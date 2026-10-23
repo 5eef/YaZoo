@@ -1,9 +1,13 @@
+import legacyTheme from './tailwind-legacy-theme.json' with { type: 'json' }
+
 /** @type {import('tailwindcss').Config} */
 export default {
   darkMode: 'class',
   content: ['./index.html', './src/**/*.{js,jsx,ts,tsx}'],
   theme: {
     extend: {
+      // Preserve YaZoo's existing palette, typography and effect scales.
+      ...legacyTheme,
       opacity: {
         6: '0.06',
         7: '0.07',
@@ -44,5 +48,12 @@ export default {
       },
     },
   },
-  plugins: [],
+  plugins: [({ addUtilities }) => {
+    // In v3 responsive font-size utilities also reset line-height. Preserve
+    // that cascade instead of inheriting a smaller-breakpoint --tw-leading.
+    addUtilities(Object.fromEntries(Object.entries(legacyTheme.fontSize).map(([name, value]) => {
+      const [fontSize, options] = value
+      return [`.text-${name}`, { '--tw-leading': 'initial', fontSize, lineHeight: options.lineHeight }]
+    })))
+  }],
 }

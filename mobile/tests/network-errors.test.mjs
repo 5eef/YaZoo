@@ -2,10 +2,15 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFile } from 'node:fs/promises';
 import ts from 'typescript';
-import { ApiError, failureKey } from '../src/api/errors.ts';
+import { ApiError, failureKey, normalizeBaseUrl } from '../src/api/errors.ts';
 const source = await readFile(new URL('../src/api/client.ts', import.meta.url), 'utf8');
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText.replace("'./errors'", JSON.stringify(new URL('../src/api/errors.ts', import.meta.url).href));
 const client = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`);
+
+test('distributed API normalization rejects a double api prefix', () => {
+  assert.equal(normalizeBaseUrl('https://yazoo-showcase.pages.dev/api/'), 'https://yazoo-showcase.pages.dev/api');
+  assert.throws(() => normalizeBaseUrl('https://yazoo-showcase.pages.dev/api/api'), /single \/api prefix/);
+});
 
 test('HTTP, local exceptions, offline and timeout have distinct user messages', () => {
   for (const [status, key, category] of [[401,'expired','AUTH_ERROR'],[403,'forbidden','FORBIDDEN'],[404,'notFound','NOT_FOUND'],[422,'validation','VALIDATION_ERROR'],[500,'unavailable','SERVER_ERROR'],[0,'offline','NETWORK_ERROR']]) {
@@ -98,4 +103,32 @@ test('showcase upload denial and storage failure are never offline errors', () =
   assert.equal(denied.category, 'SHOWCASE_UPLOADS_DISABLED');
   assert.equal(failureKey(denied), 'demoUploadsDisabled');
   assert.equal(new ApiError(500).category, 'SERVER_ERROR');
+});
+
+test('logout acknowledgement survives detachment without restoring private response data', async () => {
+  const original = globalThis.fetch;
+  let deliver;
+  try {
+    client.configureSession('fictional-logout-token', () => assert.fail('already signed out'));
+    globalThis.fetch = (_, options) => {
+      assert.equal(options.headers.Authorization, 'Bearer fictional-logout-token');
+      return new Promise(resolve => { deliver = resolve; });
+    };
+    const request = client.api('/auth/logout', 'fr', 'POST');
+    client.configureSession(null, () => {});
+    deliver(new Response('{"message":"signed out"}'));
+    assert.deepEqual(await request, {});
+    assert.equal(client.mediaHeaders(client.baseUrl + '/media/test'), undefined);
+  } finally { globalThis.fetch = original; client.configureSession(null, () => {}); }
+});
+
+test('malformed validation fields cannot crash the login form', async () => {
+  const original = globalThis.fetch;
+  try {
+    globalThis.fetch = async () => new Response(JSON.stringify({ errors: { email: 'broken', password: [42], name: ['Valid test message'] } }), { status: 422 });
+    await assert.rejects(client.api('/auth/mobile/login', 'fr', 'POST', {}), error => {
+      assert.deepEqual(error.fields, { name: ['Valid test message'] });
+      return error.status === 422;
+    });
+  } finally { globalThis.fetch = original; }
 });

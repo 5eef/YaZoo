@@ -17,6 +17,7 @@ import {
   updateAdminReportStatusRequest,
 } from '../api/admin'
 import Avatar from '../components/ui/Avatar'
+import AdditionalModeration from '../components/admin/AdditionalModeration'
 import Button from '../components/ui/Button'
 import { useAuth } from '../hooks/useAuth'
 import { useI18n } from '../hooks/useI18n'
@@ -276,6 +277,7 @@ function AdminModerationPage() {
 
   return (
     <section className="space-y-6">
+      <AdditionalModeration />
       <section className="overflow-hidden rounded-[30px] border border-white/80 bg-[radial-gradient(circle_at_top_left,_rgba(168,85,247,0.18),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(221,214,254,0.5),_transparent_28%),linear-gradient(135deg,_rgba(255,255,255,0.98)_0%,_rgba(247,241,255,0.9)_48%,_rgba(237,233,254,0.84)_100%)] p-5 shadow-[0_24px_60px_rgba(124,58,237,0.1)] sm:rounded-[32px] sm:p-6">
         <div className="grid gap-6 xl:grid-cols-[1.12fr_0.88fr] xl:items-center">
           <div>

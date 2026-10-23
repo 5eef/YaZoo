@@ -2,6 +2,9 @@ import React from 'react';
 import Svg, { Path } from 'react-native-svg';
 // Same outline paths as frontend/src/components/ui/AppIcon.jsx.
 const paths: Record<string, string> = {
+  eye: 'M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12Z M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z',
+  'eye-off': 'M3 3l18 18 M10 5h2c7 0 10 7 10 7l-3 4 M6 6l-4 6s3 7 10 7l5-1 M9 9a4 4 0 0 0 6 6',
+  logout: 'M10 4H4v16h6 M10 12h12 M17 7l5 5-5 5',
   edit: 'M4 20l4-1 12-12-3-3L5 16l-1 4Z M14 7l3 3',
   trash: 'M4 6h16 M9 6V3h6v3 M6 6l1 15h10l1-15 M10 10v7 M14 10v7',
   'user-plus': 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z M2 21v-2a7 7 0 0 1 14 0 M19 8v8 M15 12h8',

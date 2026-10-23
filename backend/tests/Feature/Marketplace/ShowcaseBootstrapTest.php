@@ -14,14 +14,17 @@ use App\Models\User;
 use App\Models\Veterinarian;
 use App\Models\VeterinarianAvailabilitySlot;
 use App\Support\ShowcaseBootstrapGuard;
+use App\Support\ShowcaseBootstrapState;
 use Database\Seeders\DemoContentSeeder;
 use Database\Seeders\MarketplaceTestSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -36,75 +39,199 @@ class ShowcaseBootstrapTest extends TestCase
 
     private string $password = 'Showcase-Test-Password-2026!';
 
-    public function test_completed_bootstrap_preserves_data_but_sync_rotates_jury_password_once(): void
+    public function test_legacy_credential_sync_refuses_to_change_any_existing_hash(): void
     {
-        $arguments = ['--images' => $this->imagesPath, '--confirmation' => $this->confirmation];
-        $this->assertSame(0, Artisan::call('yazoo:bootstrap-showcase', $arguments), Artisan::output());
-        $before = [];
-        foreach (['users', 'posts', 'stories', 'comments', 'likes', 'follows', 'messages', 'veterinarian_appointments'] as $table) {
-            $before[$table] = DB::table($table)->orderBy('id')->get()->toJson();
+        foreach (['client.fes@yazoo.test', 'veterinaire.agadir@yazoo.test', 'real@example.test'] as $email) {
+            User::factory()->create(['email' => $email, 'is_admin' => false]);
         }
-        $outsider = User::factory()->create(['email' => 'outside@example.test', 'is_admin' => false]);
-        $adminHashes = User::query()->where('is_admin', true)->pluck('password', 'id')->all();
-        config(['operations.showcase_password' => 'Rotated-Test-Only-Password-2026!']);
+        $before = DB::table('users')->orderBy('id')->get()->toJson();
+        $this->assertSame(1, Artisan::call('yazoo:sync-showcase-credentials', ['--confirmation' => $this->confirmation]));
+        $this->assertSame($before, DB::table('users')->orderBy('id')->get()->toJson());
+    }
+
+    public function test_initial_bootstrap_refuses_even_an_allowlisted_existing_account(): void
+    {
+        User::factory()->create(['email' => 'veterinaire.agadir@yazoo.test']);
+        $before = DB::table('users')->get()->toJson();
+        $this->assertSame(1, Artisan::call('yazoo:bootstrap-showcase', [
+            '--images' => $this->imagesPath, '--confirmation' => $this->confirmation,
+        ]));
+        $this->assertSame($before, DB::table('users')->get()->toJson());
+        $this->assertSame([], Storage::disk('public')->allFiles());
+    }
+
+    public function test_registered_user_and_veterinarian_can_relogin_after_completed_bootstrap_restart(): void
+    {
+        Mail::fake();
+        $arguments = ['--images' => $this->imagesPath, '--confirmation' => $this->confirmation];
+        $this->assertSame(0, Artisan::call('yazoo:bootstrap-showcase', $arguments));
+        $payload = [
+            'name' => 'Independent User', 'email' => 'independent@example.test',
+            'password' => 'Owner-Selected-Test-Password!', 'password_confirmation' => 'Owner-Selected-Test-Password!',
+            'phone' => '+212600008777', 'country' => 'Maroc', 'city' => 'Agadir',
+        ];
+        $this->postJson('/api/auth/register', $payload)->assertCreated();
+        $newUser = User::query()->where('email', $payload['email'])->sole();
+        $this->assertTrue(Hash::check($payload['password'], $newUser->password));
+        $this->assertFalse(Hash::check($this->password, $newUser->password));
+
+        $login = $this->postJson('/api/auth/login', [
+            'email' => $payload['email'], 'password' => $payload['password'],
+        ])->assertOk();
+        $token = Crypt::decryptString($login->getCookie('yazoo_api_token', false)->getValue());
+        $this->withHeader('Authorization', 'Bearer '.$token)->postJson('/api/auth/logout')->assertOk();
+        $this->assertDatabaseMissing('personal_access_tokens', ['token' => hash('sha256', explode('|', $token, 2)[1])]);
+        $this->flushHeaders();
+        $this->postJson('/api/auth/login', [
+            'email' => $payload['email'], 'password' => $payload['password'],
+        ])->assertOk();
+
+        $before = DB::table('users')->orderBy('id')->get()->toJson();
+        $counts = $this->showcaseCounts();
+        // Re-resolve the cache repository, retaining only database-backed marker state.
+        Cache::forgetDriver('database');
+        $this->assertSame('complete', Cache::store('database')->get('yazoo_showcase_bootstrap_v2'));
+        config(['operations.showcase_password' => 'Different-Startup-Test-Password!']);
         $this->assertSame(0, Artisan::call('yazoo:bootstrap-showcase', $arguments));
         $this->assertStringContainsString('aucune ecriture', Artisan::output());
-        foreach ($before as $table => $rows) {
-            $query = DB::table($table)->orderBy('id');
-            if ($table === 'users') {
-                $query->where('id', '!=', $outsider->id);
-            }
-            $this->assertSame($rows, $query->get()->toJson());
-        }
-        $this->mock(ShowcaseBootstrapGuard::class, function ($mock): void {
-            $mock->shouldReceive('assertAllowed')->with($this->confirmation)->twice();
-        });
-        $sync = ['--confirmation' => $this->confirmation];
-        $syncExit = Artisan::call('yazoo:sync-showcase-credentials', $sync);
-        $syncOutput = Artisan::output();
-        $this->assertSame(0, $syncExit, $syncOutput);
-        $this->assertStringContainsString('18 modification(s)', $syncOutput);
-        $this->assertTrue(Hash::check(config('operations.showcase_password'), User::query()->where('email', 'client.fes@yazoo.test')->firstOrFail()->password));
-        $this->assertSame(0, Artisan::call('yazoo:sync-showcase-credentials', $sync));
-        $this->assertStringContainsString('0 modification(s)', Artisan::output());
-        $this->assertSame($adminHashes, User::query()->where('is_admin', true)->pluck('password', 'id')->all());
-        $this->assertSame($outsider->password, $outsider->fresh()->password);
-        foreach (array_diff(array_keys($before), ['users']) as $table) {
-            $this->assertSame($before[$table], DB::table($table)->orderBy('id')->get()->toJson());
-        }
-        $this->assertStringNotContainsString(config('operations.showcase_password'), Artisan::output());
+        $this->assertSame($before, DB::table('users')->orderBy('id')->get()->toJson());
+        $this->assertSame($counts, $this->showcaseCounts());
+        $this->postJson('/api/auth/login', [
+            'email' => $payload['email'], 'password' => $payload['password'],
+        ])->assertOk();
+        $this->postJson('/api/auth/login', [
+            'email' => 'veterinaire.agadir@yazoo.test', 'password' => $this->password,
+        ])->assertOk()->assertJsonPath('user.email', 'veterinaire.agadir@yazoo.test');
+        $this->assertSame($before, DB::table('users')->orderBy('id')->get()->toJson());
     }
 
-    public function test_credential_sync_is_idempotent_and_preserves_non_demo_users_and_admins(): void
+    public function test_completed_bootstrap_survives_application_cache_clear_with_registered_users(): void
     {
-        $this->mock(ShowcaseBootstrapGuard::class, function ($mock): void {
-            $mock->shouldReceive('assertAllowed')->with($this->confirmation)->twice();
-        });
-        Cache::store('database')->forever('yazoo_showcase_bootstrap_v2', 'complete');
-        $client = User::factory()->create(['email' => 'client.fes@yazoo.test', 'name' => 'Client DEMO AFWAJ', 'bio' => 'Personnage fictif AFWAJ', 'is_admin' => false]);
-        $outsider = User::factory()->create(['email' => 'outside@example.test', 'name' => 'DEMO outsider', 'bio' => 'fictif', 'is_admin' => false]);
-        $admin = User::factory()->create(['email' => 'bough.youssef@gmail.com', 'is_admin' => true]);
-        $before = [$outsider->password, $admin->password, $client->updated_at->toISOString()];
-        $arguments = ['--confirmation' => $this->confirmation];
-        $this->assertSame(0, Artisan::call('yazoo:sync-showcase-credentials', $arguments), Artisan::output());
-        $hash = $client->fresh()->password;
-        $this->assertTrue(Hash::check($this->password, $hash));
-        $this->assertSame(0, Artisan::call('yazoo:sync-showcase-credentials', $arguments));
-        $this->assertSame($hash, $client->fresh()->password);
-        $this->assertSame($before, [$outsider->fresh()->password, $admin->fresh()->password, $client->fresh()->updated_at->toISOString()]);
-        $this->assertStringNotContainsString($this->password, Artisan::output());
+        $arguments = ['--images' => $this->imagesPath, '--confirmation' => $this->confirmation];
+        $this->assertSame(0, Artisan::call('yazoo:bootstrap-showcase', $arguments));
+        User::factory()->create(['email' => 'registered-before-cache-clear@example.test']);
+        $before = DB::table('users')->orderBy('id')->get()->toJson();
+        $counts = $this->showcaseCounts();
+        $this->assertSame(0, Artisan::call('cache:clear', ['store' => 'database']));
+        $this->assertNull(Cache::store('database')->get('yazoo_showcase_bootstrap_v2'));
+        $this->assertSame(0, Artisan::call('yazoo:bootstrap-showcase', $arguments), Artisan::output());
+        $this->assertSame($before, DB::table('users')->orderBy('id')->get()->toJson());
+        $this->assertSame($counts, $this->showcaseCounts());
+        $this->assertDatabaseCount('operation_markers', 1);
+        config(['operations.showcase_bootstrap_enabled' => true]);
+        $this->mock(ShowcaseBootstrapGuard::class)->shouldReceive('assertAllowed')->twice()->with($this->confirmation);
+        $refresh = ['--confirmation' => $this->confirmation];
+        $this->assertSame(0, Artisan::call('yazoo:refresh-showcase-availability', $refresh));
+        $slots = VeterinarianAvailabilitySlot::query()->count();
+        $this->assertSame(0, Artisan::call('yazoo:refresh-showcase-availability', $refresh));
+        $this->assertSame($slots, VeterinarianAvailabilitySlot::query()->count());
+        $this->assertSame($before, DB::table('users')->orderBy('id')->get()->toJson());
     }
 
-    public function test_credential_sync_refuses_an_allowlisted_user_without_fictitious_markers(): void
+    public function test_legacy_v2_is_promoted_before_purge_without_replaying_accounts_or_content(): void
     {
-        $this->mock(ShowcaseBootstrapGuard::class, function ($mock): void {
-            $mock->shouldReceive('assertAllowed')->once();
-        });
-        Cache::store('database')->forever('yazoo_showcase_bootstrap_v2', 'complete');
-        $client = User::factory()->create(['email' => 'client.fes@yazoo.test', 'name' => 'Real account', 'is_admin' => false]);
-        $hash = $client->password;
-        $this->assertSame(1, Artisan::call('yazoo:sync-showcase-credentials', ['--confirmation' => $this->confirmation]));
-        $this->assertSame($hash, $client->fresh()->password);
+        User::factory()->create(['email' => 'legacy-registered@example.test']);
+        User::factory()->create(['email' => 'veterinaire.agadir@yazoo.test']);
+        $before = DB::table('users')->orderBy('id')->get()->toJson();
+        Cache::store('database')->forever(ShowcaseBootstrapState::KEY, 'complete');
+        $this->assertDatabaseCount('operation_markers', 0);
+        $arguments = ['--images' => $this->imagesPath, '--confirmation' => $this->confirmation];
+        $this->assertSame(0, Artisan::call('yazoo:bootstrap-showcase', $arguments));
+        $this->assertDatabaseHas('operation_markers', ['key' => ShowcaseBootstrapState::KEY]);
+        $marker = DB::table('operation_markers')->where('key', ShowcaseBootstrapState::KEY)->first();
+        $this->assertSame('legacy-cache-v2', json_decode($marker->metadata, true)['source']);
+        $this->assertSame(0, Artisan::call('cache:clear', ['store' => 'database']));
+        $this->assertSame(0, Artisan::call('yazoo:bootstrap-showcase', $arguments));
+        $this->assertSame(0, Artisan::call('yazoo:bootstrap-showcase', $arguments));
+        $this->assertDatabaseCount('operation_markers', 1);
+        $this->assertEquals($marker, DB::table('operation_markers')->where('key', ShowcaseBootstrapState::KEY)->first());
+        $this->assertSame($before, DB::table('users')->orderBy('id')->get()->toJson());
+        $this->assertDatabaseCount('posts', 0);
+        $this->assertSame([], Storage::disk('public')->allFiles());
+    }
+
+    public function test_render_legacy_sql_marker_with_yazoo_prefix_promotes_without_touching_twenty_accounts(): void
+    {
+        config(['cache.prefix' => 'yazoo_cache_']);
+        Cache::forgetDriver('database');
+        User::factory()->count(18)->create();
+        User::factory()->create(['email' => 'veterinaire.agadir@yazoo.test']);
+        User::factory()->create(['email' => 'client.fes@yazoo.test']);
+        $before = DB::table('users')->orderBy('id')->get()->toJson();
+        DB::table('cache')->insert([
+            'key' => 'yazoo_cache_yazoo_showcase_bootstrap_v2',
+            'value' => 's:8:"complete";',
+            'expiration' => now()->addDay()->timestamp,
+        ]);
+        $this->assertSame('complete', Cache::store('database')->get(ShowcaseBootstrapState::KEY));
+        $this->assertDatabaseCount('operation_markers', 0);
+        $arguments = ['--images' => $this->imagesPath, '--confirmation' => $this->confirmation];
+        $this->assertSame(0, Artisan::call('yazoo:bootstrap-showcase', $arguments));
+        $this->assertDatabaseHas('operation_markers', ['key' => ShowcaseBootstrapState::KEY]);
+        $this->assertSame(0, Artisan::call('cache:clear', ['store' => 'database']));
+        $this->assertSame(0, Artisan::call('yazoo:bootstrap-showcase', $arguments));
+        $this->assertDatabaseCount('operation_markers', 1);
+        $this->assertDatabaseCount('users', 20);
+        $this->assertSame($before, DB::table('users')->orderBy('id')->get()->toJson());
+        $this->assertDatabaseCount('posts', 0);
+        $this->assertSame([], Storage::disk('public')->allFiles());
+    }
+
+    public function test_partial_initialization_without_proof_is_refused_after_cache_purge(): void
+    {
+        app(MarketplaceTestSeeder::class)->seedFrom($this->imagesPath);
+        $before = DB::table('users')->orderBy('id')->get()->toJson();
+        $counts = $this->showcaseCounts();
+        $this->assertSame(0, Artisan::call('cache:clear', ['store' => 'database']));
+        $arguments = ['--images' => $this->imagesPath, '--confirmation' => $this->confirmation];
+        $this->assertSame(1, Artisan::call('yazoo:bootstrap-showcase', $arguments));
+        $this->assertSame($before, DB::table('users')->orderBy('id')->get()->toJson());
+        $this->assertSame($counts, $this->showcaseCounts());
+        $this->assertDatabaseCount('operation_markers', 0);
+    }
+
+    public function test_lost_legacy_marker_never_authorizes_recovery_from_a_nonempty_database(): void
+    {
+        User::factory()->create(['email' => 'registered@example.test']);
+        $before = DB::table('users')->get()->toJson();
+        Cache::store('database')->forever(ShowcaseBootstrapState::KEY, 'complete');
+        $this->assertSame(0, Artisan::call('cache:clear', ['store' => 'database']));
+        $this->assertSame(1, Artisan::call('yazoo:bootstrap-showcase', [
+            '--images' => $this->imagesPath, '--confirmation' => $this->confirmation,
+        ]));
+        $this->assertDatabaseCount('operation_markers', 0);
+        $this->assertSame($before, DB::table('users')->get()->toJson());
+    }
+
+    public function test_wrong_database_refuses_legacy_promotion_before_any_write(): void
+    {
+        User::factory()->create(['email' => 'protected@example.test']);
+        $before = DB::table('users')->get()->toJson();
+        Cache::store('database')->forever(ShowcaseBootstrapState::KEY, 'complete');
+        app()['env'] = 'production';
+        config([
+            'app.url' => 'https://demo.example',
+            'operations.showcase_bootstrap_enabled' => true,
+            'operations.showcase_app_host' => 'demo.example',
+            'operations.showcase_database_host' => 'demo-db.example',
+            'operations.showcase_database_name' => 'authorized_showcase',
+        ]);
+        $this->assertSame(1, Artisan::call('yazoo:bootstrap-showcase', [
+            '--images' => $this->imagesPath, '--confirmation' => $this->confirmation,
+        ]));
+        $this->assertStringContainsString('La cible MySQL showcase', Artisan::output());
+        $this->assertDatabaseCount('operation_markers', 0);
+        $this->assertSame($before, DB::table('users')->get()->toJson());
+    }
+
+    public function test_dry_run_does_not_promote_legacy_marker(): void
+    {
+        Cache::store('database')->forever(ShowcaseBootstrapState::KEY, 'complete');
+        $this->assertSame(0, Artisan::call('yazoo:bootstrap-showcase', [
+            '--images' => $this->imagesPath, '--confirmation' => $this->confirmation, '--dry-run' => true,
+        ]));
+        $this->assertDatabaseCount('operation_markers', 0);
+        $this->assertDatabaseCount('users', 0);
     }
 
     protected function setUp(): void
@@ -135,7 +262,7 @@ class ShowcaseBootstrapTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_it_bootstraps_the_complete_showcase_once_and_rotates_all_demo_passwords(): void
+    public function test_it_creates_showcase_credentials_once_and_preserves_them_on_rerun(): void
     {
         $arguments = [
             '--images' => $this->imagesPath,
@@ -200,11 +327,14 @@ class ShowcaseBootstrapTest extends TestCase
             'availability_slot_id' => $slot->id, 'animal_type' => 'chat', 'reason' => 'Consultation fictive AFWAJ',
         ])->assertCreated()->assertJsonPath('data.status', 'pending');
 
+        $hashesBefore = User::query()->pluck('password', 'id')->all();
+        config(['operations.showcase_password' => 'Changed-Test-Only-Password-2026!']);
         $countsBefore = $this->showcaseCounts();
         $publicFilesBefore = Storage::disk('public')->allFiles();
         $privateFilesBefore = Storage::disk('private')->allFiles();
 
         $this->assertSame(0, Artisan::call('yazoo:bootstrap-showcase', $arguments));
+        $this->assertSame($hashesBefore, User::query()->pluck('password', 'id')->all());
         $this->assertSame($countsBefore, $this->showcaseCounts());
         $this->assertSame($publicFilesBefore, Storage::disk('public')->allFiles());
         $this->assertSame($privateFilesBefore, Storage::disk('private')->allFiles());
@@ -238,6 +368,8 @@ class ShowcaseBootstrapTest extends TestCase
         $this->assertDatabaseCount('posts', 5);
         $this->assertDatabaseCount('stories', 2);
         $this->assertSame($passwords, User::query()->pluck('password', 'id')->all());
+        $this->assertDatabaseHas('operation_markers', ['key' => ShowcaseBootstrapState::KEY]);
+        $this->assertSame(0, Artisan::call('cache:clear', ['store' => 'database']));
         $counts = $this->showcaseCounts();
         $this->assertSame(0, Artisan::call('yazoo:bootstrap-showcase', $arguments));
         $this->assertSame($counts, $this->showcaseCounts());

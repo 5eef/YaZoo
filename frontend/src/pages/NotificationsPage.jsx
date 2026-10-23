@@ -11,6 +11,7 @@ import Button from '../components/ui/Button'
 import SkeletonBlock from '../components/ui/SkeletonBlock'
 import { useI18n } from '../hooks/useI18n'
 import { useNotifications } from '../hooks/useNotifications'
+import { useVisiblePolling } from '../hooks/useVisiblePolling'
 import { asArray, extractDataArray, extractDataObject } from '../utils/apiData'
 import { formatDate } from '../utils/formatDate'
 import { getErrorMessage } from '../utils/getErrorMessage'
@@ -54,6 +55,7 @@ function NotificationsPage() {
   useEffect(() => {
     fetchNotifications()
   }, [fetchNotifications])
+  useVisiblePolling(fetchNotifications)
 
   useEffect(() => {
     setSearch(queryFromUrl)

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 
 import {
@@ -15,6 +15,7 @@ import SkeletonBlock from '../components/ui/SkeletonBlock'
 import { useAuth } from '../hooks/useAuth'
 import { useI18n } from '../hooks/useI18n'
 import { useNotifications } from '../hooks/useNotifications'
+import { useVisiblePolling } from '../hooks/useVisiblePolling'
 import { subscribeToPrivateChannel } from '../lib/realtime'
 import { asArray, extractDataArray, extractDataObject } from '../utils/apiData'
 import { formatDate } from '../utils/formatDate'
@@ -39,6 +40,7 @@ function MessagesPage() {
   const [search, setSearch] = useState(queryFromUrl)
   const [selectedConversationId, setSelectedConversationId] = useState(null)
   const [selectedConversation, setSelectedConversation] = useState(null)
+  const receivedMessageIds = useRef(new Set())
   const [conversationForm, setConversationForm] = useState(defaultConversationForm)
   const [recipientQuery, setRecipientQuery] = useState('')
   const [recipientSuggestions, setRecipientSuggestions] = useState([])
@@ -54,7 +56,7 @@ function MessagesPage() {
   const [isConversationSubmitting, setIsConversationSubmitting] = useState(false)
   const [isMessageSubmitting, setIsMessageSubmitting] = useState(false)
   const directConversationTarget = useRef(null)
-  const { refreshUnreadCount, latestNotification } = useNotifications()
+  const { refreshUnreadCount, latestNotification, realtimeStatus } = useNotifications()
 
   const safeConversations = asArray(conversations)
   const unreadMessages = safeConversations.reduce(
@@ -112,7 +114,7 @@ function MessagesPage() {
 
         setSelectedConversation(conversation)
         setConversations((current) => upsertConversation(current, conversation))
-        await markConversationReadRequest(conversationId)
+        if (!silent) await markConversationReadRequest(conversationId)
         await refreshUnreadCount()
 
         if (updateQuery) {
@@ -250,6 +252,11 @@ function MessagesPage() {
       if (!incomingConversationId || !incomingMessage) {
         return
       }
+      if (receivedMessageIds.current.has(incomingMessage.id)) return
+      receivedMessageIds.current.add(incomingMessage.id)
+      if (receivedMessageIds.current.size > 1000) {
+        receivedMessageIds.current.delete(receivedMessageIds.current.values().next().value)
+      }
 
       const normalizedMessage = {
         ...incomingMessage,
@@ -296,13 +303,10 @@ function MessagesPage() {
       })
 
       if (selectedConversationId === incomingConversationId) {
-        void openConversation(incomingConversationId, {
-          updateQuery: false,
-          silent: true,
-        })
+        void markConversationReadRequest(incomingConversationId).catch(() => {})
       }
     },
-    [openConversation, selectedConversationId, user?.id],
+    [selectedConversationId, user?.id],
   )
 
   useEffect(() => {
@@ -340,21 +344,18 @@ function MessagesPage() {
     }
   }, [latestNotification, loadConversations, openConversation, selectedConversationId])
 
+  useVisiblePolling(async () => {
+    await loadConversations({ silent: true })
+    if (selectedConversationId) await openConversation(selectedConversationId, { updateQuery: false, silent: true })
+  }, { enabled: Boolean(user?.id) && realtimeStatus !== 'connected', intervalMs: selectedConversationId ? 15000 : 30000 })
+
+  const reconcileAfterReconnect = useEffectEvent(() => {
+    void loadConversations({ silent: true })
+    if (selectedConversationId) void openConversation(selectedConversationId, { updateQuery: false, silent: true })
+  })
   useEffect(() => {
-    let cancelled = false
-    let timer
-    const poll = async () => {
-      if (document.visibilityState !== 'hidden') {
-        await loadConversations({ silent: true })
-        if (!cancelled && selectedConversationId) {
-          await openConversation(selectedConversationId, { updateQuery: false, silent: true })
-        }
-      }
-      if (!cancelled) timer = globalThis.setTimeout(poll, 15000)
-    }
-    timer = globalThis.setTimeout(poll, 15000)
-    return () => { cancelled = true; globalThis.clearTimeout(timer) }
-  }, [loadConversations, openConversation, selectedConversationId])
+    if (realtimeStatus === 'connected') reconcileAfterReconnect()
+  }, [realtimeStatus])
 
   useEffect(() => {
     const trimmedQuery = recipientQuery.trim()

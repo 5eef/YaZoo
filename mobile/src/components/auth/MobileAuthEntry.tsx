@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AccessibilityInfo, ActivityIndicator, Animated, Easing, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { PasswordInput } from './PasswordInput';
 import { AnimatedBrandLogo } from './AnimatedBrandLogo';
 import { Button } from '../ui';
 import { useTheme } from '../../theme/ThemeProvider';
@@ -52,14 +53,20 @@ export function MobileAuthEntry(props: Props) {
   }, [progress]);
   const t = dictionaries[props.locale];
   const direction = { writingDirection: props.locale === 'ar' ? 'rtl' as const : 'ltr' as const, textAlign: props.locale === 'ar' ? 'right' as const : 'left' as const };
-  const field = (key: Field, label: string, secure = false) => <View key={key}>
-    <Text style={[styles.label, direction]}>{label}</Text>
-    <TextInput accessibilityLabel={label} value={props.values[key]} onChangeText={value => props.onChange(key, value)} secureTextEntry={secure}
-      autoCapitalize={key === 'name' ? 'words' : 'none'} autoCorrect={false} keyboardType={key === 'email' ? 'email-address' : 'default'}
-      autoComplete={key === 'email' ? 'email' : key === 'name' ? 'name' : props.register ? 'new-password' : 'current-password'}
-      style={[styles.input, direction]} />
-    {props.fields[key]?.map((message, index) => <Text key={index} accessibilityRole="alert" style={[styles.error, direction]}>{message}</Text>)}
-  </View>;
+  const field = (key: Field, label: string, secure = false) => {
+    const inputProps = {
+      accessibilityLabel: label, value: props.values[key], onChangeText: (value: string) => props.onChange(key, value),
+      autoCapitalize: key === 'name' ? 'words' as const : 'none' as const, autoCorrect: false,
+      keyboardType: key === 'email' ? 'email-address' as const : 'default' as const,
+      autoComplete: key === 'email' ? 'email' as const : key === 'name' ? 'name' as const : props.register ? 'new-password' as const : 'current-password' as const,
+      style: [styles.input, direction],
+    };
+    return <View key={key}>
+      <Text style={[styles.label, direction]}>{label}</Text>
+      {secure ? <PasswordInput locale={props.locale} {...inputProps} /> : <TextInput {...inputProps} />}
+      {props.fields[key]?.map((message, index) => <Text key={index} accessibilityRole="alert" style={[styles.error, direction]}>{message}</Text>)}
+    </View>;
+  };
   return <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} onLayout={event => {
     // Freeze the intro geometry: opening the keyboard must not restart or move it.
     if (!height) setHeight(event.nativeEvent.layout.height);

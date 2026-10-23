@@ -53,6 +53,13 @@ class OperationsSchedule
             ->withoutOverlapping()
             ->onOneServer();
 
+        $schedule
+            ->command('yazoo:purge-expired-stories --limit=200')
+            ->hourly()
+            ->name('retention:purge-expired-stories')
+            ->withoutOverlapping()
+            ->onOneServer();
+
         if (config('queue.default') !== 'sync') {
             $schedule
                 ->command('yazoo:dispatch-account-deletion-retries')

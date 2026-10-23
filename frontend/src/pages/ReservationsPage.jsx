@@ -12,6 +12,7 @@ import {
   updateReservationDeliveryStatusRequest,
 } from '../api/reservations'
 import Avatar from '../components/ui/Avatar'
+import ReservationFollowUp from '../components/commerce/ReservationFollowUp'
 import Button from '../components/ui/Button'
 import SkeletonBlock from '../components/ui/SkeletonBlock'
 import { useI18n } from '../hooks/useI18n'
@@ -284,7 +285,8 @@ function ReservationsPage() {
                 reservation={reservation}
                 processingId={processingId}
                 onAction={handleAction}
-                paymentConfig={paymentConfig}
+                  paymentConfig={paymentConfig}
+                  onUpdated={loadReservations}
               />
             ))}
           </div>
@@ -303,7 +305,7 @@ function HeroStatCard({ label, value }) {
   )
 }
 
-function ReservationCard({ reservation, processingId, onAction, paymentConfig }) {
+function ReservationCard({ reservation, processingId, onAction, paymentConfig, onUpdated }) {
   const { t } = useI18n()
   const counterpart = reservation.isBuyer ? reservation.seller : reservation.buyer
   const imageUrl = reservation.listing?.imageUrl
@@ -380,6 +382,7 @@ function ReservationCard({ reservation, processingId, onAction, paymentConfig })
         </div>
 
         <ReservationNextAction reservation={reservation} />
+        <ReservationFollowUp reservation={reservation} onUpdated={onUpdated} />
         <ReservationTimeline reservation={reservation} paymentConfig={paymentConfig} />
 
         <div className="rounded-[22px] bg-white/90 px-4 py-4 shadow-sm dark:bg-white/10">
@@ -672,6 +675,9 @@ function buildSuccessMessage(action, payload, t) {
 }
 
 function formatReservationKind(kind, t) {
+  if (kind === 'pet_sitting') return t('services.petSitting')
+  if (kind === 'training') return t('services.training')
+  if (!['animal', 'product'].includes(kind)) return t('ordersUi.statuses.kind.fallback')
   const key = `ordersUi.statuses.kind.${kind}`
   const label = t(key)
 

@@ -133,6 +133,43 @@ class R2MediaStorageTest extends TestCase
         Storage::disk('r2')->assertMissing($story->media_path);
     }
 
+    public function test_expired_story_cleanup_is_bounded_and_preserves_active_media(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+        $this->post('/api/stories', ['media_file' => $this->image()])->assertCreated();
+        $expired = Story::query()->firstOrFail();
+        $this->assertEqualsWithDelta(now()->addDay()->timestamp, $expired->expires_at->timestamp, 2);
+        $expired->update(['expires_at' => now()->subSecond()]);
+        $this->get(MediaStorage::resolveUrl($expired->media_path))->assertNotFound();
+        $this->postJson('/api/stories/'.$expired->id.'/view')->assertForbidden();
+        $this->post('/api/stories', ['media_file' => $this->image()])->assertCreated();
+        $active = Story::query()->whereKeyNot($expired->id)->firstOrFail();
+        $this->artisan('yazoo:purge-expired-stories --dry-run')->assertSuccessful();
+        Storage::disk('r2')->assertExists($expired->media_path);
+        $this->artisan('yazoo:purge-expired-stories --limit=1')->assertSuccessful();
+        $this->assertDatabaseMissing('stories', ['id' => $expired->id]);
+        Storage::disk('r2')->assertMissing($expired->media_path);
+        $this->assertDatabaseHas('stories', ['id' => $active->id]);
+        Storage::disk('r2')->assertExists($active->media_path);
+        $this->artisan('yazoo:purge-expired-stories --limit=0')->assertExitCode(2);
+    }
+
+    public function test_expired_story_cleanup_keeps_retryable_references_when_storage_refuses_deletion(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+        $this->post('/api/stories', ['media_file' => $this->image()])->assertCreated();
+        $story = Story::query()->firstOrFail();
+        $story->update(['expires_at' => now()->subSecond()]);
+        $disk = Storage::disk('r2');
+        $failing = \Mockery::mock($disk)->makePartial();
+        $failing->shouldReceive('delete')->with($story->media_path)->andReturn(false);
+        Storage::shouldReceive('disk')->with('r2')->andReturn($failing);
+        $this->artisan('yazoo:purge-expired-stories')->assertFailed();
+        $this->assertDatabaseHas('stories', ['id' => $story->id]);
+        $this->assertDatabaseHas('media_assets', ['path' => $story->media_path]);
+        $this->assertTrue($disk->exists($story->media_path));
+    }
+
     public function test_marketplace_uploads_preserve_omitted_fields_and_clean_on_delete(): void
     {
         $owner = User::factory()->approvedProfessional('breeder')->create();

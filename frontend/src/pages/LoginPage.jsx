@@ -48,6 +48,7 @@ function LoginPage() {
 
   const handleSubmit = async (event) => {
     event.preventDefault()
+    if (isSubmitting || backendStatus !== 'ready') return
     setErrorMessage('')
     setIsSubmitting(true)
     const formData = new FormData(event.currentTarget)
@@ -155,7 +156,7 @@ function LoginPage() {
               </p>
             ) : null}
 
-            <GoogleAuthErrorNotice message={googleAuthErrorMessage} />
+            <GoogleAuthErrorNotice message={errorMessage || isSubmitting ? null : googleAuthErrorMessage} />
 
             {errorMessage ? (
               <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-300/20 dark:bg-rose-950/60 dark:text-rose-100">

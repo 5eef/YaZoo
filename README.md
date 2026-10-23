@@ -1,4 +1,10 @@
-# YaZoo Startup 2026
+# YaZoo
+
+The official release source is `main`, with Laravel in `backend/`, React/Vite in
+`frontend/`, and Expo/React Native in `mobile/`. Historical branches, `output/`,
+and local consolidation copies are recovery sources, never application build roots.
+See [canonical architecture](docs/ARCHITECTURE_CANONIQUE.md) and
+[API environments](docs/API_ROUTES_AND_ENVIRONMENTS.md).
 
 > **Votre animal. Les bons professionnels.**
 >

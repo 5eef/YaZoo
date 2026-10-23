@@ -1,5 +1,14 @@
 # Dependency security — release candidate, 2026-10-08
 
+## Canonical integration check, 2026-10-23
+
+Fresh lockfile installs report **0 frontend vulnerabilities** and **5 HIGH mobile
+findings** propagated from the documented Node certificate tooling. Mobile's
+runtime graph policy passes after an Android export; raw mobile `npm audit`
+still fails and must not be described as clean. Expo Doctor passes 21 checks.
+Composer audit reports no advisories. These results apply to the canonical
+integration candidate; the older counts below describe their dated audit.
+
 Les commandes npm ci/audit/outdated/ls ont été réexécutées. Aucune modification incompatible de React, RN, Expo57, Metro, Router, Video ou Tailwind ; aucune UI refaite. Les registres consultés proposent toujours braces3.0.3 et node-forge1.4.0 sans fix compatible ; mise à jour upstream requise. npm audit brut reste **FAIL**, pas « NPM PASS ».
 
 | Advisory | Package/version | Direct/transitive ; parent | Exposition | Fixed version / breaking | Décision |

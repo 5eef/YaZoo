@@ -7,6 +7,18 @@ import {
 } from '../../functions/_shared/proxy.js'
 
 describe('Cloudflare Pages reverse proxy', () => {
+  it('preserves logout expiry and separate CSRF cookies without caching private data', async () => {
+    const headers = new Headers({ 'Content-Type': 'application/json', 'Cache-Control': 'no-store, private' })
+    headers.append('Set-Cookie', 'yazoo_api_token=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/; Domain=backend.example.test; HttpOnly; SameSite=Lax')
+    headers.append('Set-Cookie', 'XSRF-TOKEN=csrf; Path=/; Domain=backend.example.test; SameSite=Lax')
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{}', { headers })))
+    const response = await proxyRequest({ env: { BACKEND_ORIGIN: 'https://backend.example.test' }, request: new Request('https://demo.pages.dev/api/auth/logout', { method: 'POST' }) }, { expectedJson: true })
+    const cookies = response.headers.getSetCookie()
+    expect(cookies).toHaveLength(2)
+    expect(cookies[0]).toContain('Expires=Thu, 01 Jan 1970')
+    expect(cookies.every(cookie => cookie.includes('Secure') && !cookie.includes('Domain='))).toBe(true)
+    expect(response.headers.get('Cache-Control')).toBe('no-store, private')
+  })
   it('preserves media byte ranges and streams the response body', async () => {
     const fetchImpl = vi.fn().mockImplementation(async (_url, init) => {
       expect(init.headers.get('Range')).toBe('bytes=2-5')

@@ -5,6 +5,23 @@ export const baseUrl = normalizeBaseUrl(configured);
 let token: string | null = null;
 let invalidSession: () => void = () => {};
 export function configureSession(value: string | null, onInvalid: () => void) { token = value; invalidSession = onInvalid; }
+export async function authorizeBroadcast(socketId: string, channel: string): Promise<{ auth: string }> {
+  const requestToken = token;
+  if (!requestToken) throw new ApiError(401);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+  try {
+    const response = await fetch(`${baseUrl.replace(/\/api$/, '')}/broadcasting/auth`, {
+      method: 'POST', credentials: 'omit', signal: controller.signal,
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${requestToken}` },
+      body: JSON.stringify({ socket_id: socketId, channel_name: channel }),
+    });
+    if (requestToken !== token || !response.ok) throw new ApiError(response.status || 401);
+    const result = await response.json();
+    if (requestToken !== token || typeof result.auth !== 'string') throw new ApiError(401);
+    return { auth: result.auth };
+  } finally { clearTimeout(timeout); }
+}
 export function mediaHeaders(uri: string): Record<string, string> | undefined {
   try {
     const url = new URL(uri);
@@ -33,14 +50,21 @@ export async function api<T>(path: string, locale: Locale, method = 'GET', body?
       try { payload = JSON.parse(text); } catch { if (response.ok) throw new ApiError(502, {}, 'INVALID_RESPONSE'); }
     }
     if (response.ok && (payload === null || typeof payload !== 'object')) throw new ApiError(502, {}, 'INVALID_RESPONSE');
-    if (requestToken && requestToken !== token) throw new ApiError(401);
+    if (requestToken && requestToken !== token) {
+      // Logout detaches local state immediately. Its acknowledgement contains no private data.
+      if (path === '/auth/logout' && method === 'POST' && response.ok) return {} as T;
+      throw new ApiError(401);
+    }
     if (!response.ok) {
       if (response.status === 401 && requestToken && requestToken === token) invalidSession();
       const errors = payload && typeof payload === 'object' && 'errors' in payload ? payload.errors : {};
       const code = payload && typeof payload === 'object' && 'code' in payload && payload.code === 'DEMO_BACKEND_WAKING' ? payload.code : payload && typeof payload === 'object' && 'error' in payload && payload.error === 'showcase.uploads_disabled' ? 'SHOWCASE_UPLOADS_DISABLED' : undefined;
       const retryHeader = response.headers.get('Retry-After');
       const retryAfter = retryHeader && /^\d+$/.test(retryHeader) ? Math.min(Number(retryHeader), 300) : undefined;
-      throw new ApiError(response.status, errors && typeof errors === 'object' && !Array.isArray(errors) ? errors as Record<string, string[]> : {}, code, retryAfter);
+      const fields = errors && typeof errors === 'object' && !Array.isArray(errors)
+        ? Object.fromEntries(Object.entries(errors).filter(([, value]) => Array.isArray(value) && value.every(message => typeof message === 'string')))
+        : {};
+      throw new ApiError(response.status, fields, code, retryAfter);
     }
     return payload as T;
   } catch (error) {

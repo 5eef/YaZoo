@@ -10,6 +10,7 @@ import {
   updateVeterinarianAppointmentStatusRequest,
 } from '../api/veterinarianAppointments'
 import Button from '../components/ui/Button'
+import { deleteAvailability } from '../api/demoIntegration'
 import { useI18n } from '../hooks/useI18n'
 import { getErrorMessage } from '../utils/getErrorMessage'
 import { formatDate } from '../utils/formatDate'
@@ -160,6 +161,17 @@ function VeterinarianAppointmentsPage() {
       ) : null}
 
       {Object.entries(fieldErrors).map(([field, errors]) => <p key={field} role="alert" className="text-sm text-red-700 dark:text-red-200">{Array.isArray(errors) ? errors.join(' ') : String(errors)}</p>)}
+      {veterinarianId && isOwner && <div className="grid gap-3">
+        {slots.map(slot => <div key={slot.id} className="flex flex-wrap items-center gap-3 rounded-2xl bg-white/90 p-4 dark:bg-white/8">
+          <span>{slotDate(slot.startsAt)}</span>
+          <Button disabled={pending} variant="secondary" onClick={async () => {
+            if (!globalThis.confirm(t('integration.confirmChange')) || !beginMutation()) return
+            try { await deleteAvailability(slot.id); await load(); setMessage(t('integration.saved')) }
+            catch (error) { showFailure(error) }
+            finally { endMutation() }
+          }}>{t('integration.deleteSlot')}</Button>
+        </div>)}
+      </div>}
       <div aria-live="polite" className="text-sm text-violet-800 dark:text-violet-100">{message}</div>
       <div className="grid gap-4">
         {appointments.map((appointment) => (
@@ -170,6 +182,7 @@ function VeterinarianAppointmentsPage() {
             <p className="mt-2 text-xs font-semibold uppercase text-violet-700">{t(`vetAppointments.status.${appointment.status}`)}</p>
             <div className="mt-3 flex flex-wrap gap-2">
               {appointment.canManage && appointment.status === 'pending' ? <Button type="button" disabled={pending} onClick={() => updateStatus(appointment.id, 'confirmed')}>{t('vetAppointments.confirm')}</Button> : null}
+              {appointment.canManage && appointment.status === 'pending' ? <Button type="button" disabled={pending} variant="ghost" onClick={() => updateStatus(appointment.id, 'rejected')}>{t('vetAppointments.reject')}</Button> : null}
               {appointment.canCancel ? <Button type="button" disabled={pending} variant="ghost" onClick={() => updateStatus(appointment.id, 'cancelled')}>{t('common.cancel')}</Button> : null}
               {appointment.canManage && appointment.status === 'confirmed' && new Date(appointment.endsAt).getTime() < Date.now() ? <Button type="button" disabled={pending} variant="secondary" onClick={() => updateStatus(appointment.id, 'completed')}>{t('vetAppointments.complete')}</Button> : null}
               {appointment.canReview ? (

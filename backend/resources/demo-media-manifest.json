@@ -1,0 +1,33 @@
+{
+  "mode": "pre_scanned_demo_files_only",
+  "scanned_at": "2026-10-22T03:17:59.568414+00:00",
+  "expires_at": "2026-10-29T03:17:59.568414+00:00",
+  "engine": "ClamAV 1.5.4/28160/Wed Oct 21 06:25:49 2026",
+  "scan_result": "clean",
+  "files": [
+    {
+      "source": "backend/database/seeders/assets/marketplace/dresseur_chien.png",
+      "sha256": "c47dee3011688c6f98ed2b290c1f051df201c258ff27273a2c68f802d30b0089",
+      "size": 393018,
+      "mime_type": "image/png"
+    },
+    {
+      "source": "backend/database/seeders/assets/marketplace/food_dog_produit1.png",
+      "sha256": "17daa04892ae603722d808ada368b43ef9ce25e1e9f07f00d917d93dbacad1f9",
+      "size": 260460,
+      "mime_type": "image/png"
+    },
+    {
+      "source": "mobile/assets/brand/yazoo-inapp-logo.png",
+      "sha256": "0688699f4f3815118cefa011ac51426e0914a993e7fec98eaef82c4e379ba9ea",
+      "size": 932943,
+      "mime_type": "image/png"
+    },
+    {
+      "source": "mobile/assets/brand/login-logo-light.mp4",
+      "sha256": "9c737ff03b668ae099eb0bb620b3ef6bae4a90e6af7cb6fb6f2cb3d9c1ad9e72",
+      "size": 704381,
+      "mime_type": "video/mp4"
+    }
+  ]
+}

@@ -6,6 +6,7 @@ import { useAuth } from '../hooks/useAuth'
 import { getNotificationsPollMs, isRealtimeEnabled as resolveRealtimeEnabled } from '../lib/appConfig'
 import { subscribeRealtimeStatus, subscribeToPrivateChannel } from '../lib/realtime'
 import { NotificationContext } from './notification-context'
+import { useVisiblePolling } from '../hooks/useVisiblePolling'
 
 const realtimeEnabled = resolveRealtimeEnabled()
 const notificationsPollMs = getNotificationsPollMs()
@@ -70,7 +71,6 @@ export function NotificationProvider({ children }) {
 
   useEffect(() => {
     let cancelled = false
-    let intervalId = null
 
     const syncUnreadCount = async () => {
       if (!isAuthenticated) {
@@ -102,18 +102,15 @@ export function NotificationProvider({ children }) {
 
     syncUnreadCount()
 
-    if (isAuthenticated && (!realtimeEnabled || realtimeStatus !== 'connected')) {
-      intervalId = globalThis.setInterval(syncUnreadCount, notificationsPollMs)
-    }
-
     return () => {
       cancelled = true
-
-      if (intervalId) {
-        globalThis.clearInterval(intervalId)
-      }
     }
   }, [isAuthenticated, isBootstrapping, realtimeStatus])
+
+  useVisiblePolling(async () => {
+    const response = await getUnreadNotificationsCountRequest()
+    setUnreadCount(response.data.data.unreadCount ?? 0)
+  }, { enabled: isAuthenticated && !isBootstrapping && realtimeStatus !== 'connected', intervalMs: notificationsPollMs })
 
   const value = useMemo(
     () => ({

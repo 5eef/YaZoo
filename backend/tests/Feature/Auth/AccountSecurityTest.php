@@ -19,6 +19,20 @@ class AccountSecurityTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_provider_failure_does_not_disclose_account_existence(): void
+    {
+        User::factory()->create(['email' => 'provider-failure@example.test']);
+        Mail::shouldReceive('to')->once()->andThrow(new \RuntimeException('Sensitive provider diagnostic'));
+        $known = $this->postJson('/api/auth/password/forgot', [
+            'channel' => 'email', 'identifier' => 'provider-failure@example.test',
+        ])->assertOk();
+        $unknown = $this->postJson('/api/auth/password/forgot', [
+            'channel' => 'email', 'identifier' => 'unknown-provider@example.test',
+        ])->assertOk();
+        $this->assertSame($known->json(), $unknown->json());
+        $this->assertStringNotContainsString('Sensitive', $known->getContent());
+    }
+
     public function test_email_recovery_is_generic_hashed_single_use_and_revokes_tokens(): void
     {
         Mail::fake();

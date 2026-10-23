@@ -1,6 +1,7 @@
 import PropTypes from 'prop-types'
 
 const paths = {
+  reels: <><rect x="4" y="3" width="16" height="18" rx="3" /><path d="m10 8 6 4-6 4V8Z" /></>,
   home: (
     <>
       <path d="M3.75 10.5 12 4.5l8.25 6v8.25a1.5 1.5 0 0 1-1.5 1.5h-4.5v-6h-4.5v6h-4.5a1.5 1.5 0 0 1-1.5-1.5V10.5Z" />

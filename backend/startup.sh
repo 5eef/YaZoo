@@ -15,7 +15,6 @@ if [ "${YAZOO_RUN_SHOWCASE_BOOTSTRAP:-false}" = "true" ]; then
     php artisan yazoo:migrate-production
 
     if [ "${YAZOO_RESET_RUNTIME_STATE:-false}" = "true" ]; then
-        php artisan cache:clear
         php artisan queue:clear "${QUEUE_CONNECTION:-redis}" --force
     fi
 
@@ -23,11 +22,13 @@ if [ "${YAZOO_RUN_SHOWCASE_BOOTSTRAP:-false}" = "true" ]; then
         --images="${YAZOO_SHOWCASE_IMAGES_PATH:-/opt/yazoo-showcase-images}" \
         --confirmation="${YAZOO_SHOWCASE_CONFIRMATION}"
 
+    # Preserve the legacy completion marker in operation_markers before cache purge.
+    if [ "${YAZOO_RESET_RUNTIME_STATE:-false}" = "true" ]; then
+        php artisan cache:clear
+    fi
+
     php artisan yazoo:ensure-showcase-media \
         --images="${YAZOO_SHOWCASE_IMAGES_PATH:-/opt/yazoo-showcase-images}"
-
-    php artisan yazoo:sync-showcase-credentials \
-        --confirmation="${YAZOO_SHOWCASE_CONFIRMATION}"
 
     php artisan yazoo:refresh-showcase-availability \
         --confirmation="${YAZOO_SHOWCASE_CONFIRMATION}"
@@ -86,6 +87,7 @@ scheduler_pid=""
 queue_pid=""
 php_fpm_pid=""
 nginx_pid=""
+reverb_pid=""
 
 start_managed_process() {
     process_name="$1"
@@ -135,6 +137,24 @@ check_managed_process() {
 
 trap 'shutdown_managed_processes 143' TERM INT
 
+if [ "${YAZOO_RUN_REVERB:-false}" = "true" ]; then
+    if [ "${BROADCAST_CONNECTION:-}" != "reverb" ]; then
+        echo "YAZOO_RUN_REVERB requires BROADCAST_CONNECTION=reverb." >&2
+        shutdown_managed_processes 1
+    fi
+    start_managed_process reverb php artisan reverb:start --host=127.0.0.1 --port=8081
+    reverb_attempt=1
+    until php -r '$s = @fsockopen("127.0.0.1", 8081, $e, $m, 0.2); if (!$s) { exit(1); } fclose($s);'; do
+        check_managed_process reverb "${reverb_pid}"
+        if [ "${reverb_attempt}" -ge 30 ]; then
+            echo "Reverb readiness timed out." >&2
+            shutdown_managed_processes 1
+        fi
+        sleep 0.3
+        reverb_attempt=$((reverb_attempt + 1))
+    done
+fi
+
 if [ "${YAZOO_RUN_SCHEDULER:-false}" = "true" ]; then
     start_managed_process scheduler php artisan schedule:work
 fi
@@ -166,6 +186,8 @@ done
 start_managed_process nginx nginx -g "daemon off;"
 
 while true; do
+    # Fail the container as one unit; the hosting supervisor restarts it.
+    check_managed_process reverb "${reverb_pid}"
     check_managed_process scheduler "${scheduler_pid}"
     check_managed_process queue "${queue_pid}"
     check_managed_process php-fpm "${php_fpm_pid}"

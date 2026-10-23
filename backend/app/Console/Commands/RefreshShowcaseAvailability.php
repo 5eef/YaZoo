@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Services\ShowcaseAvailability;
 use App\Support\ShowcaseBootstrapGuard;
+use App\Support\ShowcaseBootstrapState;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -15,13 +16,13 @@ class RefreshShowcaseAvailability extends Command
 
     protected $description = 'Maintient 14 jours de disponibilites fictives AFWAJ sans modifier les rendez-vous.';
 
-    public function handle(ShowcaseBootstrapGuard $guard, ShowcaseAvailability $availability): int
+    public function handle(ShowcaseBootstrapGuard $guard, ShowcaseAvailability $availability, ShowcaseBootstrapState $state): int
     {
         try {
             // Scheduled invocations use server configuration; never put the
             // confirmation in scheduler command lines or process listings.
             $guard->assertAllowed((string) ($this->option('confirmation') ?? config('operations.showcase_bootstrap_confirmation')));
-            if (Cache::store('database')->get('yazoo_showcase_bootstrap_v2') !== 'complete') {
+            if (! $state->isComplete()) {
                 throw new \RuntimeException('AFWAJ bootstrap required.');
             }
             $created = $availability->refresh();

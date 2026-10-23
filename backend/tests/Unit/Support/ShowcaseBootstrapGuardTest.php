@@ -94,4 +94,26 @@ class ShowcaseBootstrapGuardTest extends TestCase
 
         app(ShowcaseBootstrapGuard::class)->assertAllowed('demo-db.example/yazoo_showcase@demo.example');
     }
+
+    public function test_it_accepts_the_exact_afwaj_database_without_connecting(): void
+    {
+        config([
+            'database.connections.showcase.database' => 'yazoo_showcase_afwaj',
+            'operations.showcase_database_name' => 'yazoo_showcase_afwaj',
+            'operations.showcase_bootstrap_confirmation' => 'test-only-afwaj-confirmation',
+        ]);
+        app(ShowcaseBootstrapGuard::class)->assertAllowed('test-only-afwaj-confirmation');
+        $this->addToAssertionCount(1);
+    }
+
+    public function test_afwaj_guard_rejects_the_old_database_name_without_connecting(): void
+    {
+        config([
+            'operations.showcase_database_name' => 'yazoo_showcase_afwaj',
+            'operations.showcase_bootstrap_confirmation' => 'test-only-afwaj-confirmation',
+        ]);
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('cible MySQL');
+        app(ShowcaseBootstrapGuard::class)->assertAllowed('test-only-afwaj-confirmation');
+    }
 }

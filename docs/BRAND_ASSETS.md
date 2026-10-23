@@ -74,3 +74,11 @@ sont conservés. Logo décoratif masqué à l’accessibilité lorsque le titre 
 
 Les tests ne remplacent pas la revue physique propriétaire : Expo Go/APK,
 TalkBack, grands caractères, clavier et rendu natif du launcher.
+## Current local source replacement
+
+The local source previously named `YaZoo logo.png` was renamed to
+`YaZoo logo romove background.png` before canonical integration. The rename is
+preserved in Git. Existing Web/native runtime copies are retained; their historical
+mapping above describes the original asset import, not a fresh regeneration.
+The current Web artwork generator uses `YaZoo.png`, `YaZoo logo light.png` and
+`YaZoo logo dark.png` and does not require the retired source filename.

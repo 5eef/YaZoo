@@ -15,8 +15,13 @@ import { screens, socialScreens, type Screen } from './src/navigation/destinatio
 import { useSocial } from './src/features/social/useSocial';
 import { Avatar, Button } from './src/components/ui';
 import { ProfessionalCard } from './src/components/ProfessionalCard';
-import { api, configureSession } from './src/api/client';
+import { api, authorizeBroadcast, configureSession } from './src/api/client';
+import { connectRealtime, type RealtimeEvent } from './src/api/realtime';
+import { realtimeUrl } from './src/api/realtimeConfig';
+import type { Notification } from './src/features/social/types';
 import { ApiError, failureKey } from './src/api/errors';
+import { isSession } from './src/auth/validation';
+import { endSession } from './src/auth/logout';
 import { clearSession, readSession, saveSession, type Session } from './src/auth/session';
 import { dictionaries, type Locale, type TranslationKey } from './src/i18n/messages';
 import type { Appointment, Collection, Conversation, Service, Slot, Vet } from './src/features/types';
@@ -59,6 +64,7 @@ function PilotApp() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+  const [realtimeConnected, setRealtimeConnected] = useState(false);
   const [services, setServices] = useState<Service[]>([]);
   const [reason, setReason] = useState('');
   const [animal, setAnimal] = useState('');
@@ -75,6 +81,7 @@ function PilotApp() {
     const next = phoneLocale();
     setLocale(next); I18nManager.allowRTL(true); I18nManager.forceRTL(next === 'ar');
     setSession(null); setPassword(''); setConfirmation(''); setSelectedConversation(null);
+    setFields({}); setError(''); setEmail(''); setName(''); setRegister(false); setSelectedVet(null); setSlots([]); setVets([]); setServices([]); setAnimal(''); setRating('5');
     setConversations([]); setAppointments([]); setBody(''); setReason(''); setComment(''); setReviewId(null); router.replace('/');
     void clearSession().catch(() => {});
   }, [resetSocial]);
@@ -90,6 +97,39 @@ function PilotApp() {
   }, [invalidate]);
   const refreshScreen = useEffectEvent(() => { if (session) void perform(() => load(screen, 1)); });
   useEffect(() => { refreshScreen(); }, [screen, session?.user.id]);
+  const receiveRealtime = useEffectEvent((event: RealtimeEvent) => {
+    if (!session) return;
+    if (event.event === 'message.sent') {
+      const payload = event.data as { message?: Conversation['latestMessage'] };
+      if (!payload.message?.id || !payload.message.body) return;
+      const message = { ...payload.message, isOwn: payload.message.sender?.id === session.user.id };
+      setSelectedConversation(previous => {
+        if (!previous || event.channel !== `private-conversations.${previous.id}`) return previous;
+        const messages = [...(previous.messages || []).filter(item => item.id !== message.id), message].sort((a, b) => a.id - b.id);
+        return { ...previous, messages, latestMessage: message };
+      });
+      if (screen === 'conversation' && selectedConversation) void api(`/conversations/${selectedConversation.id}/read`, locale, 'PATCH').catch(() => {});
+    }
+    if (event.event === 'notification.created') {
+      const payload = event.data as { notification?: Notification };
+      if (payload.notification?.id) social.receiveNotification(payload.notification);
+      if (screen === 'messages') refreshScreen();
+    }
+  });
+  useEffect(() => {
+    const url = realtimeUrl();
+    if (!session || !url) return;
+    return connectRealtime({ url, origin: 'https://yazoo-showcase.pages.dev',
+      channels: [`private-users.${session.user.id}`, ...(screen === 'conversation' && selectedConversation ? [`private-conversations.${selectedConversation.id}`] : [])],
+      authorize: authorizeBroadcast, receive: event => receiveRealtime(event),
+      status: setRealtimeConnected, resync: () => refreshScreen(),
+    });
+  }, [session?.token, session?.user.id, screen, selectedConversation?.id]);
+  useEffect(() => {
+    if (!session || realtimeConnected || !['conversation', 'messages', 'notifications'].includes(screen)) return;
+    const interval = setInterval(() => refreshScreen(), 30000);
+    return () => clearInterval(interval);
+  }, [session?.user.id, screen, realtimeConnected]);
   async function changeLocale(next: Locale) {
     try {
       await SecureStore.setItemAsync('yazoo-native-locale', next);
@@ -106,7 +146,7 @@ function PilotApp() {
     setBusy(true); setError(''); setFields({});
     try { await action(); } catch (failure) {
       const issue = failure instanceof ApiError ? failure : new ApiError(500);
-      setError(t(failureKey(failure))); setFields(issue.fields);
+      setError(t(!session && !register && issue.status === 401 ? 'invalidCredentials' : failureKey(failure))); setFields(issue.fields);
     } finally { mutationLock.current = false; setBusy(false); }
   }
   async function load(target: Screen = screen, targetPage = page) {
@@ -134,11 +174,27 @@ function PilotApp() {
     const result = await api<{ data: Conversation }>('/conversations/direct', locale, 'POST', { recipient_id: id });
     setSelectedConversation(result.data); setScreen('conversation');
   }
+  const logoutLock = useRef(false);
+  const [logoutBusy, setLogoutBusy] = useState(false);
+  async function logout() {
+    if (logoutLock.current) return;
+    logoutLock.current = true; setLogoutBusy(true);
+    try {
+      const result = await endSession(() => api('/auth/logout', locale, 'POST'), clearSession, invalidate);
+      if (!result.remoteRevoked) Alert.alert(t('logout'), t('logoutLocalOnly'));
+      if (!result.localCleared) setError(t('unexpected'));
+    } finally { logoutLock.current = false; setLogoutBusy(false); }
+  }
   async function authenticate() {
     await perform(async () => {
-      const result = await api<Session>(`/auth/mobile/${register ? 'register' : 'login'}`, locale, 'POST', {
-        email, password, device_name: `YaZoo ${Platform.OS}`, ...(register ? { name, password_confirmation: confirmation, preferred_locale: locale } : {})
+      if (!email.trim() || !password) throw new ApiError(422, {
+        ...(!email.trim() ? { email: [t('validation')] } : {}),
+        ...(!password ? { password: [t('validation')] } : {}),
       });
+      const result = await api<Session>(`/auth/mobile/${register ? 'register' : 'login'}`, locale, 'POST', {
+        email: email.trim().toLowerCase(), password, device_name: `YaZoo ${Platform.OS}`, ...(register ? { name, password_confirmation: confirmation, preferred_locale: locale } : {})
+      });
+      if (!isSession(result)) throw new ApiError(502, {}, 'INVALID_RESPONSE');
       await saveSession(result); setSession(result); configureSession(result.token, invalidate); setPassword(''); setConfirmation('');
       router.replace('/feed');
     });
@@ -180,11 +236,11 @@ function PilotApp() {
       </View>)}</View>}
       {screen === 'messages' && <View>{!conversations.length && <Text style={styles.text}>{t('empty')}</Text>}{conversations.map(conversation => <Pressable key={conversation.id} accessibilityRole="button" accessibilityLabel={conversation.participant.name} onPress={() => void perform(async () => { setSelectedConversation((await api<{ data: Conversation }>(`/conversations/${conversation.id}`, locale)).data); await api(`/conversations/${conversation.id}/read`, locale, 'PATCH'); setScreen('conversation'); })} style={[styles.card, { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 80 }]}><Avatar name={conversation.participant.name} uri={conversation.participant.avatar} /><View style={{ flex: 1 }}><Text style={styles.heading}>{conversation.participant.name}</Text><Text numberOfLines={2} style={styles.text}>{conversation.latestMessage?.body}</Text><Text style={styles.label}>{conversation.updatedAt && new Date(conversation.updatedAt).toLocaleString(locale)}</Text></View>{!!conversation.unreadCount && <Text accessibilityLabel={`${t('unread')} ${conversation.unreadCount}`} style={{ color: colors.brandText, fontWeight: '700' }}>{conversation.unreadCount}</Text>}</Pressable>)}</View>}
       {screen === 'conversation' && selectedConversation && <View><View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}><Avatar name={selectedConversation.participant.name} uri={selectedConversation.participant.avatar} /><Text style={[styles.heading, textStyle]}>{selectedConversation.participant.name}</Text></View>{selectedConversation.messages?.map(message => <View key={message.id} style={[styles.card, { alignSelf: message.isOwn ? 'flex-end' : 'flex-start', maxWidth: '88%', backgroundColor: message.isOwn ? colors.muted : colors.surface }]}><Text style={[styles.label, textStyle]}>{message.sender?.name}</Text><Text style={[styles.text, textStyle]}>{message.body}</Text><Text style={styles.label}>{message.createdAt && new Date(message.createdAt).toLocaleTimeString(locale)}</Text></View>)}{input(t('message'), body, setBody, false, 'body')}{button(t('send'), () => void perform(async () => { if (!body.trim() || body.trim().length > 5000) throw new ApiError(422, { body: [t('validation')] }); await api(`/conversations/${selectedConversation.id}/messages`, locale, 'POST', { body: body.trim() }); setBody(''); await load('conversation'); }))}</View>}
-      {screen === 'settings' && <View style={styles.card}><Text style={styles.heading}>{t('language')}</Text>{languages}<Avatar name={session.user.name} uri={session.user.avatar} size={64} /><Text style={[styles.heading, textStyle]}>{session.user.name}</Text><Text style={[styles.text, textStyle]}>{session.user.email}</Text><Text style={[styles.text, textStyle]}>{session.user.city}</Text><Text style={[styles.heading, textStyle]}>{t('theme')}</Text>{(['system', 'light', 'dark'] as const).map(value => <View key={value}>{button(`${t(value)}${preference === value ? ' ✓' : ''}`, () => void perform(() => setPreference(value)), true)}</View>)}<Text style={[styles.text, textStyle]}>{t('secure')}</Text>{button(t('logout'), () => void perform(async () => { await api('/auth/logout', locale, 'POST'); await clearSession(); invalidate(); }))}</View>}
+      {screen === 'settings' && <View style={styles.card}><Text style={styles.heading}>{t('language')}</Text>{languages}<Avatar name={session.user.name} uri={session.user.avatar} size={64} /><Text style={[styles.heading, textStyle]}>{session.user.name}</Text><Text style={[styles.text, textStyle]}>{session.user.email}</Text><Text style={[styles.text, textStyle]}>{session.user.city}</Text><Text style={[styles.heading, textStyle]}>{t('theme')}</Text>{(['system', 'light', 'dark'] as const).map(value => <View key={value}>{button(`${t(value)}${preference === value ? ' ✓' : ''}`, () => void perform(() => setPreference(value)), true)}</View>)}<Text style={[styles.text, textStyle]}>{t('secure')}</Text>{button(t('logout'), () => void logout())}</View>}
     </View>
     <Text style={[styles.text, textStyle]}>{t('demo')}</Text>{button(t('privacy'), () => void openLegal('/privacy'), true)}{button(t('terms'), () => void openLegal('/cgu'), true)}
   </ScrollView></KeyboardAvoidingView>;
-  return provideScreen(session ? <YaZooShell backEnabled={!['feed', 'reels', 'messages'].includes(screen) && (screen !== 'user-profile' || !social.isOwnProfile)} onBack={() => { Keyboard.dismiss(); if (router.canGoBack()) router.back(); else router.replace('/feed'); }} screen={screen} user={session.user} rtl={rtl} label={key => t(key)} navigate={target => void navigate(target)} communitiesEnabled={social.flags.communities} openWeb={path => void social.openWeb(path)} webLinks={[{ label: t('reservationsWeb'), path: '/reservations' }, { label: t('ordersWeb'), path: '/orders/history' }, { label: t('verificationWeb'), path: '/settings/professional-verification' }]}>{content}</YaZooShell> : <SafeAreaView style={styles.container}>{content}</SafeAreaView>);
+  return provideScreen(session ? <YaZooShell onLogout={() => void logout()} logoutBusy={logoutBusy} backEnabled={!['feed', 'reels', 'messages'].includes(screen) && (screen !== 'user-profile' || !social.isOwnProfile)} onBack={() => { Keyboard.dismiss(); if (router.canGoBack()) router.back(); else router.replace('/feed'); }} screen={screen} user={session.user} rtl={rtl} label={key => t(key)} navigate={target => void navigate(target)} communitiesEnabled={social.flags.communities} openWeb={path => void social.openWeb(path)} webLinks={[{ label: t('reservationsWeb'), path: '/reservations' }, { label: t('ordersWeb'), path: '/orders/history' }, { label: t('verificationWeb'), path: '/settings/professional-verification' }]}>{content}</YaZooShell> : <SafeAreaView style={styles.container}>{content}</SafeAreaView>);
   async function transition(id: number, status: string) { await perform(async () => { await api(`/veterinarian-appointments/${id}/status`, locale, 'PATCH', { status }); await load('appointments'); }); }
   async function openLegal(path: string) { try { const config = await api<{ frontendUrl: string }>('/legal/config', locale); const url = new URL(config.frontendUrl); if (!['https:', 'http:'].includes(url.protocol)) throw new Error('Invalid legal URL'); await Linking.openURL(`${url.origin}${path}?lang=${locale}`); } catch (failure) { setError(t(failureKey(failure))); } }
 }

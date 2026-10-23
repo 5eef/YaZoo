@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { getSessionEpoch } from './sessionEpoch'
 import { classifyApiError } from './classifyError'
 
 import { getErrorMessage } from '../utils/getErrorMessage'
@@ -33,6 +34,7 @@ export const ensureCsrfCookie = () =>
   })
 
 api.interceptors.request.use((config) => {
+  config.sessionEpoch = getSessionEpoch()
   // A demo mutation may still be processing behind the proxy at 30 seconds.
   // Wait for its response; never automatically replay a write.
   if (!['get', 'head', 'options'].includes(String(config.method ?? 'get').toLowerCase()) && config.timeout === API_TIMEOUT_MS) config.timeout = 75000
@@ -71,8 +73,13 @@ api.interceptors.request.use((config) => {
 })
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => response.config.sessionEpoch === getSessionEpoch()
+    ? response
+    : Promise.reject(new axios.CanceledError('Obsolete account response')),
   (error) => {
+    if (error?.config && error.config.sessionEpoch !== getSessionEpoch()) {
+      return Promise.reject(new axios.CanceledError('Obsolete account response'))
+    }
     if (shouldEmitAuthSessionExpired(error)) {
       globalThis.dispatchEvent?.(new CustomEvent(AUTH_SESSION_EXPIRED_EVENT))
     }

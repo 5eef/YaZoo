@@ -17,9 +17,11 @@ use App\Models\VeterinarianAppointment;
 use App\Models\VeterinarianAppointmentReview;
 use App\Models\VeterinarianAvailabilitySlot;
 use App\Services\MarketplacePublishingResolver;
+use Database\Seeders\DemoContentSeeder;
 use Database\Seeders\MarketplaceTestSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
@@ -51,6 +53,28 @@ class MarketplaceDemoSeederTest extends TestCase
         }
 
         parent::tearDown();
+    }
+
+    public function test_reseeding_preserves_existing_test_and_real_accounts_exactly(): void
+    {
+        $arguments = ['--images' => $this->imagesPath];
+        $this->assertSame(0, Artisan::call('yazoo:seed-marketplace-demo', $arguments));
+        $vet = User::query()->where('email', 'veterinaire.agadir@yazoo.test')->firstOrFail();
+        $vet->forceFill(['password' => Hash::make('Changed-Only-In-Isolated-Test!'), 'banned_at' => now(), 'name' => 'Real owner'])->save();
+        User::factory()->create(['email' => 'real@example.test']);
+        $before = DB::table('users')->orderBy('id')->get()->toJson();
+        $this->assertSame(0, Artisan::call('yazoo:seed-marketplace-demo', $arguments));
+        $this->assertSame($before, DB::table('users')->orderBy('id')->get()->toJson());
+    }
+
+    public function test_social_seeder_rerun_preserves_all_user_hashes(): void
+    {
+        $this->seed(DemoContentSeeder::class);
+        $user = User::query()->where('email', 'sara.adoption@yazoo.ma')->firstOrFail();
+        $user->forceFill(['password' => Hash::make('Private-Test-Only!')])->save();
+        $before = DB::table('users')->orderBy('id')->get()->toJson();
+        $this->seed(DemoContentSeeder::class);
+        $this->assertSame($before, DB::table('users')->orderBy('id')->get()->toJson());
     }
 
     public function test_command_refuses_production_environment(): void

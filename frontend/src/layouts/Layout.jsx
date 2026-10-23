@@ -28,6 +28,7 @@ import ScrollTopButton from '../components/ui/ScrollTopButton'
 import { useAuth } from '../hooks/useAuth'
 import { useI18n } from '../hooks/useI18n'
 import { useNotifications } from '../hooks/useNotifications'
+import { useVisiblePolling } from '../hooks/useVisiblePolling'
 import { asArray, extractDataArray, extractDataObject } from '../utils/apiData'
 import { formatDate } from '../utils/formatDate'
 import { formatBadgeCount } from '../utils/formatBadgeCount'
@@ -42,7 +43,7 @@ import { OPEN_MESSAGE_DOCK_EVENT } from '../lib/messageDock'
 function Layout() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { isAuthenticated, isBootstrapping, logout, user } = useAuth()
+  const { isAuthenticated, isBootstrapping, hasEndedSession, logout, user } = useAuth()
   const { isRtl, t } = useI18n()
   const { latestNotification, refreshUnreadCount, unreadCount } = useNotifications()
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0)
@@ -361,13 +362,16 @@ function Layout() {
       }
     }
 
-    const intervalId = globalThis.setInterval(refreshUnreadMessagesCount, 45_000)
-
     return () => {
       globalThis.clearTimeout(timeoutId)
-      globalThis.clearInterval(intervalId)
     }
   }, [isAuthenticated, isBootstrapping, location.pathname, refreshUnreadMessagesCount])
+
+  useVisiblePolling(async () => {
+    await refreshUnreadMessagesCount()
+    if (isNotificationsOpen) await loadNotificationPreview()
+    if (isMessagesOpen) await loadMessagePreview()
+  }, { enabled: isAuthenticated && !isBootstrapping, intervalMs: 45000 })
 
   useEffect(() => {
     if (latestNotification?.type !== 'new_message') {
@@ -409,7 +413,7 @@ function Layout() {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to={`/login?returnTo=${encodeURIComponent(location.pathname + location.search)}`} replace />
+    return <Navigate to={hasEndedSession ? '/login' : `/login?returnTo=${encodeURIComponent(location.pathname + location.search)}`} replace />
   }
 
   const handleCreateStory = () => {
@@ -427,6 +431,7 @@ function Layout() {
 
   const primaryNavigationItems = [
     { to: '/feed', label: t('common.feed'), icon: 'home' },
+    { to: '/reels', label: 'Reels', icon: 'reels' },
     { to: '/marketplace', label: t('common.marketplace'), icon: 'marketplace' },
     { to: '/communities', label: t('common.communities'), icon: 'communities' },
     { to: '/messages', label: t('common.messages'), icon: 'chat' },
@@ -646,7 +651,7 @@ function MobileMenuDrawer({
     : 'right-0 border-l'
 
   return (
-    <div className={`fixed inset-0 z-40 lg:hidden ${isOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+    <div className={`fixed inset-0 z-50 lg:hidden ${isOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
       <button
         type="button"
         onClick={onClose}

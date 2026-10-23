@@ -31,4 +31,12 @@ describe('appConfig', () => {
     expect(getApiBaseUrl()).toBe('/api')
     expect(getBackendBaseUrl()).toBe('')
   })
+
+  it('refuse un double prefixe API configure au lieu de demander /api/api', async () => {
+    const { getApiBaseUrl } = await import('./appConfig')
+    for (const value of ['/api/api', 'https://api.yazoo.test/api/api/']) {
+      vi.stubEnv('VITE_API_URL', value)
+      expect(getApiBaseUrl).toThrow('single /api prefix')
+    }
+  })
 })

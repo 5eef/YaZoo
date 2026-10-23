@@ -1,4 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
+import { isSession } from './validation';
 export type User = { id: number; name: string; email: string; city?: string; preferredLocale?: string; avatar?: string; bio?: string; coverPhoto?: string };
 export type Session = { token: string; user: User; expires_at: string };
 const KEY = 'yazoo-native-session';
@@ -7,7 +8,7 @@ export async function readSession(): Promise<Session | null> {
   if (!stored) return null;
   try {
     const value = JSON.parse(stored) as Session;
-    if (typeof value.token !== 'string' || !value.user?.id || !Number.isFinite(Date.parse(value.expires_at)) || Date.parse(value.expires_at) <= Date.now()) { await clearSession(); return null; }
+    if (!isSession(value)) { await clearSession(); return null; }
     return value;
   } catch { await clearSession(); return null; }
 }

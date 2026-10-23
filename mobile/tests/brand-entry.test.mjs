@@ -40,7 +40,7 @@ function entry(reduceMotion = false) {
   class Value { constructor(value) { this.value = value; } setValue(value) { this.value = value; } interpolate(options) { return options; } stopAnimation() {} }
   const native = Object.fromEntries(['View', 'Text', 'Image', 'TextInput', 'ScrollView', 'KeyboardAvoidingView', 'ActivityIndicator'].map(name => [name, name]));
   Object.assign(native, { Platform: { OS: 'android' }, StyleSheet: { create: value => value }, Easing: { cubic: 'cubic', out: value => value }, Animated: { Value, View: 'AnimatedView', timing: (value, options) => ({ start: () => value.setValue(options.toValue) }), parallel: animations => ({ start: () => animations.forEach(animation => animation.start()) }) }, AccessibilityInfo: { isReduceMotionEnabled: async () => reduceMotion, addEventListener: () => ({ remove() {} }) } });
-  return harness('../src/components/auth/MobileAuthEntry.tsx', { 'react-native': native, './AnimatedBrandLogo': { AnimatedBrandLogo: 'AnimatedBrandLogo' }, '../ui': { Button: 'Button' }, '../../theme/ThemeProvider': { useTheme: () => ({ colors: themes.light, isDark: false }) }, '../../theme/tokens': { themes, radius, spacing, typography }, '../../i18n/messages': { dictionaries } });
+  return harness('../src/components/auth/MobileAuthEntry.tsx', { 'react-native': native, './PasswordInput': { PasswordInput: 'TextInput' }, './AnimatedBrandLogo': { AnimatedBrandLogo: 'AnimatedBrandLogo' }, '../ui': { Button: 'Button' }, '../../theme/ThemeProvider': { useTheme: () => ({ colors: themes.light, isDark: false }) }, '../../theme/tokens': { themes, radius, spacing, typography }, '../../i18n/messages': { dictionaries } });
 }
 const props = { locale: 'fr', register: false, busy: false, error: '', values: { name: '', email: '', password: '', password_confirmation: '' }, fields: {}, onChange() {}, onSubmit() {}, onToggle() {}, onRetry() {}, onLegal() {} };
 test('intro shows only brand, then Login and Register, without guest language controls in FR EN AR', () => {
@@ -70,11 +70,12 @@ test('Reduce Motion exposes final form without waiting for intro timer', async (
 test('restoring session renders brand only, a saved session renders shell, a guest renders entry', () => {
   const saved = { token: 'test-only', user: { id: 1, name: 'DEMO' } };
   const mocks = {
+    './src/api/realtime': { connectRealtime: () => () => {} }, './src/api/realtimeConfig': { realtimeUrl: () => null },
     './src/components/reels/ReelsScreen': { ReelsScreen: 'Reels' }, 'expo-router': { Stack: 'Stack', router: {}, usePathname: () => '/feed' },
     'react-native': { StyleSheet: { create: value => value } }, 'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView' }, 'expo-secure-store': {}, 'expo-localization': { getLocales: () => [{ languageCode: 'ar' }] },
     './src/i18n/deviceLocale': { deviceLocale, startupLocale }, './src/components/auth/BrandLoading': { BrandLoading: 'BrandLoading' }, './src/components/auth/MobileAuthEntry': { MobileAuthEntry: 'MobileAuthEntry' },
     './src/theme/ThemeProvider': { useTheme: () => ({ colors: themes.light }) }, './src/navigation/YaZooShell': { YaZooShell: 'YaZooShell' }, './src/navigation/destinations': { screens: ['feed'], socialScreens: ['feed'] },
-    './src/features/social/useSocial': { useSocial: () => ({ render: () => 'feed', reset() {}, flags: {} }) }, './src/components/ui': {}, './src/components/ProfessionalCard': {}, './src/api/client': {}, './src/api/errors': {}, './src/auth/session': {}, './src/i18n/messages': { dictionaries },
+    './src/features/social/useSocial': { useSocial: () => ({ render: () => 'feed', reset() {}, flags: {} }) }, './src/components/ui': {}, './src/components/ProfessionalCard': {}, './src/api/client': {}, './src/api/errors': {}, './src/auth/session': {}, './src/auth/validation': {}, './src/auth/logout': {}, './src/i18n/messages': { dictionaries },
   };
   for (const [session, restoring, expected] of [[saved, true, 'BrandLoading'], [null, true, 'BrandLoading'], [saved, false, 'YaZooShell'], [null, false, 'MobileAuthEntry']]) {
     const h = harness('../App.tsx', mocks, { 1: session, 2: restoring }); const tree = h.render('TestPilotApp');

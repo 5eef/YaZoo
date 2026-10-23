@@ -73,11 +73,17 @@ class AccountSecurityService
             .'/reset-password?channel=email&identifier='.rawurlencode($identifier)
             .'&token='.rawurlencode($plainToken);
 
-        Mail::to($user->email)->send(new AccountRecoveryMail(
-            $user,
-            $resetUrl,
-            $expiresInMinutes,
-        ));
+        try {
+            Mail::to($user->email)->send(new AccountRecoveryMail(
+                $user,
+                $resetUrl,
+                $expiresInMinutes,
+            ));
+        } catch (\Throwable $exception) {
+            // Keep the same public response for known and unknown accounts.
+            // Provider diagnostics may contain recipient addresses or credentials.
+            Log::warning('account.recovery_delivery_failed', ['exception' => $exception::class]);
+        }
     }
 
     /**
@@ -142,11 +148,15 @@ class AccountSecurityService
             ],
         );
 
-        Mail::to($user->email)->queue(new VerifyEmailMail(
-            $user,
-            $verificationUrl,
-            $expiresInMinutes,
-        ));
+        try {
+            Mail::to($user->email)->queue(new VerifyEmailMail(
+                $user,
+                $verificationUrl,
+                $expiresInMinutes,
+            ));
+        } catch (\Throwable $exception) {
+            Log::warning('account.verification_delivery_failed', ['exception' => $exception::class]);
+        }
     }
 
     public function verifyEmail(User $user, string $hash): void

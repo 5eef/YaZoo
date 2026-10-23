@@ -18,11 +18,20 @@ use Illuminate\Support\Facades\Hash;
 
 class DemoContentSeeder extends Seeder
 {
+    public ?string $initialPassword = null;
+
+    public ?string $initialAdminPassword = null;
+
     /**
      * Seed the application's demo content.
      */
     public function run(): void
     {
+        // The demo anchor already exists: do not replay sample content or credentials.
+        if (User::query()->where('email', 'admin@yazoo.ma')->exists()) {
+            return;
+        }
+
         $admin = $this->createUser([
             'name' => 'Admin YaZoo',
             'email' => 'admin@yazoo.ma',
@@ -329,13 +338,18 @@ class DemoContentSeeder extends Seeder
      */
     private function createUser(array $attributes, bool $isAdmin = false): User
     {
+        $existing = User::query()->where('email', $attributes['email'])->first();
+        if ($existing !== null) {
+            return $existing;
+        }
+
         $user = new User;
         $user->forceFill(array_merge([
             'email_verified_at' => now(),
             'phone_verified_at' => now(),
             'preferred_locale' => 'fr',
             'is_admin' => $isAdmin,
-            'password' => Hash::make('password'),
+            'password' => Hash::make(($isAdmin ? $this->initialAdminPassword : $this->initialPassword) ?? 'password'),
             'remember_token' => null,
         ], $attributes));
         $user->save();

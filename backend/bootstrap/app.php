@@ -42,6 +42,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withBroadcasting(__DIR__.'/../routes/channels.php', [
         'middleware' => [
             UseSanctumTokenFromCookie::class,
+            EnsureCookieAuthenticatedMutationsAreCsrfProtected::class,
             'auth:sanctum',
         ],
     ])
@@ -98,6 +99,7 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions) {
         $exceptions->context(fn (): array => [
+            'release' => config('app.version'),
             'broadcast_connection' => config('broadcasting.default'),
             'media_driver' => config('media.driver'),
         ]);

@@ -31,13 +31,10 @@ jobs:
             echo "::error::Docker images require the exact 40-character Git SHA."
             exit 1
           fi
-          case "$GITHUB_REF" in
-            refs/heads/*) ;;
-            *)
-              echo "::error::Manual image publication is allowed only from a branch ref."
-              exit 1
-              ;;
-          esac
+          if [ "$GITHUB_REF" != refs/heads/main ]; then
+            echo "::error::Official images must be built from the validated main branch."
+            exit 1
+          fi
 
       - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:

@@ -25,6 +25,7 @@ describe('message collection utilities', () => {
     const message = { id: 7, body: 'Bonjour' }
     expect(appendUniqueMessage([message], message)).toEqual([message])
     expect(appendUniqueMessage([], message)).toEqual([message])
+    expect(appendUniqueMessage([{ id: 9 }, { id: 10 }], message).map(item => item.id)).toEqual([7, 9, 10])
 
     const conversations = [
       { id: 1, participant: { name: 'Élodie' }, latestMessage: { body: 'Bonjour' } },

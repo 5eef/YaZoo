@@ -49,8 +49,10 @@ class StoreReservationRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
+        $note = RequestInput::trim($this->input('note'));
+
         $this->merge([
-            'note' => RequestInput::trim($this->input('note')),
+            'note' => $note === '' ? null : $note,
             'message' => RequestInput::trim($this->input('message')),
             'contact_phone' => RequestInput::trim($this->input('contact_phone')),
             'payment_method' => RequestInput::trim($this->input('payment_method') ?: 'cash_on_pickup'),

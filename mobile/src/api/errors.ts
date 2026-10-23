@@ -31,6 +31,7 @@ export function failureKey(failure: unknown) {
 export function normalizeBaseUrl(value: string) {
   const url = new URL(value);
   if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) throw new Error('Invalid API URL');
+  if (/\/api\/api(?:\/|$)/i.test(url.pathname)) throw new Error('API base URL must contain a single /api prefix');
   const base = value.replace(/\/+$/, '');
   return base.endsWith('/api') ? base : `${base}/api`;
 }

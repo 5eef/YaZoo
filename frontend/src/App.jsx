@@ -28,6 +28,7 @@ const ContactPage = lazy(() => import('./pages/ContactPage'))
 const FeedbackPage = lazy(() => import('./pages/FeedbackPage'))
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'))
 const FeedPage = lazy(() => import('./pages/FeedPage'))
+const ReelsPage = lazy(() => import('./pages/ReelsPage'))
 const InvoicePage = lazy(() => import('./pages/InvoicePage'))
 const ImpactPage = lazy(() => import('./pages/ImpactPage'))
 const LandingPage = lazy(() => import('./pages/LandingPage'))
@@ -92,6 +93,7 @@ function App() {
         <Route path="/discover/:section/:listingId" element={<PublicListingPage />} />
         <Route element={<Layout />}>
           <Route path="/feed" element={<FeedPage />} />
+          <Route path="/reels" element={<ReelsPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/profile/:userId" element={<ProfilePage />} />
           <Route element={<AdminRoute />}>

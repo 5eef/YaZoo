@@ -68,6 +68,20 @@ class AuthApiTest extends TestCase
         Mail::assertQueued(VerifyEmailMail::class);
     }
 
+    public function test_new_user_can_login_after_registration(): void
+    {
+        Mail::fake();
+        $payload = [
+            'name' => 'New Login User', 'email' => 'new-login@example.test',
+            'password' => 'Registration-Test-2026!', 'password_confirmation' => 'Registration-Test-2026!',
+            'phone' => '+212600008888', 'country' => 'Maroc', 'city' => 'Agadir',
+        ];
+        $this->postJson('/api/auth/register', $payload)->assertCreated();
+        $this->postJson('/api/auth/login', [
+            'email' => $payload['email'], 'password' => $payload['password'],
+        ])->assertOk()->assertCookie('yazoo_api_token');
+    }
+
     public function test_registration_succeeds_when_verification_email_cannot_be_enqueued(): void
     {
         $this->mock(AccountSecurityService::class)
