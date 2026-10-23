@@ -13,6 +13,12 @@ preserve the incoming pathname and query string. `BACKEND_ORIGIN` must be an
 origin without `/api`; client methods use paths such as `/posts`, never `/api/posts`.
 The native broadcast helper removes the API suffix before `/broadcasting/auth`.
 
+The mobile login/register session contains `user.email: string | null`. Laravel
+deliberately returns `null` for synthetic phone-account addresses; clients must
+accept and preserve that value in SecureStore without exposing the internal
+address. An absent or non-string/non-null email remains an invalid response.
+Token, numeric user identity and expiration checks still apply.
+
 | Feature | Backend route families | Web consumer | Native consumer |
 | --- | --- | --- | --- |
 | Account | `/api/auth/*`, `/api/auth/mobile/{login,register}` | auth.js and AuthContext | App.tsx and native client |
