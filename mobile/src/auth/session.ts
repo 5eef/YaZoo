@@ -1,6 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 import { isSession } from './validation';
-export type User = { id: number; name: string; email: string; city?: string; preferredLocale?: string; avatar?: string; bio?: string; coverPhoto?: string };
+export type User = { id: number; name: string; email: string | null; city?: string; preferredLocale?: string; avatar?: string; bio?: string; coverPhoto?: string };
 export type Session = { token: string; user: User; expires_at: string };
 const KEY = 'yazoo-native-session';
 export async function readSession(): Promise<Session | null> {

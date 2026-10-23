@@ -59,6 +59,13 @@ test('session validation refuses empty tokens, malformed user and expired respon
   for (const value of [null, {}, [], { ...valid, token: '' }, { ...valid, user: { id: 1 } }, { ...valid, expires_at: 'invalid' }, { ...valid, expires_at: '2000-01-01' }]) assert.equal(isSession(value), false);
 });
 
+test('phone-only API sessions accept a deliberately hidden public email while preserving all auth guards', () => {
+  const valid = { token: 'fictional-only', user: { id: 4, name: 'Phone account', email: null }, expires_at: new Date(Date.now() + 60000).toISOString() };
+  assert.equal(isSession(valid), true);
+  for (const email of [undefined, false, 4, {}, []]) assert.equal(isSession({ ...valid, user: { ...valid.user, email } }), false);
+  for (const value of [{ ...valid, token: '' }, { ...valid, user: { ...valid.user, id: 0 } }, { ...valid, expires_at: '2000-01-01' }]) assert.equal(isSession(value), false);
+});
+
 test('SecureStore saves, restores and deletes sessions; corrupt or expired storage is removed', async () => {
   let stored = null; let deletes = 0;
   const session = mount('../src/auth/session.ts', {
@@ -72,10 +79,14 @@ test('SecureStore saves, restores and deletes sessions; corrupt or expired stora
   await session('saveSession', valid);
   assert.deepEqual(JSON.parse(JSON.stringify(await session('readSession'))), valid);
   await session('clearSession'); assert.equal(stored, null);
+  const phoneOnly = { ...valid, user: { ...valid.user, email: null } };
+  await session('saveSession', phoneOnly);
+  assert.deepEqual(JSON.parse(JSON.stringify(await session('readSession'))), phoneOnly);
+  await session('clearSession'); assert.equal(stored, null);
   for (const value of ['broken JSON', JSON.stringify({ ...valid, expires_at: '2000-01-01' })]) {
     stored = value; assert.equal(await session('readSession'), null); assert.equal(stored, null);
   }
-  assert.equal(deletes, 3);
+  assert.equal(deletes, 4);
 });
 
 test('drawer and wide sidebar close before calling logout; disabled state blocks repeat presses natively', () => {
