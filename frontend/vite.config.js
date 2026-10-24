@@ -4,6 +4,8 @@ import process from 'node:process'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
+const backendOrigin = new URL(process.env.VITE_API_URL || '/api', 'http://127.0.0.1:8000').origin
+
 // https://vite.dev/config/
 export default defineConfig({
   root: process.cwd(),
@@ -14,11 +16,11 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      '/api': 'http://127.0.0.1:8000',
-      '/sanctum': 'http://127.0.0.1:8000',
-      '/broadcasting': 'http://127.0.0.1:8000',
-      '/storage': 'http://127.0.0.1:8000',
-      '/health': 'http://127.0.0.1:8000',
+      '/api': backendOrigin,
+      '/sanctum': backendOrigin,
+      '/broadcasting': backendOrigin,
+      '/storage': backendOrigin,
+      '/health': backendOrigin,
     },
   },
   build: {

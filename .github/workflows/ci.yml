@@ -128,7 +128,65 @@ jobs:
           server_pid=$!
           trap 'if kill -0 "$server_pid" 2>/dev/null; then kill "$server_pid"; fi' EXIT
           cd ../frontend
-          npm run test:e2e -- e2e/veterinarian-fullstack.spec.js
+          npm run test:e2e -- e2e/veterinarian-fullstack.spec.js e2e/logout-fullstack.spec.js e2e/branding-demo.spec.js --workers=1
+
+      - name: Run isolated social, private media and notification journeys
+        working-directory: backend
+        env:
+          APP_ENV: testing
+          APP_DEBUG: 'false'
+          APP_KEY: base64:c49vk2fjl1WJZPUaxanThGkmCDU9hHDldPjseMgdaQc=
+          APP_URL: http://127.0.0.1:8012
+          DB_CONNECTION: sqlite
+          DB_DATABASE: /state/social-e2e.sqlite
+          DB_URL: ''
+          CACHE_STORE: array
+          SESSION_DRIVER: file
+          SESSION_SECURE_COOKIE: 'false'
+          QUEUE_CONNECTION: sync
+          PHP_CLI_SERVER_WORKERS: '4'
+          BROADCAST_CONNECTION: log
+          MAIL_MAILER: array
+          SMS_DRIVER: disabled
+          MEDIA_STORAGE_DRIVER: r2
+          PROFESSIONAL_VERIFICATIONS_DISK: r2
+          R2_ENDPOINT: http://yazoo-social-s3:9090
+          R2_BUCKET: yazoo-social-test
+          R2_REGION: auto
+          R2_ACCESS_KEY_ID: local-s3mock-only
+          R2_SECRET_ACCESS_KEY: local-s3mock-only
+          ADMIN_MFA_ENFORCED: 'false'
+          YAZOO_REQUIRE_EXPECTED_DATABASE: 'false'
+          YAZOO_DEPLOYMENT_PROFILE: local
+          YAZOO_REQUIRE_PERSISTENT_STORAGE: 'false'
+          YAZOO_REQUIRE_SCHEDULER_HEARTBEAT: 'false'
+          YAZOO_REQUIRE_REVERB_HEALTH: 'false'
+          SANCTUM_STATEFUL_DOMAINS: 127.0.0.1:5182,127.0.0.1:8012
+          CORS_ALLOWED_ORIGINS: http://127.0.0.1:5182
+          E2E_BASE_URL: http://127.0.0.1:5182
+          E2E_API_URL: http://127.0.0.1:8012/api
+          E2E_SOCIAL_FULLSTACK: 'true'
+        run: |
+          set -euo pipefail
+          sudo mkdir -p /state
+          sudo chown "$(id -u):$(id -g)" /state
+          echo '127.0.0.1 yazoo-social-s3' | sudo tee -a /etc/hosts > /dev/null
+          docker run --rm -d --name yazoo-social-s3 -p 127.0.0.1:9090:9090 \
+            adobe/s3mock@sha256:ab01a6946750f451ca215a47e91030695b260e4003b8a5a6201d25029b8fca92
+          server_pid=''
+          trap 'if [ -n "$server_pid" ] && kill -0 "$server_pid" 2>/dev/null; then kill "$server_pid"; fi; docker stop yazoo-social-s3 > /dev/null' EXIT
+          for attempt in $(seq 1 60); do
+            if curl --silent --max-time 2 http://127.0.0.1:9090/ > /dev/null; then break; fi
+            sleep 2
+          done
+          php tests/Support/prepare-social-e2e.php
+          (
+            cd public
+            exec php -S 127.0.0.1:8012 ../vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php
+          ) > /tmp/yazoo-social-e2e-server.log 2>&1 &
+          server_pid=$!
+          cd ../frontend
+          npm run test:e2e -- e2e/social-marketplace-fullstack.spec.js e2e/social-media-s3.spec.js e2e/social-notifications-fullstack.spec.js --workers=1
 
   mysql-concurrency:
     # MongoDB 8 cannot start on the newer runner kernel (SERVER-121912).
