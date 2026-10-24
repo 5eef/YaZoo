@@ -50,6 +50,11 @@ export async function api<T>(path: string, locale: Locale, method = 'GET', body?
       headers: { Accept: 'application/json', ...(!multipart ? { 'Content-Type': 'application/json' } : {}), 'Accept-Language': locale, ...(requestToken ? { Authorization: `Bearer ${requestToken}` } : {}) },
       ...(requestBody === undefined ? {} : { body: requestBody })
     }); } catch { throw new ApiError(0, {}, controller.signal.aborted ? 'REQUEST_TIMEOUT' : 'NETWORK_ERROR'); }
+    // Headers already prove rejection, even if the connection drops while reading the body.
+    if (response.status === 401 && requestToken && requestEpoch === sessionEpoch) {
+      invalidSession();
+      throw new ApiError(401);
+    }
     let text: string;
     try { text = await response.text(); } catch { throw new ApiError(0, {}, controller.signal.aborted ? 'REQUEST_TIMEOUT' : 'NETWORK_ERROR'); }
     let payload: unknown = {};
@@ -63,7 +68,6 @@ export async function api<T>(path: string, locale: Locale, method = 'GET', body?
       throw new ApiError(401);
     }
     if (!response.ok) {
-      if (response.status === 401 && requestToken) invalidSession();
       const errors = payload && typeof payload === 'object' && 'errors' in payload ? payload.errors : {};
       const code = payload && typeof payload === 'object' && 'code' in payload && payload.code === 'DEMO_BACKEND_WAKING' ? payload.code : payload && typeof payload === 'object' && 'error' in payload && payload.error === 'showcase.uploads_disabled' ? 'SHOWCASE_UPLOADS_DISABLED' : undefined;
       const retryHeader = response.headers.get('Retry-After');

@@ -74,3 +74,16 @@ test('a late broadcast 401 cannot expire the account that replaced its session',
   assert.equal(invalidations, 0);
  } finally { globalThis.fetch = original; client.configureSession(null, () => {}); }
 });
+
+test('a confirmed authenticated 401 expires the session even when its response body cannot be read', async () => {
+ const original = globalThis.fetch;
+ let invalidations = 0;
+ try {
+  client.configureSession('expired-test-token', () => { invalidations++; });
+  globalThis.fetch = async () => new Response(new ReadableStream({
+   start(controller) { controller.error(new TypeError('connection lost after response headers')); },
+  }), { status: 401 });
+  await assert.rejects(client.api('/conversations', 'fr'), error => error.status === 401);
+  assert.equal(invalidations, 1);
+ } finally { globalThis.fetch = original; client.configureSession(null, () => {}); }
+});
