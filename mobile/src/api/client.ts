@@ -3,10 +3,12 @@ import type { Locale } from '../i18n/messages';
 const configured = process.env.EXPO_PUBLIC_API_URL || 'https://yazoo-showcase.pages.dev/api';
 export const baseUrl = normalizeBaseUrl(configured);
 let token: string | null = null;
+let sessionEpoch = 0;
 let invalidSession: () => void = () => {};
-export function configureSession(value: string | null, onInvalid: () => void) { token = value; invalidSession = onInvalid; }
+export function configureSession(value: string | null, onInvalid: () => void) { sessionEpoch++; token = value; invalidSession = onInvalid; }
 export async function authorizeBroadcast(socketId: string, channel: string): Promise<{ auth: string }> {
   const requestToken = token;
+  const requestEpoch = sessionEpoch;
   if (!requestToken) throw new ApiError(401);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
@@ -16,9 +18,13 @@ export async function authorizeBroadcast(socketId: string, channel: string): Pro
       headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${requestToken}` },
       body: JSON.stringify({ socket_id: socketId, channel_name: channel }),
     });
-    if (requestToken !== token || !response.ok) throw new ApiError(response.status || 401);
+    if (requestEpoch !== sessionEpoch) throw new ApiError(401);
+    if (!response.ok) {
+      if (response.status === 401) invalidSession();
+      throw new ApiError(response.status || 401);
+    }
     const result = await response.json();
-    if (requestToken !== token || typeof result.auth !== 'string') throw new ApiError(401);
+    if (requestEpoch !== sessionEpoch || typeof result.auth !== 'string') throw new ApiError(401);
     return { auth: result.auth };
   } finally { clearTimeout(timeout); }
 }
@@ -34,6 +40,7 @@ export async function api<T>(path: string, locale: Locale, method = 'GET', body?
   // The demo proxy can wait 65 seconds for a mutation; never replay it on timeout.
   const timeout = setTimeout(() => controller.abort(), method === 'GET' ? 20000 : 75000);
   const requestToken = token;
+  const requestEpoch = sessionEpoch;
   const multipart = typeof FormData !== 'undefined' && body instanceof FormData;
   try {
     const requestBody = body === undefined ? undefined : multipart ? body as FormData : JSON.stringify(body);
@@ -50,13 +57,13 @@ export async function api<T>(path: string, locale: Locale, method = 'GET', body?
       try { payload = JSON.parse(text); } catch { if (response.ok) throw new ApiError(502, {}, 'INVALID_RESPONSE'); }
     }
     if (response.ok && (payload === null || typeof payload !== 'object')) throw new ApiError(502, {}, 'INVALID_RESPONSE');
-    if (requestToken && requestToken !== token) {
+    if (requestEpoch !== sessionEpoch) {
       // Logout detaches local state immediately. Its acknowledgement contains no private data.
       if (path === '/auth/logout' && method === 'POST' && response.ok) return {} as T;
       throw new ApiError(401);
     }
     if (!response.ok) {
-      if (response.status === 401 && requestToken && requestToken === token) invalidSession();
+      if (response.status === 401 && requestToken) invalidSession();
       const errors = payload && typeof payload === 'object' && 'errors' in payload ? payload.errors : {};
       const code = payload && typeof payload === 'object' && 'code' in payload && payload.code === 'DEMO_BACKEND_WAKING' ? payload.code : payload && typeof payload === 'object' && 'error' in payload && payload.error === 'showcase.uploads_disabled' ? 'SHOWCASE_UPLOADS_DISABLED' : undefined;
       const retryHeader = response.headers.get('Retry-After');
