@@ -19,6 +19,7 @@ Mission commencée le 25 octobre ; reprise et validations fraîches le **26 octo
 5. **Contrôles HTTP reproductibles.** `verify-served-seo.mjs` contrôle les réponses du serveur, le contenu sans JS, le montage React après un effet de composant, l’unicité du H1/canonical, OG, JSON-LD, images, sitemap, robots et en-têtes de routes privées et Functions.
 6. **Navigation.** Nouveaux E2E d’inscription → Feed, inscription avec liens profonds Messages et Rendez-vous, langue et retour, restauration de session localisée. Les parcours professionnels et `returnTo` sont conservés.
 7. **Pitch exact.** Source éditable historique de 20 pages retrouvée ; liste des corrections par page rédigée dans `docs/IDEAWAVE_PITCH_CORRECTIONS_2026-10-25.md`. Sources historiques et PDF/PPTX préservés.
+8. **Correctif sécurité d’image révélé par la CI.** Le premier scan distant a bloqué sur deux HIGH `CVE-2026-92392` concernant `curl` et `libcurl` 8.21.0-r0. Le correctif impose au moins 8.23.0-r0 dans les deux images PHP ; dans Nginx, il met à jour ces paquets lorsqu’ils sont installés. La disponibilité de la version corrigée a été vérifiée avec la base PHP épinglée dans un conteneur jetable, sans volume et sans base de données. Aucun filtre, ignore ou seuil Trivy n’a été affaibli. Le nouveau commit doit repasser la CI et ses scans avant toute décision READY.
 
 ## Validation locale et tentatives
 
@@ -123,7 +124,7 @@ Le pitch antérieur de **20 pages** est identifié et ses corrections exactes so
 
 Les neuf URL ont répondu 200 en lecture seule ; leur HTML initial ne contient aucun H1. Canonical vide pour `/`, `/fr`, `/en`, `/ar`, canonical de route pour les cinq autres. Aucun X-Robots-Tag observé sur ces pages ni sur `/messages` et le statut backend. Cela décrit l’ancienne release, pas un échec du build candidat et pas une prétendue mise en production du nouveau SEO. `/api/auth/me` répond 401 sans compte ; aucune session réelle créée.
 
-Le SHA candidat, la branche, les résultats finaux et les fichiers inclus seront consignés après les validations et la publication autorisée de la branche. Cette section provisoire ne revendique aucune CI distante pour le diff local.
+Branche publiée : `release/global-rc-20261025` ; [PR brouillon #9](https://github.com/5eef/YaZoo/pull/9), aucune fusion. Premier commit applicatif `2d2bf5aa1e6130c3e289782964515c3c2869114e` : [CodeQL PASS](https://github.com/5eef/YaZoo/actions/runs/40338853434), [première CI](https://github.com/5eef/YaZoo/actions/runs/40338854150) bloquée par Trivy sur curl/libcurl. Mobile et concurrence MySQL ont réussi. Le build local reconstruit de ce commit a un `release.json` au SHA exact, `sourceDirty: false`, et les contrôles HTTP workerd ont réussi. Le correctif de sécurité des trois Dockerfiles fait l’objet d’un commit séparé et d’une nouvelle CI ; son résultat sera consigné avant décision finale.
 
 ### Fichiers inclus dans le candidat
 
@@ -162,5 +163,9 @@ Le SHA candidat, la branche, les résultats finaux et les fichiers inclus seront
 - `frontend/src/pages/PublicListingPage.jsx`
 - `frontend/vite.config.js`
 - `mobile/src/i18n/messages.ts`
+
+- `Dockerfile.api-demo`
+- `backend/Dockerfile`
+- `frontend/Dockerfile`
 
 **BLOCKED — contrôles de release en cours.**
