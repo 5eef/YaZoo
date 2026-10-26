@@ -27,14 +27,14 @@ Les lignes de clôture donnent les résultats finaux. Les anciennes valeurs 243 
 
 | Contrôle | Portée | État de préparation |
 | --- | --- | --- |
-| Frontend lint / TypeScript | Source finale | Résultats de clôture ci-dessous |
-| Unitaires | 245 cas, assertions conservées | Relance avec deux workers après contention Windows |
+| Frontend lint / TypeScript | Source finale | PASS local et CI |
+| Unitaires | 245 cas, assertions conservées | PASS local avec deux workers et CI |
 | i18n | FR/EN/AR, 2 073 clés | PASS |
 | Build et SEO fichiers | Origine HTTPS de démonstration | PASS avant commit ; rebuild propre prévu après commit |
-| E2E complet | 336 cas découverts, suites conditionnelles signalées séparément | Résultat exact de clôture ci-dessous |
-| E2E consolidé final | Source finale, faible concurrence, sans agrégation d’anciens résultats | Résultat exact de clôture ci-dessous |
+| E2E complet | 336 cas découverts, suites conditionnelles signalées séparément | CI : 267 PASS / 69 SKIP, puis 54 PASS et 15 PASS dans les étapes isolées |
+| E2E consolidé final | Source finale, faible concurrence, sans agrégation d’anciens résultats | Local : 60 PASS, puis reprise distincte de 4 cas PASS |
 | Mobile | Lint, TypeScript, 81 tests | PASS ; aucun nouveau build natif lancé |
-| Backend | Aucune modification Laravel | Tests Laravel locaux non relancés ; contrôles serveur conservés dans CI |
+| Backend | Aucun code Laravel modifié ; images corrigées | CI : 525 tests / 4 282 assertions PASS ; images et démarrage testés |
 
 Tentatives conservées : un test i18n dépendait implicitement d’un libellé anglais incorrect ; son scénario français fixe désormais explicitement sa langue. Trois unitaires ont dépassé les 20 secondes pendant l’exécution simultanée de Vitest et Playwright. Le scénario de onze captures de marque a dépassé ses 30 secondes en forte concurrence. Aucun timeout ni assertion n’a été augmenté ou désactivé pour obtenir un résultat positif. Les relances limitent les workers et séparent les charges lourdes.
 
@@ -75,13 +75,15 @@ Aucun score Lighthouse ni Core Web Vitals terrain inventé. Aucun nouveau contr�
 | Composant | Commit SHA | Version / déploiement | Tests / preuve | Statut |
 | --- | --- | --- | --- | --- |
 | GitHub main | `f48e398363a50c24e804b4b2c8920cbaed15b6d6` | Branche officielle inchangée | API GitHub ; CI 40112609121 et CodeQL 40112609250 success | Ancienne release officielle |
-| Candidate locale/GitHub | Voir clôture Git | Branche de stabilisation séparée | Contrôles locaux puis CI PR | Non déployée |
+| Candidate locale/GitHub | `16628cd994c0350a47c8223fefec5295c44fd713` | Branche de stabilisation séparée | CI et CodeQL PASS ; build local propre à ce SHA | Non déployée |
 | Docker Hub | `f48e398363a50c24e804b4b2c8920cbaed15b6d6` | `5eef/yazoo-api-demo`, digest `sha256:1f115b82ec0ae1c293c7ffab85f19891289943baa884bca96e9d8c9455ed43f0` | Manifeste registre lu avec jeton pull anonyme | Pas d’image candidate publiée |
 | Render | Même SHA | `dep-dbeeh68ae00c73csvd90`, live, même digest | API Render + health ready : DB, R2, Reverb ok | Ancienne release disponible |
 | Cloudflare Pages | Même SHA | Production/main `49a9f7bd-f08f-413c-a7bc-47c8ec86d4be`, success | API projet après renouvellement de session Wrangler ; source ad_hoc | Ancien Web, nouvelles routes SEO non livrées |
 | Android EAS | Même SHA | Build `3ac4d7be-18c5-49d9-8c41-1b92f3d746d0`, FINISHED, 0.1.0 / code 1 | build:view puis dernier build:list ; APK local historique SHA-256 vérifié | Ancien APK, aucune candidate construite |
 
-SHA-256 de l’APK historique local : `5c29ebdbc9f851e3226784a431fb213d4bd6b34f7afa4177c06aaad8bd7f0564`. [APK EAS existant](https://expo.dev/artifacts/eas/Cg2dls7xcg2xmteffsw9CpJLbpfXpC6eZNEDJjhpens.apk). Les octets CDN n’ont pas été retéléchargés dans cette mission. Le dernier build listé correspond bien au build consulté. Les tests mobiles de source ne prouvent pas le fonctionnement de cet APK sur un téléphone réel.
+SHA-256 de l’APK historique local : `5c29ebdbc9f851e3226784a431fb213d4bd6b34f7afa4177c06aaad8bd7f0564`. [APK EAS existant](https://expo.dev/artifacts/eas/Cg2dls7xcg2xmteffsw9CpJLbpfXpC6eZNEDJjhpens.apk). Les octets CDN n’ont pas été retéléchargés dans cette mission. Le dernier build listé correspond bien au build consulté, y compris lors de la relecture du 26 octobre. Les tests mobiles de source ne prouvent pas le fonctionnement de cet APK sur un téléphone réel.
+
+L’inspection en lecture seule de l’image publiée au digest indiqué a confirmé `curl-8.21.0-r0` et `libcurl-8.21.0-r0`. Elle reste donc concernée par le correctif curl identifié ; un ancien scan vert n’annule pas une nouvelle alerte. Le correctif candidat n’est pas encore actif sur Render. Une mise à jour de démonstration revue et autorisée devra intégrer l’image corrigée, sans prétendre que l’ancienne image est actuellement conforme au nouveau scan.
 
 Les premières lectures Cloudflare globales ont retourné 403, puis le projet a retourné 401 pour une session expirée. Le client officiel a renouvelé sa session existante et la relecture du projet précis a confirmé le SHA complet. Aucun élargissement de permission ni modification des secrets applicatifs.
 
@@ -96,7 +98,7 @@ Les HTTP publics de l’ancienne release ont aussi été relevés : ils ne doive
 5. Construire le frontend avec les flags du showcase et `VITE_SITE_URL=https://yazoo-showcase.pages.dev`. Vérifier `release.json`, canonical, hreflang, HTML, images et absence de sourceDirty. Publier uniquement vers le projet Pages existant, en enregistrant le SHA exact. Rejouer les contrôles HTTP, y compris API/Functions et fallback privé ; ne pas déduire les headers d’un fichier.
 6. Si un nouvel APK est retenu, lancer manuellement EAS preview depuis le même checkout propre et conserver build ID, SHA, version distante, hash et signataire. Aucune publication Play et aucun changement d’infrastructure payante. Tester ensuite sur le téléphone réel.
 7. Répéter le parcours jury sur comptes fictifs autorisés : inscription/connexion, Feed/Stories/Reels, catalogue, demande fictive, messagerie/notification, logout et changement de compte. Marquer WSS et téléphone non vérifiés jusqu’à preuve effective. Aucun compte administrateur réel à modifier.
-8. Garder comme repli applicatif les IDs/digest historiques ci-dessus. Tout rollback reste une action opérateur contrôlée, sans rollback SQL automatique ni effacement de médias.
+8. Conserver les IDs/digest historiques pour la traçabilité. Ne pas considérer l’ancienne image curl vulnérable comme un repli de sécurité validé : toute reconstruction d’un ancien code doit conserver les correctifs de sécurité et repasser les scans. Tout rollback reste une action opérateur contrôlée, sans rollback SQL automatique ni effacement de médias.
 
 ## Candidature Idea’Wave
 
@@ -125,6 +127,20 @@ Le pitch antérieur de **20 pages** est identifié et ses corrections exactes so
 Les neuf URL ont répondu 200 en lecture seule ; leur HTML initial ne contient aucun H1. Canonical vide pour `/`, `/fr`, `/en`, `/ar`, canonical de route pour les cinq autres. Aucun X-Robots-Tag observé sur ces pages ni sur `/messages` et le statut backend. Cela décrit l’ancienne release, pas un échec du build candidat et pas une prétendue mise en production du nouveau SEO. `/api/auth/me` répond 401 sans compte ; aucune session réelle créée.
 
 Branche publiée : `release/global-rc-20261025` ; [PR brouillon #9](https://github.com/5eef/YaZoo/pull/9), aucune fusion. Premier commit applicatif `2d2bf5aa1e6130c3e289782964515c3c2869114e` : [CodeQL PASS](https://github.com/5eef/YaZoo/actions/runs/40338853434), [première CI](https://github.com/5eef/YaZoo/actions/runs/40338854150) bloquée par Trivy sur curl/libcurl. Mobile et concurrence MySQL ont réussi. Le build local reconstruit de ce commit a un `release.json` au SHA exact, `sourceDirty: false`, et les contrôles HTTP workerd ont réussi. Le correctif de sécurité des trois Dockerfiles fait l’objet d’un commit séparé et d’une nouvelle CI ; son résultat sera consigné avant décision finale.
+
+### Clôture vérifiée du code candidat — 26 octobre 2026
+
+- Commit applicatif et images corrigées : **`16628cd994c0350a47c8223fefec5295c44fd713`**. Le build local de ce SHA et son vérificateur SEO passent, avec `sourceDirty: false`.
+- **[CI complète 40342315669 : SUCCESS](https://github.com/5eef/YaZoo/actions/runs/40342315669)** au SHA exact : qualité, concurrence MySQL, mobile, conteneurs et secrets verts.
+- **[CodeQL 40342315651 : SUCCESS](https://github.com/5eef/YaZoo/actions/runs/40342315651)** au même SHA.
+- Journal qualité de ce run : Laravel **525 tests / 4 282 assertions** ; React **245 tests / 63 fichiers** ; Playwright général **267 PASS / 69 SKIP** ; étapes isolées **54 PASS** puis **15 PASS**. Il s’agit d’étapes distinctes du même run CI, pas d’un résultat artificiel de 336 PASS dans une seule invocation. Les cas conditionnels ignorés dans le smoke général sont exécutés dans leurs étapes dédiées.
+- Le job mobile inclut lint, TypeScript, 81 tests, audit selon la politique existante et export JavaScript Android. Cela ne construit ni ne publie un nouvel APK.
+- Trivy : **0 HIGH/CRITICAL dans chacune des trois images ciblées**, avec les seuils initiaux. Gitleaks : **no leaks found**. Les quatre cycles de démarrage showcase, les contrôles FPM et le smoke des images non root passent. Cela ne signifie pas zéro vulnérabilité de tout niveau dans tout le projet ; les alertes d’outillage restent soumises à la politique existante.
+- Preuves complémentaires ignorées par Git : `output/rc-quality-fixed-ci.log`, `rc-container-fixed-ci.log`, `rc-build-security-commit.log`, `rc-static-seo-security-commit.json`.
+- Les **137 fichiers hors périmètre sont inchangés**, vérifiés par empreinte. Aucun `.env`, clé, base, sauvegarde ou répertoire `output/` n’est inclus. Le périmètre final comprend **38 fichiers** par rapport au HEAD initial ; les trois Dockerfiles s’ajoutent aux 35 premiers fichiers validés.
+- Une clôture documentaire publie ce rapport après le commit applicatif validé. Elle ne change ni les applications, ni les Dockerfiles, ni les workflows. Les contrôles du dernier HEAD documentaire sont consultables dans [les checks de la PR](https://github.com/5eef/YaZoo/pull/9/checks) ; les preuves figées du code sont les deux runs ci-dessus. Aucune fusion, aucun tag réécrit et aucune image poussée sur Docker Hub.
+
+La candidate est techniquement prête pour une **mise à jour manuelle et autorisée de la démonstration existante**. Les services et l’APK encore hébergés restent à `f48e398`, et l’image actuellement publiée conserve les anciens paquets curl. Le passage effectif à la candidate, la recette Web/API/WSS après livraison, le nouvel APK éventuel et le téléphone physique restent des actions opérateur/propriétaire. Le dossier Idea’Wave reste à finaliser personnellement, notamment la vidéo réelle et le deck exporté ; la préparation technique n’équivaut pas à sa soumission.
 
 ### Fichiers inclus dans le candidat
 
@@ -168,4 +184,4 @@ Branche publiée : `release/global-rc-20261025` ; [PR brouillon #9](https://gith
 - `backend/Dockerfile`
 - `frontend/Dockerfile`
 
-**BLOCKED — contrôles de release en cours.**
+**READY FOR DEMO DEPLOYMENT**
