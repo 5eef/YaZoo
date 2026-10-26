@@ -1,3 +1,4 @@
+import { globalStartupMessages } from './locales/globalStartup.js'
 import { professionalMarketplaceMessages } from './locales/professionalMarketplace.js'
 import { demoIntegrationMessages } from './locales/demoIntegration.js'
 
@@ -8479,3 +8480,13 @@ Object.assign(messages.ar.errors, { uploadsDisabled: 'رفع الملفات مع
 Object.assign(messages.fr.errors, {"uploadType":"Format de fichier non autorisé.","uploadSize":"Fichier trop volumineux : 5 Mo pour les images et documents, 20 Mo pour les médias du fil.","uploadCount":"Six images maximum par annonce."})
 Object.assign(messages.en.errors, {"uploadType":"File format not allowed.","uploadSize":"File too large: 5 MB for images and documents, 20 MB for feed media.","uploadCount":"A listing supports up to six images."})
 Object.assign(messages.ar.errors, {"uploadType":"صيغة الملف غير مسموحة.","uploadSize":"حجم الملف كبير: 5 ميغابايت للصور والمستندات، و20 ميغابايت لوسائط المنشورات.","uploadCount":"الحد الأقصى ست صور لكل إعلان."})
+
+for (const [locale, content] of Object.entries(globalStartupMessages)) {
+  Object.assign(messages[locale].landing, content)
+  messages[locale].common.tagline = content.tagline
+  messages[locale].legal.about.intro = content.aboutIntro
+  messages[locale].legal.about.missionBody = content.visionText
+  messages[locale].legal.about.socialBody = content.secondaryDescription
+  messages[locale].footer.platformDescription = content.tagline
+}
+messages.en.common.arabic = 'Arabic'

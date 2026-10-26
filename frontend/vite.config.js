@@ -24,6 +24,7 @@ export default defineConfig({
     },
   },
   build: {
+    manifest: true,
     sourcemap: process.env.VITE_BUILD_SOURCEMAPS === 'true',
     rollupOptions: {
       output: {

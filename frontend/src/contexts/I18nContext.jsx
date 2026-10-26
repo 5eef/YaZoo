@@ -11,7 +11,16 @@ import {
 } from '../lib/i18n'
 
 export function I18nProvider({ children }) {
-  const [locale, setLocaleState] = useState(() => getCurrentLocale())
+  const [locale, setLocaleState] = useState(() => globalThis.location?.pathname.match(/^\/(fr|en|ar)\/?$/)?.[1] || getCurrentLocale())
+
+  useEffect(() => {
+    const synchronizePathLocale = () => {
+      const pathLocale = globalThis.location?.pathname.match(/^\/(fr|en|ar)\/?$/)?.[1]
+      if (pathLocale) setLocaleState(pathLocale)
+    }
+    globalThis.addEventListener('popstate', synchronizePathLocale)
+    return () => globalThis.removeEventListener('popstate', synchronizePathLocale)
+  }, [])
 
   useEffect(() => {
     const nextDirection = getDirection(locale)
@@ -24,6 +33,12 @@ export function I18nProvider({ children }) {
 
   const setLocale = useCallback((nextLocale) => {
     if (SUPPORTED_LOCALES.includes(nextLocale)) {
+      const pathLocale = globalThis.location?.pathname.match(/^\/(fr|en|ar)\/?$/)?.[1]
+      if (pathLocale && pathLocale !== nextLocale) {
+        setStoredLocale(nextLocale)
+        globalThis.location.assign(`/${nextLocale}${globalThis.location.search}${globalThis.location.hash}`)
+        return
+      }
       setStoredLocale(nextLocale)
       setLocaleState(nextLocale)
     }

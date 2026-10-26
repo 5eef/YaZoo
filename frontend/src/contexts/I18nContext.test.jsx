@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, beforeEach } from 'vitest'
 
@@ -11,8 +11,22 @@ function Probe() {
 }
 
 describe('i18n', () => {
+  it('restores the explicit URL language on history navigation', () => {
+    render(<I18nProvider><Probe /></I18nProvider>)
+    act(() => {
+      history.pushState({}, '', '/ar')
+      dispatchEvent(new PopStateEvent('popstate'))
+    })
+    expect(document.documentElement).toHaveAttribute('lang', 'ar')
+    expect(document.documentElement).toHaveAttribute('dir', 'rtl')
+    act(() => {
+      history.replaceState({}, '', '/')
+      dispatchEvent(new PopStateEvent('popstate'))
+    })
+  })
   beforeEach(() => {
     localStorage.clear()
+    localStorage.setItem(LOCALE_STORAGE_KEY, 'fr')
     document.documentElement.lang = ''
     document.documentElement.dir = ''
     document.documentElement.className = ''

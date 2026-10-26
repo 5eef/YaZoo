@@ -20,12 +20,14 @@ for (const [width, locale, theme] of variants) {
     await mockApi(page, true)
     await page.route('**/api/users/1', route => route.fulfill({ json: { data: { id: 1, name: 'Admin DEMO YaZoo' } } }))
     for (const path of routes) {
-      await page.goto(path)
-      await expect(page.locator('#main-content')).toBeVisible()
-      await expect(page.locator('html')).toHaveAttribute('dir', locale === 'ar' ? 'rtl' : 'ltr')
-      await expect(page.locator('html')).toHaveAttribute('lang', locale)
-      expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth), path).toBeLessThanOrEqual(1)
-      expect(exceptions, path).toEqual([])
+      await test.step(path, async () => {
+        await page.goto(path)
+        await expect(page.locator('#main-content')).toBeVisible()
+        await expect(page.locator('html')).toHaveAttribute('dir', locale === 'ar' ? 'rtl' : 'ltr')
+        await expect(page.locator('html')).toHaveAttribute('lang', locale)
+        expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth), path).toBeLessThanOrEqual(1)
+        expect(exceptions, path).toEqual([])
+      })
     }
     if (width < 1024) {
       await page.getByRole('button', { name: { ar: 'فتح القائمة', fr: 'Ouvrir le menu', en: 'Open menu' }[locale] }).click()

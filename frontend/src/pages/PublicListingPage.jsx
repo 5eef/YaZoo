@@ -90,7 +90,7 @@ function PublicListingPage() {
     setMetaContent('meta[name="twitter:description"]', description)
     setMetaContent(
       'meta[name="robots"]',
-      'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
+      'noindex, nofollow',
     )
 
     if (listing.imageUrl) {
@@ -103,23 +103,8 @@ function PublicListingPage() {
 
     document.head.querySelector('link[rel="canonical"]')?.setAttribute('href', canonicalUrl)
 
-    const structuredData = document.createElement('script')
-    structuredData.id = 'yazoo-listing-structured-data'
-    structuredData.type = 'application/ld+json'
-    structuredData.textContent = JSON.stringify({
-      '@context': 'https://schema.org',
-      '@type': 'ItemPage',
-      name: listing.title,
-      description,
-      url: canonicalUrl,
-      mainEntity: buildListingStructuredEntity(section, listing, description, canonicalUrl),
-    })
+    // Precommercial listings may be demonstrations: publish no commercial schema.
     document.getElementById('yazoo-listing-structured-data')?.remove()
-    document.head.append(structuredData)
-
-    return () => {
-      structuredData.remove()
-    }
   }, [definition, listing, listingId, section, t])
 
   useEffect(() => {
@@ -281,35 +266,6 @@ function PublicListingPage() {
 
 function setMetaContent(selector, content) {
   document.head.querySelector(selector)?.setAttribute('content', content)
-}
-
-function buildListingStructuredEntity(section, listing, description, canonicalUrl) {
-  const common = {
-    '@type': section === 'services' || section === 'veterinarians' ? 'Service' : 'Product',
-    name: listing.title,
-    description,
-    url: canonicalUrl,
-    ...(listing.imageUrl ? { image: listing.imageUrl } : {}),
-  }
-
-  if (listing.author?.name) {
-    common.provider = {
-      '@type': 'Person',
-      name: listing.author.name,
-    }
-  }
-
-  if (listing.price !== null && listing.price !== undefined) {
-    common.offers = {
-      '@type': 'Offer',
-      price: Number(listing.price),
-      priceCurrency: 'MAD',
-      availability: 'https://schema.org/InStock',
-      url: canonicalUrl,
-    }
-  }
-
-  return common
 }
 
 function DetailBadge({ children, className }) {

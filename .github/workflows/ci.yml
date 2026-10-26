@@ -84,8 +84,11 @@ jobs:
 
       - name: Build frontend
         working-directory: frontend
+        env:
+          VITE_SITE_URL: https://yazoo-showcase.pages.dev
         run: |
           npm run build
+          node scripts/verify-static-seo.mjs
           npm run audit:tailwind
 
       - name: Install Playwright browser

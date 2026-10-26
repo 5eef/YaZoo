@@ -150,13 +150,13 @@ test('landing page locale charge sans compte reel', async ({ page }) => {
 
   await page.goto('/')
 
-  await expect(page.getByRole('heading', { name: 'Your pet. The right professionals.' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'The world of animals, all in one place.' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Log in' }).first()).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Find a veterinarian' })).toHaveAttribute(
+  await expect(page.getByRole('link', { name: 'Join the community' }).first()).toHaveAttribute(
     'href',
-    '/discover/veterinarians',
+    '/register?returnTo=%2Ffeed',
   )
-  await expect(page.getByRole('link', { name: 'I am a professional' })).toHaveAttribute(
+  await expect(page.getByRole('link', { name: 'Explore the professional space' }).first()).toHaveAttribute(
     'href',
     '/pros',
   )
@@ -169,12 +169,12 @@ test('landing page locale charge sans compte reel', async ({ page }) => {
   await expect(page.getByRole('link', { name: 'Sign in to contact' })).toBeVisible()
 
   await page.goto('/')
-  await page.getByRole('link', { name: 'Find a veterinarian' }).click()
-  await expect(page).toHaveURL(/\/discover\/veterinarians$/)
-  await expect(page.getByRole('heading', { name: /Veterinarians/i })).toBeVisible()
+  await page.getByRole('link', { name: 'Discover services' }).first().click()
+  await expect(page).toHaveURL(/\/discover\/services$/)
+  await expect(page.getByRole('heading', { level: 1, name: /Services/i })).toBeVisible()
 
   await page.goto('/')
-  await page.getByRole('link', { name: 'I am a professional' }).click()
+  await page.getByRole('link', { name: 'Explore the professional space' }).first().click()
   await expect(page).toHaveURL(/\/pros$/)
   await expect(page.getByRole('heading', { name: 'Your professional activity on YaZoo' })).toBeVisible()
   await page.getByRole('link', { name: 'Create my professional account' }).click()
@@ -329,7 +329,7 @@ test('catalogue public animaux reste consultable sans connexion', async ({ page 
   await expect(page.getByText('Chat public a adopter')).toBeVisible()
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
     'content',
-    /index, follow/,
+    /noindex, nofollow/,
   )
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
     'href',
@@ -341,7 +341,7 @@ test('catalogue public animaux reste consultable sans connexion', async ({ page 
   await expect(page).toHaveURL(/\/discover\/animals\/1$/)
   await expect(page.getByRole('heading', { name: 'Chat public a adopter' })).toBeVisible()
   await expect(page.getByText('+212', { exact: false })).toHaveCount(0)
-  await expect(page.locator('#yazoo-listing-structured-data')).toHaveCount(1)
+  await expect(page.locator('#yazoo-listing-structured-data')).toHaveCount(0)
 })
 
 test('fiche publique absente devient non indexable', async ({ page }) => {

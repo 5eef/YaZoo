@@ -55,7 +55,7 @@ describe('SeoManager', () => {
     })
   })
 
-  it('keeps public listing detail routes indexable with their own canonical URL', () => {
+  it('excludes unverified and demo listing detail routes from indexing', () => {
     const translations = {
       'publicMarketplace.animalsDescription': 'Animaux approuves.',
       'publicMarketplace.animalsTitle': 'Animaux au Maroc',
@@ -68,9 +68,8 @@ describe('SeoManager', () => {
 
     expect(seo).toMatchObject({
       canonicalUrl: `${globalThis.location.origin}/discover/animals/42`,
-      description: 'Animaux approuves.',
-      indexable: true,
-      title: 'Animaux au Maroc | YaZoo',
+      indexable: false,
+      title: 'YaZoo',
     })
   })
 

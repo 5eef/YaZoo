@@ -6,11 +6,11 @@ and local consolidation copies are recovery sources, never application build roo
 See [canonical architecture](docs/ARCHITECTURE_CANONIQUE.md) and
 [API environments](docs/API_ROUTES_AND_ENVIRONMENTS.md).
 
-> **Votre animal. Les bons professionnels.**
+> **Le monde des animaux, au même endroit.**
 >
 > **MVP Startup — phase pilote**
 
-YaZoo is a Moroccan product MVP for connecting pet owners with animal care professionals. Owners can browse public professional profiles, review services, request veterinary appointments, exchange messages, and leave reviews after eligible completed appointments or reservations.
+YaZoo is a precommercial technology startup project born in Morocco with an international ambition: a social animal community, an eligible products and services marketplace, and professional journeys. The proposed Fez–Meknes pilot is a validation step. Social experiences are central to the product; local services remain relevant to user location.
 
 This branch is a product prototype for incubation and pilot preparation. It does not establish that a company has been legally incorporated, that a pilot has been approved, that listed professionals are real partners, or that real transactions have taken place.
 
@@ -36,9 +36,11 @@ The startup visual identity supplied in `docs/logo` is integrated into Web SVG a
 
 YaZoo profile review is an internal platform process. A profile badge does not mean a government license, state certification, official partnership, or legal endorsement.
 
-### Additional experiences
+### Community at the heart of the product
 
-The marketplace, animal listings, social feed, and communities remain available as supporting features. Their presence does not replace professional discovery as the product’s primary purpose.
+Feed, photo and video posts, Stories, Reels, likes, comments, follows, communities and messaging form the social experience. Marketplace and professional workflows extend it. Feature flags and regulated listing safeguards remain applicable. Demo accounts do not establish real traction.
+
+Community access is intended to remain free. Commissions of 3%, 5% and 8% on eligible commercial transactions are scenarios to validate, not active fees. Veterinary activities are excluded pending legal and professional review. No payment activation or revenue is claimed.
 
 The current architecture includes `frontend/` (React/Vite Web), `backend/` (Laravel API, PHP 8.4.1 minimum for the current lock), and `mobile/` (Expo/React Native Android). Mobile includes professional discovery, services, appointments, messages, Feed, Stories and Reels. Video posts share their identity and interactions between Feed and Reels; Stories remain distinct.
 
@@ -142,7 +144,7 @@ Older audit, demo deployment, and database compatibility documents are retained 
 
 ## Startup / pilote 2026
 
-Le parcours prioritaire est propriétaire → professionnel → demande → communication → expérience terminée → avis. `startup-2026` porte les évolutions ; `main` et `portfolio-showcase-2026-10` conservent le showcase historique. Les annonces animales publiques sont désactivées par défaut dans le profil pilote. Le showcase nécessite des flags explicites lors de reconstruction.
+La communauté constitue le cœur du produit. Marketplace et parcours professionnels complètent l’expérience, avec un pilote proposé à Fès–Meknès et une ambition internationale. `main` est la branche officielle ; les anciens documents de pilote restent des archives à relire avant réutilisation. Les annonces animales réglementées conservent leurs garde-fous.
 
 - [Brief AFWAJ](docs/AFWAJ_2026_STARTUP_BRIEF.md) et [plan 90 jours](docs/PILOT_90_DAY_PLAN.md).
 - [Métriques](docs/PILOT_METRICS.md), [préparation juridique](docs/LEGAL_READINESS_MOROCCO.md), [décision de marque](docs/BRAND_DECISION.md).
