@@ -27,7 +27,7 @@ try {
   const options = { cwd: path.dirname(frontendDirectory), encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }
   // Build provenance must not execute a binary supplied through the caller's PATH.
   const readGit = (args) => (process.platform === 'win32'
-    ? execFileSync('C:/Program Files/Git/cmd/git.exe', args, options)
+    ? execFileSync('C:\\Program Files\\Git\\cmd\\git.exe', args, options)
     : execFileSync('/usr/bin/git', args, options)).trim()
   commit = readGit(['rev-parse', 'HEAD'])
   sourceDirty = Boolean(readGit(['status', '--porcelain', '--untracked-files=no', '--', 'frontend', 'backend', 'mobile']))
