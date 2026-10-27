@@ -35,6 +35,17 @@ function SeoManager() {
     setMetaTag('name', 'twitter:image', SOCIAL_IMAGE_URL)
     setMetaTag('name', 'twitter:image:alt', `Logo ${SITE_NAME}`)
     setCanonicalUrl(seo.canonicalUrl)
+    document.querySelectorAll('link[data-yazoo-hreflang]').forEach((element) => element.remove())
+    if (/^\/(fr|en|ar)?\/?$/.test(pathname)) {
+      for (const language of ['fr', 'en', 'ar']) {
+        const link = document.createElement('link')
+        link.rel = 'alternate'
+        link.hreflang = language
+        link.href = `${SITE_URL}/${language}`
+        link.dataset.yazooHreflang = ''
+        document.head.append(link)
+      }
+    }
     setStructuredData(seo.structuredData)
   }, [locale, pathname, t])
 
@@ -80,21 +91,11 @@ function setStructuredData(enabled) {
     '@context': 'https://schema.org',
     '@graph': [
       {
-        '@type': 'Organization',
-        '@id': `${SITE_URL}/#organization`,
-        name: SITE_NAME,
-        url: `${SITE_URL}/`,
-        logo: SOCIAL_IMAGE_URL,
-      },
-      {
         '@type': 'WebSite',
         '@id': `${SITE_URL}/#website`,
         url: `${SITE_URL}/`,
         name: SITE_NAME,
         inLanguage: ['fr', 'ar', 'en'],
-        publisher: {
-          '@id': `${SITE_URL}/#organization`,
-        },
       },
     ],
   })

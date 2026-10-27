@@ -4,9 +4,22 @@ import {
   normalizeBackendOrigin,
   proxyRequest,
   sanitizeSetCookie,
+  jsonResponse,
 } from '../../functions/_shared/proxy.js'
 
 describe('Cloudflare Pages reverse proxy', () => {
+  it('keeps API and media responses non-indexable without relying on static _headers', async () => {
+    for (const status of [200, 206, 401, 403, 503]) {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{}', { status, headers: { 'Content-Type': 'application/json', 'X-Robots-Tag': 'index' } })))
+      const response = await proxyRequest({ env: { BACKEND_ORIGIN: 'https://backend.example.test' }, request: new Request('https://demo.pages.dev/api/auth/me') })
+      expect(response.status).toBe(status)
+      expect(response.headers.get('X-Robots-Tag')).toBe('noindex, nofollow')
+    }
+    expect(jsonResponse({ status: 'ready' }).headers.get('X-Robots-Tag')).toBe('noindex, nofollow')
+    const misconfigured = await proxyRequest({ env: {}, request: new Request('https://demo.pages.dev/api/auth/me') })
+    expect(misconfigured.status).toBe(500)
+    expect(misconfigured.headers.get('X-Robots-Tag')).toBe('noindex, nofollow')
+  })
   it('preserves logout expiry and separate CSRF cookies without caching private data', async () => {
     const headers = new Headers({ 'Content-Type': 'application/json', 'Cache-Control': 'no-store, private' })
     headers.append('Set-Cookie', 'yazoo_api_token=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/; Domain=backend.example.test; HttpOnly; SameSite=Lax')

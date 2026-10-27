@@ -39,6 +39,7 @@ RUN set -eux; \
         su-exec \
         'brotli-libs>=1.2.1-r0'; \
     apk upgrade --no-cache libcrypto3 libssl3 openssl; \
+    apk add --no-cache 'curl>=8.23.0-r0' 'libcurl>=8.23.0-r0'; \
     apk add --no-cache --virtual .build-deps \
         $PHPIZE_DEPS \
         icu-dev \

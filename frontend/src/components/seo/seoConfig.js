@@ -14,7 +14,7 @@ export const NOINDEX_ROBOTS = 'noindex, nofollow'
 
 const PUBLIC_ROUTE_METADATA = {
   '/': {
-    titleKeys: ['landing.heroLineOne', 'landing.heroLineTwo'],
+    titleKey: 'landing.seoTitle',
     descriptionKey: 'landing.heroDescription',
     structuredData: true,
   },
@@ -88,10 +88,11 @@ const OPEN_GRAPH_LOCALES = {
 }
 
 export function getRouteSeo(pathname, locale, translate) {
-  const normalizedPath = normalizePathname(pathname)
+  const homeLocale = pathname.match(/^\/(fr|en|ar)\/?$/)?.[1]
+  if (homeLocale) locale = homeLocale
+  const normalizedPath = homeLocale ? '/' : normalizePathname(pathname)
   const routeMetadata =
-    PUBLIC_ROUTE_METADATA[normalizedPath] ??
-    getPublicListingRouteMetadata(normalizedPath)
+    PUBLIC_ROUTE_METADATA[normalizedPath]
 
   if (!routeMetadata) {
     return {
@@ -109,25 +110,13 @@ export function getRouteSeo(pathname, locale, translate) {
     : translate(routeMetadata.titleKey)
 
   return {
-    canonicalUrl: `${SITE_URL}${normalizedPath === '/' ? '/' : normalizedPath}`,
+    canonicalUrl: `${SITE_URL}${normalizedPath === '/' ? `/${locale}` : normalizedPath}`,
     description: translate(routeMetadata.descriptionKey),
-    indexable: true,
+    indexable: !normalizedPath.startsWith('/discover/'),
     locale: OPEN_GRAPH_LOCALES[locale] ?? OPEN_GRAPH_LOCALES.fr,
     structuredData: routeMetadata.structuredData === true,
     title: `${pageTitle} | ${SITE_NAME}`,
   }
-}
-
-function getPublicListingRouteMetadata(pathname) {
-  const match = pathname.match(
-    /^\/discover\/(animals|products|services|veterinarians)\/\d+$/,
-  )
-
-  if (!match) {
-    return null
-  }
-
-  return PUBLIC_ROUTE_METADATA[`/discover/${match[1]}`]
 }
 
 function normalizePathname(pathname) {

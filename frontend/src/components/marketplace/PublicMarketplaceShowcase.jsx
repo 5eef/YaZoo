@@ -181,6 +181,7 @@ function PreviewRow({ title, section, listings, isLoading, isRtl, locale, t }) {
       {isLoading || hasListings ? (
         <div
           ref={scrollerRef}
+          role="group"
           aria-label={title}
           className="flex max-w-full snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain pb-3 [scrollbar-width:thin]"
         >

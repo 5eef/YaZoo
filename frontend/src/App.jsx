@@ -73,6 +73,7 @@ function App() {
           path="/"
           element={isAuthenticated ? <Navigate to="/feed" replace /> : <LandingPage />}
         />
+        {['fr', 'en', 'ar'].map((locale) => <Route key={locale} path={`/${locale}`} element={<LandingPage />} />)}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />

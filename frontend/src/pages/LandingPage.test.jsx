@@ -29,9 +29,9 @@ describe('Startup landing page', () => {
   })
 
   it.each([
-    ['fr', 'Votre animal.', 'Les bons professionnels.', 'Trouver un vétérinaire'],
-    ['en', 'Your pet.', 'The right professionals.', 'Find a veterinarian'],
-    ['ar', 'حيوانك الأليف.', 'المهنيون المناسبون.', 'اعثر على طبيب بيطري'],
+    ['fr', 'Le monde des animaux,', 'au même endroit.', 'Rejoindre la communauté'],
+    ['en', 'The world of animals,', 'all in one place.', 'Join the community'],
+    ['ar', 'عالم الحيوانات،', 'في مكان واحد.', 'انضم إلى المجتمع'],
   ])('renders the main proposition in %s', async (locale, firstLine, secondLine, ctaLabel) => {
     localStorage.setItem('yazoo-locale', locale)
 
@@ -41,9 +41,9 @@ describe('Startup landing page', () => {
     await waitFor(() => expect(document.documentElement.lang).toBe(locale))
     expect(hero).toHaveTextContent(firstLine)
     expect(hero).toHaveTextContent(secondLine)
-    expect(screen.getByRole('link', { name: ctaLabel })).toHaveAttribute(
+    expect(screen.getAllByRole('link', { name: ctaLabel })[0]).toHaveAttribute(
       'href',
-      '/discover/veterinarians',
+      '/register?returnTo=%2Ffeed',
     )
 
     if (locale === 'ar') {
@@ -59,14 +59,11 @@ describe('Startup landing page', () => {
 
     renderLanding()
 
-    expect(screen.getByRole('link', { name: 'Trouver un vétérinaire' })).toHaveAttribute(
+    expect(screen.getAllByRole('link', { name: 'Rejoindre la communauté' })[0]).toHaveAttribute(
       'href',
-      '/discover/veterinarians',
+      '/register?returnTo=%2Ffeed',
     )
-    expect(screen.getByRole('link', { name: 'Je suis professionnel' })).toHaveAttribute(
-      'href',
-      '/pros',
-    )
+    expect(screen.getAllByRole('link', { name: 'Découvrir les services' })[0]).toHaveAttribute('href', '/discover/services')
     expect(screen.getByRole('link', { name: 'Voir les services' })).toHaveAttribute(
       'href',
       '/discover/services',
@@ -90,11 +87,11 @@ describe('Startup landing page', () => {
 
     renderLanding()
 
-    expect(screen.getByRole('heading', { name: 'Trouvez un professionnel' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Consultez son profil' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Réservez ou contactez' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Échangez directement' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Donnez votre avis' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Un fil à découvrir' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Photos et vidéos' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Stories' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Des échanges' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Des communautés' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Une vérification YaZoo' })).toBeInTheDocument()
     expect(screen.getByText(/ne constitue pas une certification ou un agrément public/)).toBeInTheDocument()
   })
@@ -108,7 +105,7 @@ describe('Startup landing page', () => {
     const englishButtons = screen.getAllByRole('button', { name: 'Anglais' })
     await user.click(englishButtons[0])
     expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent(
-      'Your pet. The right professionals.',
+      'The world of animals, all in one place.',
     )
     await waitFor(() => expect(document.documentElement).toHaveAttribute('lang', 'en'))
 
@@ -142,7 +139,7 @@ describe('Startup landing page', () => {
 
     renderLanding()
 
-    expect(screen.getByRole('link', { name: 'Trouver un vétérinaire' })).toHaveClass(
+    expect(screen.getAllByRole('link', { name: 'Rejoindre la communauté' })[0]).toHaveClass(
       'w-full',
       'sm:w-auto',
     )

@@ -143,6 +143,7 @@ export function jsonResponse(payload, status = 200, extraHeaders = {}) {
       'Cache-Control': 'no-store',
       'Content-Type': 'application/json; charset=utf-8',
       ...extraHeaders,
+      'X-Robots-Tag': 'noindex, nofollow',
     },
   })
 }
@@ -161,6 +162,7 @@ function copyRequestHeaders(headers) {
 
 function buildProxyResponse(upstreamResponse, backendOrigin, publicOrigin) {
   const responseHeaders = new Headers()
+  responseHeaders.set('X-Robots-Tag', 'noindex, nofollow')
 
   for (const [name, value] of upstreamResponse.headers.entries()) {
     const lowerName = name.toLowerCase()

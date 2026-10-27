@@ -54,6 +54,8 @@ COPY LICENSE /usr/share/nginx/html/LICENSE.txt
 RUN set -eux; \
     if apk info --exists brotli-libs >/dev/null; then apk add --no-cache 'brotli-libs>=1.2.1-r0'; fi; \
     apk upgrade --no-cache libcrypto3 libssl3 libexpat libuuid pcre2 tiff libx11; \
+    if apk info --exists curl >/dev/null; then apk add --no-cache 'curl>=8.23.0-r0'; fi; \
+    if apk info --exists libcurl >/dev/null; then apk add --no-cache 'libcurl>=8.23.0-r0'; fi; \
     printf '{"version":"%s"}\n' "$APP_VERSION" > /usr/share/nginx/html/version.json; \
     sed -i 's/listen  *80;/listen 8080;/' /etc/nginx/templates/default.conf.template; \
     sed -i 's!^[[:space:]]*pid[[:space:]].*;!pid /tmp/nginx.pid;!' /etc/nginx/nginx.conf; \

@@ -12,7 +12,7 @@ import LanguageSwitcher from '../components/ui/LanguageSwitcher'
 import { useAuth } from '../hooks/useAuth'
 import { useI18n } from '../hooks/useI18n'
 
-function LandingPage() {
+function LandingPage({ includeLivePreview = true }) {
   const { isAuthenticated } = useAuth()
   const { t } = useI18n()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -70,12 +70,12 @@ function LandingPage() {
   }, [isMobileMenuOpen])
 
   if (isAuthenticated) {
-    return <Navigate to={features.startupPilot ? "/marketplace/veterinarians" : "/feed"} replace />
+    return <Navigate to={"/feed"} replace />
   }
 
   return (
     <>
-      <a href="#top" className="yz-skip-link">
+      <a href="#main-content" className="yz-skip-link">
         {t('accessibility.skipToContent')}
       </a>
       <main
@@ -190,18 +190,19 @@ function LandingPage() {
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-4">
               <Link
-                to="/discover/veterinarians"
+                to="/register?returnTo=%2Ffeed"
                 className="inline-flex w-full items-center justify-center rounded-full bg-[linear-gradient(135deg,#6d28d9,#7c3aed)] px-6 py-3 text-base font-semibold text-white shadow-[0_16px_30px_rgba(124,58,237,0.2)] transition hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 sm:w-auto lg:px-7 lg:py-3.5"
               >
-                {t('landing.findVeterinarian')}
+                {t('landing.joinCommunity')}
               </Link>
               <Link
-                to="/pros"
+                to="/discover/services"
                 className="inline-flex w-full items-center justify-center rounded-full border border-violet-200 bg-white px-6 py-3 text-base font-semibold text-violet-900 transition hover:-translate-y-0.5 hover:border-violet-300 hover:bg-violet-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 dark:border-violet-300/18 dark:bg-black/40 dark:text-violet-50 dark:hover:bg-violet-400/15 sm:w-auto lg:px-7 lg:py-3.5"
               >
-                {t('landing.professionalCta')}
+                {t('landing.discoverServices')}
               </Link>
             </div>
+            <Link to="/pros" className="mt-4 inline-block font-semibold text-violet-800 underline dark:text-violet-200">{t('landing.professionalLearnMore')}</Link>
           </div>
 
           <div className="relative">
@@ -212,13 +213,15 @@ function LandingPage() {
                 src={heroImage}
                 alt={t('landing.heroImageAlt')}
                 className="h-[350px] w-full rounded-[24px] object-cover sm:h-[410px] lg:h-[470px]"
+                width="1200"
+                height="900"
+                fetchPriority="high"
                 loading="eager"
               />
             </div>
           </div>
         </section>
 
-        {features.startupPilot ? <PublicMarketplaceShowcase careOnly /> : null}
 
         <section
           id="features"
@@ -252,6 +255,72 @@ function LandingPage() {
             ))}
           </ol>
         </section>
+
+        <section
+          id="communaute"
+          aria-labelledby="landing-secondary-title"
+          className="mt-8 grid gap-6 rounded-[30px] border border-white/80 bg-white/90 p-5 shadow-[0_20px_60px_rgba(124,58,237,0.08)] backdrop-blur dark:border-violet-300/16 dark:bg-[linear-gradient(135deg,_rgba(5,3,10,0.98),_rgba(30,15,52,0.92))] sm:rounded-[34px] sm:p-6 lg:grid-cols-[1fr_1fr] lg:items-center xl:gap-8 xl:p-8"
+        >
+          <div>
+            <h2
+              id="landing-secondary-title"
+              className="text-2xl font-semibold text-stone-950 dark:text-white sm:text-3xl xl:text-4xl"
+            >
+              {t('landing.secondaryTitle')}
+            </h2>
+            <p className="mt-4 max-w-3xl text-sm leading-7 text-stone-600 dark:text-violet-100/78 lg:text-base xl:text-[17px] xl:leading-8">
+              {t('landing.secondaryDescription')}
+            </p>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <Link
+                to="/communities"
+                className="inline-flex items-center rounded-full border border-violet-200 bg-white px-4 py-2.5 text-sm font-semibold text-violet-900 transition hover:bg-violet-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 dark:border-violet-300/18 dark:bg-black/40 dark:text-violet-50 dark:hover:bg-violet-400/15"
+              >
+                {t('landing.communitiesLink')}
+              </Link>
+              <Link
+                to="/feed"
+                className="inline-flex items-center rounded-full border border-violet-200 bg-white px-4 py-2.5 text-sm font-semibold text-violet-900 transition hover:bg-violet-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 dark:border-violet-300/18 dark:bg-black/40 dark:text-violet-50 dark:hover:bg-violet-400/15"
+              >
+                {t('landing.feedLink')}
+              </Link>
+            </div>
+          </div>
+
+          <div className="overflow-hidden rounded-[28px] border border-violet-100 bg-[linear-gradient(180deg,_rgba(255,255,255,0.98),_rgba(244,237,255,0.84))] p-4 dark:border-violet-300/16 dark:bg-[linear-gradient(135deg,_rgba(8,5,13,0.98),_rgba(24,11,43,0.96))]">
+            <img
+              src={companionImage}
+              alt={t('landing.communityImageAlt')}
+              className="h-full min-h-[260px] w-full rounded-[22px] object-cover"
+              loading="lazy"
+            />
+          </div>
+        </section>
+
+        <section
+          aria-labelledby="landing-services-title"
+          className="mt-8 flex flex-col gap-4 rounded-[30px] border border-white/80 bg-white/90 p-5 shadow-[0_20px_60px_rgba(124,58,237,0.08)] backdrop-blur dark:border-violet-300/16 dark:bg-[linear-gradient(135deg,_rgba(5,3,10,0.98),_rgba(30,15,52,0.92))] sm:flex-row sm:items-center sm:justify-between sm:rounded-[34px] sm:p-7 lg:p-8"
+        >
+          <div>
+            <h2
+              id="landing-services-title"
+              className="text-2xl font-semibold text-stone-950 dark:text-white sm:text-3xl"
+            >
+              {t('landing.servicesTitle')}
+            </h2>
+            <p className="mt-2 max-w-3xl text-sm leading-7 text-stone-600 dark:text-violet-100/78 lg:text-base">
+              {t('landing.servicesDescription')}
+            </p>
+          </div>
+          <Link
+            to="/discover/services"
+            className="inline-flex shrink-0 items-center justify-center rounded-full border border-violet-200 bg-white px-5 py-2.5 text-sm font-semibold text-violet-900 transition hover:bg-violet-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 dark:border-violet-300/18 dark:bg-black/40 dark:text-violet-50 dark:hover:bg-violet-400/15"
+          >
+            {t('landing.servicesLink')}
+          </Link>
+        </section>
+
+        {includeLivePreview ? <PublicMarketplaceShowcase careOnly={features.startupPilot} /> : null}
 
         <section
           id="professionnels"
@@ -330,72 +399,15 @@ function LandingPage() {
           </div>
         </section>
 
-        <section
-          aria-labelledby="landing-services-title"
-          className="mt-8 flex flex-col gap-4 rounded-[30px] border border-white/80 bg-white/90 p-5 shadow-[0_20px_60px_rgba(124,58,237,0.08)] backdrop-blur dark:border-violet-300/16 dark:bg-[linear-gradient(135deg,_rgba(5,3,10,0.98),_rgba(30,15,52,0.92))] sm:flex-row sm:items-center sm:justify-between sm:rounded-[34px] sm:p-7 lg:p-8"
-        >
-          <div>
-            <h2
-              id="landing-services-title"
-              className="text-2xl font-semibold text-stone-950 dark:text-white sm:text-3xl"
-            >
-              {t('landing.servicesTitle')}
-            </h2>
-            <p className="mt-2 max-w-3xl text-sm leading-7 text-stone-600 dark:text-violet-100/78 lg:text-base">
-              {t('landing.servicesDescription')}
-            </p>
-          </div>
-          <Link
-            to="/discover/services"
-            className="inline-flex shrink-0 items-center justify-center rounded-full border border-violet-200 bg-white px-5 py-2.5 text-sm font-semibold text-violet-900 transition hover:bg-violet-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 dark:border-violet-300/18 dark:bg-black/40 dark:text-violet-50 dark:hover:bg-violet-400/15"
-          >
-            {t('landing.servicesLink')}
-          </Link>
-        </section>
-
-        {!features.startupPilot ? <PublicMarketplaceShowcase /> : null}
-
-        <section
-          id="communaute"
-          aria-labelledby="landing-secondary-title"
-          className="mt-8 grid gap-6 rounded-[30px] border border-white/80 bg-white/90 p-5 shadow-[0_20px_60px_rgba(124,58,237,0.08)] backdrop-blur dark:border-violet-300/16 dark:bg-[linear-gradient(135deg,_rgba(5,3,10,0.98),_rgba(30,15,52,0.92))] sm:rounded-[34px] sm:p-6 lg:grid-cols-[1fr_1fr] lg:items-center xl:gap-8 xl:p-8"
-        >
-          <div>
-            <h2
-              id="landing-secondary-title"
-              className="text-2xl font-semibold text-stone-950 dark:text-white sm:text-3xl xl:text-4xl"
-            >
-              {t('landing.secondaryTitle')}
-            </h2>
-            <p className="mt-4 max-w-3xl text-sm leading-7 text-stone-600 dark:text-violet-100/78 lg:text-base xl:text-[17px] xl:leading-8">
-              {t('landing.secondaryDescription')}
-            </p>
-            <div className="mt-5 flex flex-wrap gap-3">
-              <Link
-                to="/communities"
-                className="inline-flex items-center rounded-full border border-violet-200 bg-white px-4 py-2.5 text-sm font-semibold text-violet-900 transition hover:bg-violet-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 dark:border-violet-300/18 dark:bg-black/40 dark:text-violet-50 dark:hover:bg-violet-400/15"
-              >
-                {t('landing.communitiesLink')}
-              </Link>
-              <Link
-                to="/feed"
-                className="inline-flex items-center rounded-full border border-violet-200 bg-white px-4 py-2.5 text-sm font-semibold text-violet-900 transition hover:bg-violet-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 dark:border-violet-300/18 dark:bg-black/40 dark:text-violet-50 dark:hover:bg-violet-400/15"
-              >
-                {t('landing.feedLink')}
-              </Link>
-            </div>
-          </div>
-
-          <div className="overflow-hidden rounded-[28px] border border-violet-100 bg-[linear-gradient(180deg,_rgba(255,255,255,0.98),_rgba(244,237,255,0.84))] p-4 dark:border-violet-300/16 dark:bg-[linear-gradient(135deg,_rgba(8,5,13,0.98),_rgba(24,11,43,0.96))]">
-            <img
-              src={companionImage}
-              alt={t('landing.communityImageAlt')}
-              className="h-full min-h-[260px] w-full rounded-[22px] object-cover"
-              loading="lazy"
-            />
+        <section aria-labelledby="landing-vision-title" className="mt-8 rounded-[30px] bg-white/90 p-6 dark:bg-white/8">
+          <h2 id="landing-vision-title" className="text-2xl font-semibold text-stone-950 dark:text-white">{t('landing.visionTitle')}</h2>
+          <p className="mt-4 leading-7 text-stone-700 dark:text-violet-100">{t('landing.visionText')}</p>
+          <div className="mt-5 flex flex-wrap gap-4 font-semibold text-violet-800 dark:text-violet-200">
+            <Link to="/register?returnTo=%2Ffeed" className="underline">{t('landing.joinCommunity')}</Link>
+            <Link to="/discover/services" className="underline">{t('landing.discoverServices')}</Link>
+            <Link to="/pros" className="underline">{t('landing.professionalLearnMore')}</Link>
           </div>
         </section>
-
         <div id="aide">
           <Footer mode="public" className="mt-8" />
         </div>
