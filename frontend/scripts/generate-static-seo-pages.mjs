@@ -25,8 +25,12 @@ let commit = null
 let sourceDirty = null
 try {
   const options = { cwd: path.dirname(frontendDirectory), encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }
-  commit = execFileSync('git', ['rev-parse', 'HEAD'], options).trim()
-  sourceDirty = Boolean(execFileSync('git', ['status', '--porcelain', '--untracked-files=no', '--', 'frontend', 'backend', 'mobile'], options).trim())
+  // Build provenance must not execute a binary supplied through the caller's PATH.
+  const readGit = (args) => (process.platform === 'win32'
+    ? execFileSync('C:/Program Files/Git/cmd/git.exe', args, options)
+    : execFileSync('/usr/bin/git', args, options)).trim()
+  commit = readGit(['rev-parse', 'HEAD'])
+  sourceDirty = Boolean(readGit(['status', '--porcelain', '--untracked-files=no', '--', 'frontend', 'backend', 'mobile']))
 } catch {
   // Source archives and frontend Docker contexts need not contain .git or git.
   // Unknown provenance remains explicit rather than breaking the existing build.

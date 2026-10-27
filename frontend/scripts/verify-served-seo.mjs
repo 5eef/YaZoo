@@ -65,7 +65,8 @@ try {
   assert.equal(sitemap.status(), 200)
   const xml = new JSDOM(await sitemap.text(), { contentType: 'text/xml' }).window.document
   assert.equal(xml.querySelector('parsererror'), null)
-  assert.deepEqual([...xml.querySelectorAll('loc')].map((element) => element.textContent).sort(), ['/fr', '/en', '/ar', '/about', '/pros', '/partner'].map((pathname) => `${targetOrigin}${pathname}`).sort())
+  const compareUrls = (left, right) => left.localeCompare(right)
+  assert.deepEqual([...xml.querySelectorAll('loc')].map((element) => element.textContent).toSorted(compareUrls), ['/fr', '/en', '/ar', '/about', '/pros', '/partner'].map((pathname) => `${targetOrigin}${pathname}`).toSorted(compareUrls))
   const robots = await api.request.get(`${baseURL}/robots.txt`)
   assert.equal(robots.status(), 200)
   assert.ok((await robots.text()).includes(`Sitemap: ${targetOrigin}/sitemap.xml`))

@@ -9,7 +9,8 @@ assert.equal(typeof release.sourceDirty, 'boolean')
 const sitemap = new JSDOM(await readFile('dist/sitemap.xml', 'utf8'), { contentType: 'text/xml' }).window.document
 assert.equal(sitemap.querySelector('parsererror'), null)
 const paths = [...sitemap.querySelectorAll('loc')].map((element) => new URL(element.textContent).pathname)
-assert.deepEqual(paths.sort(), ['/about', '/ar', '/en', '/fr', '/partner', '/pros'].sort())
+const comparePaths = (left, right) => left.localeCompare(right)
+assert.deepEqual(paths.toSorted(comparePaths), ['/about', '/ar', '/en', '/fr', '/partner', '/pros'].toSorted(comparePaths))
 const titles = new Set()
 const rows = []
 for (const pathname of ['/', ...paths]) {
