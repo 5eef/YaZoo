@@ -8,16 +8,26 @@ const expo = path.dirname(require.resolve('expo/package.json'));
 const cli = path.dirname(require.resolve('@expo/cli/package.json', { paths: [expo] }));
 const cliRequire = createRequire(path.join(cli, 'package.json'));
 const { z } = cliRequire('zod');
-const { PluginSchema, DevToolsPluginOutputSchema } = cliRequire('./build/src/start/server/DevToolsPlugin.schema.js');
-const { createMCPDevToolsExtensionSchema } = cliRequire('./build/src/start/server/createMCPDevToolsExtensionSchema.js');
+const { PluginSchema, DevToolsPluginOutputSchema } = cliRequire('./build/src/start/server/devtools/DevToolsPlugin.schema.js');
+const { createMCPDevToolsExtensionSchema } = cliRequire('./build/src/start/server/mcp/createMCPDevToolsExtensionSchema.js');
+const { validate } = cliRequire('@expo/schema-utils');
+
+function passes(schema, value) {
+  try {
+    validate(schema, value);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 test('Expo plugin schemas retain valid commands and reject malformed plugin/output data', () => {
   const plugin = { packageName: 'isolated-plugin', packageRoot: '/isolated', cliExtensions: { description: 'Test', entryPoint: 'index.js', commands: [{ name: 'inspect', title: 'Inspect', environments: ['cli', 'mcp'], parameters: [{ name: 'limit', type: 'number' }] }] } };
-  assert.equal(PluginSchema.safeParse(plugin).success, true);
-  assert.equal(PluginSchema.safeParse({ ...plugin, cliExtensions: { ...plugin.cliExtensions, commands: [] } }).success, false);
-  assert.equal(DevToolsPluginOutputSchema.safeParse([{ type: 'text', text: 'Ready', level: 'info' }]).success, true);
-  assert.equal(DevToolsPluginOutputSchema.safeParse([{ type: 'audio', url: 'not a URL' }]).success, false);
-  const command = createMCPDevToolsExtensionSchema(plugin);
+  assert.equal(passes(PluginSchema, plugin), true);
+  assert.equal(passes(PluginSchema, { ...plugin, cliExtensions: { ...plugin.cliExtensions, commands: [] } }), false);
+  assert.equal(passes(DevToolsPluginOutputSchema, [{ type: 'text', text: 'Ready', level: 'info' }]), true);
+  assert.equal(passes(DevToolsPluginOutputSchema, [{ type: 'audio', url: 'not a URL' }]), false);
+  const command = createMCPDevToolsExtensionSchema(plugin, z);
   assert.deepEqual(command.parse({ command: 'inspect', limit: 2 }), { command: 'inspect', limit: 2 });
   assert.equal(command.safeParse({ command: 'inspect', limit: 'two' }).success, false);
   assert.equal(command.safeParse({ command: 'unknown' }).success, false);
